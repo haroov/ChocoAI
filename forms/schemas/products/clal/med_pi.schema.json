@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.chocoinsurance.co.il/products/clal/med-pi/2025-08.json",
+  "title": "Product schema - Clal Medical PI (MVP minimal schema)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "meta"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "insurer"
+      ],
+      "properties": {
+        "insurer": {
+          "type": "string",
+          "const": "clal"
+        },
+        "product": {
+          "type": "string",
+          "const": "med_pi"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "agent_name": {
+          "type": "string"
+        },
+        "agent_number": {
+          "type": "string"
+        }
+      }
+    },
+    "applicant": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "full_name": {
+          "type": "string"
+        },
+        "id_number": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "description": "MVP: this schema is intentionally permissive until we extract/define the full Med PI canonical model."
+}

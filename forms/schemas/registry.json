@@ -1,0 +1,16 @@
+{
+  "schemas": {
+    "clal/15943/2025-07": {
+      "canonical": true,
+      "path": "forms/schemas/canonical/clal_15943_2025-07.schema.json"
+    },
+    "clal/cyber/2025-01": {
+      "canonical": false,
+      "path": "forms/schemas/products/clal/cyber.schema.json"
+    },
+    "clal/med-pi/2025-08": {
+      "canonical": false,
+      "path": "forms/schemas/products/clal/med_pi.schema.json"
+    }
+  }
+}

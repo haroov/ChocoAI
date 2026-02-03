@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.chocoinsurance.co.il/canonical/clal/15943/2025-07.json",
+  "title": "Canonical - Clal Business Proposal Form (מק\"ט 15943 07/2025)",
+  "allOf": [
+    {
+      "$ref": "https://schemas.example.local/clal/business_proposal/15943-2025-07.json"
+    }
+  ]
+}

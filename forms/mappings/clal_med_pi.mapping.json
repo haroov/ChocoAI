@@ -1,0 +1,13 @@
+{
+  "schemaId": "clal/med-pi/2025-08",
+  "pdf": {
+    "file": "Clal_Med_PI_form.pdf",
+    "mode": "coordinates",
+    "note": "MVP: Med PI has its own schema; fill by coordinates and append appendix."
+  },
+  "fields": [],
+  "appendix": {
+    "enabled": true,
+    "title": "Appendix - Medical PI Proposal"
+  }
+}

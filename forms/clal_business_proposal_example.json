@@ -1,0 +1,240 @@
+{
+  "meta": {
+    "insurer": "clal",
+    "form_catalog_number": "15943",
+    "form_version_date": "2025-07",
+    "source_document": "טופס-הצעה-לביטוח-בית-עסק.pdf",
+    "created_at": "2026-02-03T00:00:00Z",
+    "status": "draft"
+  },
+  "agent": {
+    "region": "",
+    "agent_name": "",
+    "agent_team": "",
+    "agent_number": ""
+  },
+  "applicant": {
+    "person": {
+      "first_name": "",
+      "last_name": "",
+      "national_id": ""
+    },
+    "contact": {
+      "mobile": "",
+      "phone": "",
+      "fax": "",
+      "email": ""
+    },
+    "home_address": {
+      "city": "",
+      "street": "",
+      "house_number": "",
+      "entrance": "",
+      "apartment": "",
+      "zip_code": ""
+    },
+    "relationship_to_business": "owner"
+  },
+  "business": {
+    "name": "",
+    "legal_entity_type": "authorized_dealer",
+    "registration_id": "",
+    "contact": {
+      "mobile": "",
+      "phone": "",
+      "fax": "",
+      "email": ""
+    },
+    "has_additional_locations": false,
+    "additional_locations_count": 0,
+    "business_type": "store",
+    "business_use": ""
+  },
+  "policy_term": {
+    "start_date": "2026-03-01",
+    "end_date": "2027-02-28",
+    "end_time_local": "24:00"
+  },
+  "billing": {
+    "collection_method": "credit_card",
+    "payments_count": 12
+  },
+  "locations": [
+    {
+      "location_id": "loc-1",
+      "address": {
+        "city": "",
+        "street": "",
+        "house_number": "",
+        "entrance": "",
+        "pobox": "",
+        "zip_code": ""
+      },
+      "building_info": {
+        "relationship_to_building": "tenant",
+        "year_built": 2000,
+        "floor": 0,
+        "total_floors": 4,
+        "area_sqm": 120,
+        "construction_materials": [
+          "concrete"
+        ],
+        "roof_type": [
+          "concrete"
+        ],
+        "pal_kal_construction": {
+          "answer": false
+        }
+      },
+      "surroundings": {
+        "description": "",
+        "neighboring_businesses": "",
+        "hazardous_goods_nearby": {
+          "answer": false
+        },
+        "shared_wall_with_neighbors": {
+          "answer": true,
+          "details": ""
+        }
+      },
+      "liens": {
+        "required": false
+      },
+      "licenses": {
+        "business_license_in_force": {
+          "answer": true
+        },
+        "fire_department_approval_in_force": {
+          "answer": true
+        }
+      },
+      "risk_and_security": {
+        "fire_protection": {
+          "fire_extinguishers": {
+            "answer": true
+          },
+          "smoke_detectors": {
+            "answer": true
+          },
+          "sprinklers": {
+            "answer": false
+          }
+        },
+        "burglary_protection": {
+          "doors_and_locks_description": "",
+          "windows_protection_description": "",
+          "alarm_system": {
+            "answer": true,
+            "details": ""
+          }
+        },
+        "water_flood_risk": {
+          "nearby_flood_source": {
+            "answer": false
+          },
+          "below_ground_parts": {
+            "answer": false
+          },
+          "previous_flooding_events_last_3_years": {
+            "answer": false
+          }
+        }
+      }
+    }
+  ],
+  "coverages": {
+    "property": {
+      "by_location": [
+        {
+          "location_id": "loc-1",
+          "chapter_1_contents": {
+            "selected": true,
+            "sum_insured_contents_excl_stock_ils": 300000,
+            "sum_insured_stock_ils": 400000,
+            "stock_basis": "full",
+            "earthquake": true,
+            "nature_perils": true,
+            "fridge_spoilage": {
+              "selected": false
+            }
+          },
+          "chapter_2_building": {
+            "selected": false
+          },
+          "business_interruption": {
+            "type": "chapter_3a_daily_comp",
+            "chapter_3a_daily_comp": {
+              "selected": true,
+              "daily_max_compensation_ils": 3000,
+              "max_compensation_days": 60
+            }
+          },
+          "chapter_4_burglary": {
+            "selected": true,
+            "basis": "first_loss",
+            "sum_insured_ils": 200000
+          },
+          "chapter_5_money": {
+            "selected": true,
+            "in_safe_ils": 30000,
+            "in_transit_ils": 20000
+          },
+          "chapter_6_goods_in_transit": {
+            "selected": false
+          },
+          "chapter_10_electronic_equipment": {
+            "selected": false
+          }
+        }
+      ]
+    },
+    "liability": {
+      "chapter_7_third_party": {
+        "selected": true,
+        "limit_per_event_ils": 1000000,
+        "limit_aggregate_ils": 1000000
+      },
+      "chapter_8_employers_liability": {
+        "selected": true,
+        "limit_per_event_ils": 20000000,
+        "limit_aggregate_ils": 20000000,
+        "rating_basis": "employee_count",
+        "employees": [
+          {
+            "occupation_group": "כללי",
+            "employee_count": 5
+          }
+        ]
+      },
+      "chapter_9_product_liability": {
+        "selected": false
+      }
+    },
+    "annexes": {
+      "annex_a_cyber": {
+        "selected": false
+      },
+      "annex_b_terror_above_property_tax": {
+        "selected": false
+      }
+    }
+  },
+  "history_and_disclosures": {
+    "claims_last_5_years": {
+      "answer": false
+    },
+    "burglary_or_attempt_last_5_years": {
+      "answer": false
+    }
+  },
+  "communications_consents": {
+    "operational_mail_delivery": "digital",
+    "marketing_consent": false,
+    "privacy_notice_acknowledged": true
+  },
+  "signatures": {
+    "proposer_signed": false,
+    "agent_signed": false
+  },
+  "attachments": []
+}

@@ -1,0 +1,24 @@
+flowchart TD
+  A[welcome (router)] -->|identity unknown| B[identifyCustomer]
+  A -->|start quote| C[needsDiscovery]
+  A -->|resume| C
+  A -->|policy existence confirmation (COI)| P[policyExistenceConfirmation]
+  A -->|support| S[support]
+
+  B --> C
+  P -->|eligible (existing customer + existing policy)| PC[issue COI + deliver] --> Z((done))
+  P -->|not customer| R[registerCustomer] --> C
+  P -->|no policy| C
+
+  C --> D[proposalForm]
+  D --> E[carrierSubmission]
+  E --> F[underwritingReview]
+
+  F -->|carrier questions| FQ[answer + resubmit] --> F
+  F -->|quote / draft received| G[approvalAndPayment]
+  G --> H[policyIssuance]
+  H --> I[notifications]
+
+  I --> I1[email policy] --> I2[whatsapp confirmation] --> Z((done))
+
+  S --> Z

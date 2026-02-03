@@ -1,0 +1,23 @@
+{
+  "schemaId": "clal/15943/2025-07",
+  "pdf": {
+    "file": "Clal_SMB_ins_form.pdf",
+    "mode": "coordinates",
+    "note": "This PDF is flat (no AcroForm). Fill by coordinates + always append an appendix with full data."
+  },
+  "fields": [],
+  "repeaters": {
+    "locations": {
+      "sourcePath": "locations",
+      "overflow": "appendix"
+    },
+    "employees": {
+      "sourcePath": "coverages.liability.chapter_8_employers_liability.employees",
+      "overflow": "appendix"
+    }
+  },
+  "appendix": {
+    "enabled": true,
+    "title": "Appendix - Business Insurance Proposal (Canonical JSON)"
+  }
+}

@@ -1,0 +1,29 @@
+name: Check Router Purity
+
+on:
+  pull_request:
+    paths:
+      - 'backend/src/lib/flowEngine/flowRouter.ts'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/src/lib/flowEngine/flowRouter.ts'
+
+jobs:
+  check-router-purity:
+    name: Check Router Purity
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Router Purity
+        run: |
+          if grep -E "(stageSlug ===|toolName ===)" backend/src/lib/flowEngine/flowRouter.ts; then
+            echo "❌ Router contains flow-specific logic. Use declarative config instead."
+            echo ""
+            echo "See: backend/docs/LLM_DEVELOPMENT_PLAYBOOK.md"
+            exit 1
+          fi
+          echo "✅ Router is pure - no flow-specific logic found"

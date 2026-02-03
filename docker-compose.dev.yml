@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=chocoai
+      - POSTGRES_USER=chocoai
+      - POSTGRES_PASSWORD=chocoai
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chocoai-network
+
+  # Database Admin
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+    networks:
+      - chocoai-network
+
+volumes:
+  postgres_data:
+
+networks:
+  chocoai-network:
+    driver: bridge

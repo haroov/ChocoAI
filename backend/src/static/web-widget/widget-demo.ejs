@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choco - Insurance Starts Here</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        /* Header Styles */
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 90px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #882DD7;
+            text-decoration: none;
+        }
+
+        .logo-circle {
+            display: flex;
+            align-items: center;
+            margin-right: 8px;
+        }
+
+        .logo-circle svg {
+            width: 100px;
+            height: auto;
+            max-height: 70px;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: #882DD7;
+        }
+
+        .nav-dropdown {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-dropdown::after {
+            content: '▼';
+            font-size: 10px;
+            color: #666;
+        }
+
+        .live-campaigns {
+            position: relative;
+        }
+
+        .live-dot {
+            position: absolute;
+            top: -2px;
+            right: -8px;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .user-menu::after {
+            content: '▼';
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, rgba(136, 45, 215, 0.10) 0%, rgba(136, 45, 215, 0.04) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('https://www.chocoinsurance.com/assets/hero.jpg') center/cover no-repeat;
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: 5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5625rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 50px;
+            max-width: 750px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-button {
+            background: #882DD7;
+            color: white;
+            border: none;
+            padding: 24px 48px;
+            border-radius: 75px;
+            font-size: 1.65rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 22.5px rgba(136, 45, 215, 0.25);
+        }
+
+        .cta-button:hover {
+            background: #882DD7;
+            transform: translateY(-3px);
+            box-shadow: 0 9px 30px rgba(136, 45, 215, 0.30);
+        }
+
+        /* Chat Widget Integration - Hide the built-in button since we have our own */
+        .choco-widget-button {
+            display: none !important;
+        }
+
+        /* Floating Chat Button */
+        .floating-chat-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: transparent;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(136, 45, 215, 0.25);
+            transition: all 0.3s ease;
+            z-index: 1001;
+            border: none;
+        }
+
+        .floating-chat-button:hover {
+            background: #882DD7;
+            transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(136, 45, 215, 0.30);
+        }
+
+        .floating-chat-button svg {
+            width: 100%;
+            height: 100%;
+            fill: white;
+        }
+
+        /* Demo Info - Hidden by default */
+        .demo-info {
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav {
+                display: none;
+            }
+
+            .hero-title {
+                font-size: 3.125rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.25rem;
+            }
+
+            .demo-info {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <a href="#" class="logo">
+                <div class="logo-circle">
+                    <img src="/favicon.svg" alt="Choco" style="width: 100px; height: auto; max-height: 70px;" />
+                </div>
+
+            </a>
+
+            <nav class="nav">
+                <a href="#" class="nav-link nav-dropdown">Communities</a>
+                <a href="#" class="nav-link">Products</a>
+                <a href="#" class="nav-link">About</a>
+                <a href="#" class="nav-link">Help Center</a>
+                <a href="#" class="nav-link">Contact</a>
+                <a href="#" class="nav-link live-campaigns">
+                    Live Campaigns
+                    <div class="live-dot"></div>
+                </a>
+            </nav>
+
+            <div class="user-menu">
+                Welcome Uriel Test
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Powerful Online Fundraising Starts Here</h1>
+            <p class="hero-subtitle">Join thousands of organizations getting covered with Choco's innovative platform
+                and AI-powered assistance</p>
+            <button class="cta-button">Get Started</button>
+        </div>
+    </section>
+
+    <!-- Floating Chat Button -->
+    <button class="floating-chat-button" onclick="window.ChocoAI?.open()" title="Open ChocoAI Assistant">
+        <svg width="554" height="554" viewBox="0 0 554 554" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g clip-path="url(#clip0_1067_12)">
+                <path
+                    d="M241.953 2.23215C344.905 -10.9001 446.561 34.6185 505.324 120.162C564.087 205.706 570.096 316.921 520.894 408.298C458.766 523.676 324.282 579.733 198.597 542.639C72.9099 505.547 -9.58458 385.456 0.895028 254.836C11.3746 124.217 111.96 18.8136 241.953 2.23215Z"
+                    fill="white" />
+                <path
+                    d="M520.894 408.298C458.766 523.676 324.282 579.733 198.597 542.639C72.9099 505.547 -9.58458 385.457 0.895028 254.836C11.3746 124.217 111.96 18.8136 241.953 2.23215C243.078 2.40339 244.02 2.39737 244.866 3.10002L244.895 3.52781L244.453 3.7807C242.989 4.63131 242.696 4.70562 241.671 5.96649C240.727 9.65569 245.961 10.7334 247.224 13.9804C248.69 17.7555 249.198 21.7203 250.404 25.567C252.289 30.1197 255.87 33.6689 258.864 37.4989C260.273 39.3016 261.539 41.4589 262.998 43.1544C266.352 47.0476 269.923 50.712 273.034 54.8224C273.764 55.7879 275.947 56.1882 276.307 57.7293C277.601 60.3209 280.055 63.6229 281.183 66.1596C284.08 72.668 284.689 77.0035 288.947 82.8343C288.588 83.5577 288.727 83.2974 288.002 83.8364C288.275 85.312 289.66 85.3055 290.981 85.5802C291.66 87.1331 290.684 87.2286 291.584 88.7854C294.995 88.9411 297.096 89.8202 300.241 91.2318L300.295 91.6413C299.327 91.9552 299.17 91.9421 298.141 92.0376C288.651 91.2946 279.792 90.8105 270.248 91.309C233.633 93.1889 198.648 107.034 170.663 130.718C146.684 151.269 129.279 176.063 119.082 206.064C117.264 211.412 115.155 218.054 114.387 223.574C107.917 223.018 95.5461 222.935 89.0583 223.25C88.0901 229.083 88.1294 235.545 87.9763 241.492L87.381 268.015L86.9859 286.82C86.9166 290.36 86.7046 296.348 87.1154 299.799C92.7372 301.524 108.379 301.016 115.105 301.222C116.752 309.103 119.566 317.03 122.611 324.469C135.543 356.256 157.828 383.362 186.509 402.202C213.425 419.975 244.891 429.621 277.143 429.983C280.657 430.042 283.734 430.017 287.166 429.901C290.838 429.775 299.901 428.415 302.917 429.217C307.764 430.507 314.922 435.566 319.497 438.011C323.706 440.26 328.057 442.612 332.199 444.918L364.679 463.059C369.149 465.54 373.664 468.118 378.143 470.506C381.517 472.305 385.472 468.434 384.947 465.044C381.702 444.103 376.31 423.11 372.616 402.271C407.558 378.369 436.765 341.009 444.794 298.679L445.052 297.301L449.81 297.67C450.69 298.805 450.153 298.458 451.352 298.915C452.421 298.548 452.637 298.237 453.413 298.567C452.027 301.183 451.07 298.543 451.095 302.02C450.341 302.109 450.222 302.1 449.47 302.091C448.377 303.148 447.21 306.231 445.932 307.894C445.995 308.622 446 308.662 446.228 309.354C445.725 309.686 445.337 309.913 444.812 310.207L444.633 310.804C445.355 311.488 445.415 311.423 446.382 311.743C446.404 313.319 444.976 313.106 444.773 315.131C445.08 316.226 444.762 315.85 445.644 316.379L448.155 315.94L448.855 314.897C450.248 316.61 450.706 318.211 451.874 319.598C452.34 320.151 454.63 321.819 455.354 322.562C456.643 323.887 458.103 325.341 459.459 326.602C461.129 328.156 464.03 329.591 465.345 331.342C468.027 334.91 468.982 339.276 470.748 343.237C472.16 346.405 475.498 349.565 477.288 352.408C478.621 354.527 479.462 358.571 481.111 360.82C483.547 364.147 486.884 367.181 489.832 370.095C490.452 370.708 492.973 372.7 493.255 373.239C493.801 374.289 494.159 377.05 494.644 378.277C496.53 383.048 499.621 385.332 502.799 388.949C503.051 389.237 503.563 393.46 503.977 394.011C506.842 397.806 509.256 397.385 510.909 402.456C511.143 403.174 516.105 410.848 516.842 411.65C518.034 410.321 518.889 409.371 519.944 407.902L520.563 407.844L520.894 408.298Z"
+                    fill="url(#paint0_linear_1067_12)" />
+                <path
+                    d="M241.953 2.23215C344.905 -10.9001 446.561 34.6185 505.324 120.162C564.087 205.706 570.096 316.921 520.894 408.298L520.563 407.844L519.944 407.902C518.889 409.371 518.034 410.321 516.842 411.65C516.105 410.848 511.143 403.174 510.909 402.456C509.256 397.385 506.843 397.806 503.977 394.011C503.563 393.46 503.051 389.237 502.799 388.949C499.621 385.332 496.531 383.048 494.644 378.277C494.159 377.05 493.801 374.289 493.255 373.239C492.973 372.7 490.452 370.708 489.832 370.095C486.885 367.181 483.547 364.147 481.111 360.82C479.463 358.571 478.621 354.527 477.288 352.408C475.498 349.565 472.16 346.405 470.748 343.237C468.982 339.276 468.027 334.91 465.345 331.342C464.03 329.591 461.129 328.156 459.459 326.602C458.103 325.341 456.643 323.887 455.355 322.562C454.63 321.819 452.34 320.151 451.874 319.598C450.706 318.211 450.248 316.61 448.855 314.897L448.155 315.94L445.644 316.379C444.763 315.85 445.08 316.226 444.773 315.131C444.976 313.106 446.404 313.319 446.382 311.743C445.415 311.423 445.355 311.488 444.633 310.804L444.812 310.207C445.337 309.913 445.725 309.686 446.228 309.354C446 308.662 445.995 308.622 445.932 307.894C447.21 306.231 448.377 303.148 449.47 302.091C450.222 302.1 450.341 302.109 451.095 302.02C451.07 298.543 452.028 301.183 453.413 298.567C452.637 298.237 452.421 298.548 451.352 298.915C450.153 298.458 450.69 298.805 449.81 297.67C453.651 297.82 468.092 298.688 470.44 296.742C471.563 293.031 471.406 282.084 471.482 277.783L471.95 255.187C472.157 244.866 473.027 231.326 472.498 221.251C465.401 219.512 452.154 220.4 444.212 219.737C443.389 215.213 442.006 211.306 440.539 206.958C434.733 189.352 426.033 172.835 414.799 158.088C394.517 131.474 366.873 111.396 335.292 100.338C322.018 95.8171 311.873 93.8796 298.142 92.0377C299.17 91.9422 299.327 91.9552 300.295 91.6413L300.241 91.2318C297.096 89.8202 294.995 88.9411 291.584 88.7854C290.684 87.2286 291.66 87.1331 290.981 85.5802C289.66 85.3055 288.276 85.312 288.002 83.8364C288.727 83.2974 288.588 83.5577 288.947 82.8343C284.69 77.0035 284.08 72.668 281.183 66.1596C280.056 63.6229 277.601 60.3209 276.307 57.7293C275.948 56.1882 273.764 55.7879 273.034 54.8225C269.923 50.712 266.352 47.0476 262.998 43.1544C261.539 41.4589 260.273 39.3016 258.864 37.4989C255.87 33.6689 252.29 30.1197 250.404 25.567C249.198 21.7203 248.69 17.7555 247.224 13.9804C245.961 10.7334 240.727 9.6557 241.671 5.96649C242.696 4.70562 242.989 4.63131 244.453 3.7807L244.895 3.52781L244.866 3.10003C244.02 2.39738 243.078 2.4034 241.953 2.23215Z"
+                    fill="url(#paint1_linear_1067_12)" />
+                <path
+                    d="M272.28 101.664C278.52 101.518 284.692 101.433 290.899 101.793C353.986 105.456 410.254 149.36 430.333 209.116C437.276 229.775 439.663 250.403 438.276 272.33C435.478 312.55 417.375 350.17 387.689 377.453C381.207 383.306 374.731 388.565 367.379 393.26C365.319 394.575 362.702 396.231 360.932 397.872C365.494 415.45 368.858 437.266 372.786 455.644C356.578 446.93 340.466 437.567 324.323 428.735C319.812 426.207 309.214 420.554 305.441 417.72C257.404 425.343 209.525 411.386 173.291 378.928C141.817 350.724 122.908 311.12 120.765 268.914C118.511 227.116 132.837 186.118 160.631 154.818C190.13 122.14 228.323 103.873 272.28 101.664Z"
+                    fill="url(#paint2_linear_1067_12)" />
+                <path
+                    d="M188.385 229.1C200.971 227.298 212.642 236.016 214.486 248.596C216.328 261.175 207.647 272.874 195.074 274.758C182.441 276.651 170.676 267.921 168.823 255.284C166.972 242.646 175.74 230.909 188.385 229.1Z"
+                    fill="white" />
+                <path
+                    d="M368.439 229.291C381.064 228.639 391.86 238.268 392.653 250.883C393.446 263.498 383.94 274.402 371.333 275.336C363.051 275.95 355.079 272.066 350.458 265.166C345.837 258.267 345.281 249.416 349.002 241.993C352.722 234.569 360.146 229.718 368.439 229.291Z"
+                    fill="white" />
+            </g>
+            <defs>
+                <linearGradient id="paint0_linear_1067_12" x1="49.6557" y1="434.411" x2="385.847" y2="201.121"
+                    gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#1D93F3" />
+                    <stop offset="1" stop-color="#5ED0FB" />
+                </linearGradient>
+                <linearGradient id="paint1_linear_1067_12" x1="373.417" y1="211.997" x2="505.263" y2="121.067"
+                    gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#5CCEFB" />
+                    <stop offset="1" stop-color="#73E5FD" />
+                </linearGradient>
+                <linearGradient id="paint2_linear_1067_12" x1="164.018" y1="371.939" x2="424.649" y2="191.879"
+                    gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#32A6F6" />
+                    <stop offset="1" stop-color="#64D5FC" />
+                </linearGradient>
+                <clipPath id="clip0_1067_12">
+                    <rect width="554" height="554" fill="white" />
+                </clipPath>
+            </defs>
+        </svg>
+    </button>
+
+    <!-- Include the widget JavaScript -->
+    <script src="/web-widget/choco-ai-widget.js" data-root-url="<%= rootUrl %>" data-position="bottom-right"></script>
+</body>
+
+</html>

@@ -1,0 +1,13 @@
+/* Lightweight runtime theme overrides.
+ *
+ * Purpose: replace "light-cyan" backgrounds that come from primary-50/100
+ * with a light lilac derived from the Choco brand color (#882DD7).
+ */
+
+.bg-primary-50 {
+  background-color: rgba(136, 45, 215, 0.10) !important;
+}
+
+.border-primary-100 {
+  border-color: rgba(136, 45, 215, 0.15) !important;
+}

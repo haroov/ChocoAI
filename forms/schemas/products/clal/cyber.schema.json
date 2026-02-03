@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.chocoinsurance.co.il/products/clal/cyber/2025-01.json",
+  "title": "Product schema - Clal Cyber (MVP wrapper over canonical)",
+  "allOf": [
+    {
+      "$ref": "https://schemas.chocoinsurance.co.il/canonical/clal/15943/2025-07.json"
+    }
+  ],
+  "description": "MVP: Cyber is validated as a subset of the canonical schema (Clal 15943) via the annex_a_cyber section."
+}

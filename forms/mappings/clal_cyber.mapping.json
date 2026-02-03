@@ -1,0 +1,13 @@
+{
+  "schemaId": "clal/15943/2025-07",
+  "pdf": {
+    "file": "Clal_CyberIns_form.pdf",
+    "mode": "coordinates",
+    "note": "MVP: derive cyber answers from canonical annex_a_cyber + business fields; fill by coordinates and append appendix."
+  },
+  "fields": [],
+  "appendix": {
+    "enabled": true,
+    "title": "Appendix - Cyber Proposal (Derived from Canonical JSON)"
+  }
+}

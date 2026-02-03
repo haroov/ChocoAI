@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=chocoai
+      - POSTGRES_USER=chocoai
+      - POSTGRES_PASSWORD=chocoai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chocoai -d chocoai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://chocoai:chocoai@db:5432/chocoai
+      - JWT_SECRET=123
+      - ADMIN_COOKIE_NAME=choco_admin
+      - ADMIN_JWT_TTL=12h
+      - OPENAI_API_KEY=sk-...
+      - LLM_PROVIDER=openai
+      - CHOCO_DASHBOARD_BASE=https://dashboardapi.chocoinsurance.com
+      - CHOCO_CAPTCHA_TOKEN=
+      - CHOCO_ENV=development
+      - PORT=8080
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - ROOT_URL=http://localhost:8080
+      - TWILIO_ACCOUNT_SID=
+      - TWILIO_AUTH_TOKEN=
+      - TWILIO_WHATSAPP_NUMBER=
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
