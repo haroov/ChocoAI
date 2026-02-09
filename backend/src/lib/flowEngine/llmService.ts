@@ -249,6 +249,9 @@ Example of empty fields:
     // Constrain extraction to the field(s) the assistant just asked about.
     // This prevents cross-field pollution (e.g., ID number being saved as zip/house_number,
     // or business name being saved as city/street) which can incorrectly complete stages.
+    let expectedFromLastQuestion = new Set<string>();
+    let looksLikeSingleAnswerForExpected = false;
+    let isReferralSourceReply = false;
     try {
       const fields = options.context.fieldsDescription || {};
       const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
@@ -282,9 +285,18 @@ Example of empty fields:
       if (/טלפון/i.test(lastQ)) addIfExists('business_phone', 'phone', 'user_phone', 'mobile_phone');
       if (/התפקיד\s*שלך\s*בעסק|זיקת\s*המציע/i.test(lastQ)) addIfExists('insured_relation_to_business');
       if (/לקוח\s*חדש|לקוח\s*(קיים|ותיק)|האם\s+אתה\s+לקוח/i.test(lastQ)) addIfExists('is_new_customer');
+      if (/איך\s*הגעת|הגעת\s*אלינו|מקור\s*(?:הפניה|פנייה)|referral\s*source/i.test(lastQ)) addIfExists('referral_source');
+      if (/שם\s*פרטי|השם\s*הפרטי|מה\s+השם\s+הפרטי/i.test(lastQ)) addIfExists('first_name');
+      if (/שם\s*משפחה|השם\s+משפחה|מה\s+שם\s+המשפחה/i.test(lastQ)) addIfExists('last_name');
 
       // If we know what we asked, prune aggressively for short / single-answer replies.
       const looksLikeSingleAnswer = msgIsMostlyDigits || (msgRaw.length <= 80 && !msgRaw.includes('\n'));
+      expectedFromLastQuestion = expected;
+      looksLikeSingleAnswerForExpected = looksLikeSingleAnswer;
+      // Track referral-source replies so later deterministic heuristics won't misinterpret "גוגל" etc as a name/segment.
+      if (expected.has('referral_source') && looksLikeSingleAnswer) {
+        isReferralSourceReply = true;
+      }
       if (expected.size > 0 && looksLikeSingleAnswer) {
         for (const k of Object.keys(json)) {
           if (!expected.has(k)) delete (json as any)[k];
@@ -308,6 +320,77 @@ Example of empty fields:
         }
       }
 
+      // - referral_source: if the assistant asked "איך הגעת אלינו?" and the reply is a short single answer,
+      // store the full message as referral_source and prevent cross-field pollution.
+      if (expected.has('referral_source') && hasField('referral_source')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          isReferralSourceReply = true;
+          json.referral_source = msgRaw;
+          for (const k of Object.keys(json)) {
+            if (k !== 'referral_source') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - first_name / last_name: if the assistant asked for a specific name field, map the whole reply deterministically.
+      // This prevents "last name overwrote first name" issues for single-token replies (e.g., "גפן").
+      const isSimpleHebrewToken = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
+      const splitHebrewTokens = (raw: string): string[] => raw
+        .replace(/[“”"׳״']/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .filter((x) => isSimpleHebrewToken(x));
+
+      if (expected.has('first_name') && hasField('first_name')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const toks = splitHebrewTokens(msgRaw);
+          if (toks.length === 2 && hasField('last_name')) {
+            json.first_name = toks[0];
+            json.last_name = toks[1];
+            for (const k of Object.keys(json)) {
+              if (!['first_name', 'last_name'].includes(k)) delete (json as any)[k];
+            }
+          } else {
+            json.first_name = msgRaw;
+            for (const k of Object.keys(json)) {
+              if (k !== 'first_name') delete (json as any)[k];
+            }
+          }
+        }
+      }
+
+      if (expected.has('last_name') && hasField('last_name')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const toks = splitHebrewTokens(msgRaw);
+          if (toks.length === 2 && hasField('first_name')) {
+            json.first_name = toks[0];
+            json.last_name = toks[1];
+            for (const k of Object.keys(json)) {
+              if (!['first_name', 'last_name'].includes(k)) delete (json as any)[k];
+            }
+          } else {
+            json.last_name = msgRaw;
+            for (const k of Object.keys(json)) {
+              if (k !== 'last_name') delete (json as any)[k];
+            }
+          }
+        }
+      }
+
       // - user_id: if the assistant asked for ID and the reply is a plain digit string, keep ONLY user_id.
       if ((expected.has('user_id') || expected.has('legal_id')) && msgIsMostlyDigits && msgDigits.length >= 8 && msgDigits.length <= 9) {
         if (hasField('user_id')) json.user_id = msgDigits;
@@ -315,6 +398,52 @@ Example of empty fields:
         for (const k of Object.keys(json)) {
           if (!['user_id', 'legal_id'].includes(k)) delete (json as any)[k];
         }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Guardrail: prevent accidental boolean defaults (false/true) from being "invented".
+    // Some models emit `false` for boolean fields even when the user did not answer that question.
+    // This is especially harmful in Topic-Split flows (e.g. Flow 02 coverages), because boolean presence
+    // can satisfy completion checks and skip questions.
+    try {
+      const msg = String(options.message || '').trim();
+      const msgLower = msg.toLowerCase();
+      const fieldTypes = options.context.fieldsType || {};
+
+      // Explicit yes/no tokens (Hebrew + EN) with safe boundaries (avoid "לאובדן").
+      const hasExplicitYesNo = (() => {
+        const head = msgLower.replace(/^[\s"'“”׳״]+/g, '').trim();
+        return /^(כן|לא|yes|no|y|n|true|false)(?=$|[\s,.:;!?()\[\]{}'"“”\-–—])/i.test(head)
+          || /(^|[\s,.:;!?()\[\]{}'"“”\-–—])(כן|לא|yes|no|true|false)(?=$|[\s,.:;!?()\[\]{}'"“”\-–—])/i.test(msgLower);
+      })();
+
+      const boolEvidence = (key: string, value: boolean): boolean => {
+        if (hasExplicitYesNo) return true;
+        if (looksLikeSingleAnswerForExpected && expectedFromLastQuestion.has(key)) return true;
+
+        // Field-specific negative/positive patterns for common SMB gate questions
+        if (key === 'has_employees') {
+          if (/(אין|ללא|בלי)\s+עובד/i.test(msg)) return value === false;
+          if (/(יש|מעסיק|מעסיקים|עובדים\s+שכירים)/i.test(msg)) return value === true;
+        }
+        if (key === 'has_products_activity') {
+          if (/(לא|אין|בלי).*(מייצר|מייבא|משווק|מפיץ|מוצרים\s*פיזיים)/i.test(msg)) return value === false;
+          if (/(מייצר|מייבא|משווק|מפיץ|מוצרים\s*פיזיים)/i.test(msg)) return value === true;
+        }
+        if (key === 'has_physical_premises') {
+          if (/(ללא|אין)\s+(מקום\s*פיזי|סניף|חנות|משרד|קליניקה|מחסן)/i.test(msg)) return value === false;
+          if (/(משרד|חנות|קליניקה|מחסן|מפעל|בית\s*מלאכה)/i.test(msg)) return value === true;
+        }
+
+        return false;
+      };
+
+      for (const [k, v] of Object.entries(json)) {
+        if (fieldTypes[k] !== 'boolean') continue;
+        if (typeof v !== 'boolean') continue;
+        if (!boolEvidence(k, v)) delete (json as any)[k];
       }
     } catch {
       // best-effort
@@ -458,7 +587,7 @@ Example of empty fields:
       const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
       const hasHebrew = /[\u0590-\u05FF]/.test(msg);
 
-      if (hasHebrew && (hasField('business_segment') || hasField('business_site_type'))) {
+      if (!isReferralSourceReply && hasHebrew && (hasField('business_segment') || hasField('business_site_type'))) {
         const currentSeg = String(json.business_segment || '').trim();
         const shouldTrySegment = !currentSeg || currentSeg.length <= 5 || /דין/.test(currentSeg);
         if (shouldTrySegment) {
@@ -487,7 +616,9 @@ Example of empty fields:
 
       // Hebrew name extraction (works when user provides name+phone in first message).
       // IMPORTANT: do NOT attempt to infer names from customer-status replies like "לקוח חדש".
-      if (!isCustomerStatusReply && hasHebrew && (hasField('first_name') || hasField('last_name')) && !(json.first_name || json.last_name)) {
+      // Also: if the assistant asked for referral_source ("איך הגעת אלינו?") and the user replied "גוגל"/etc,
+      // do NOT treat that token as a personal name.
+      if (!isReferralSourceReply && !isCustomerStatusReply && hasHebrew && (hasField('first_name') || hasField('last_name')) && !(json.first_name || json.last_name)) {
         const head = msg.split(/(?:נייד|טלפון|phone|email|אימייל|מייל|@|\d)/i)[0] || msg;
         const chunks = head.split(/[,;\n]+/).map((c) => c.trim()).filter(Boolean);
         const stop = new Set([

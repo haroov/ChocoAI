@@ -98,8 +98,8 @@ function rewriteBooleanEqualityComparisons(compiledJs: string): string {
   //
   // We rewrite strict boolean equality comparisons into tolerant checks using only helpers already available
   // in the kseval scope: `__present` and standard JS string coercion.
-  const TRUE_TOKENS = "['true','1','כן','חדש','new','y','yes']";
-  const FALSE_TOKENS = "['false','0','לא','קיים','existing','n','no']";
+  const TRUE_TOKENS = '["true","1","כן","חדש","new","y","yes"]';
+  const FALSE_TOKENS = '["false","0","לא","קיים","existing","n","no"]';
 
   const trueRe = /\buserData\.([A-Za-z_][A-Za-z0-9_]*)\s*===\s*true\b/g;
   const falseRe = /\buserData\.([A-Za-z_][A-Za-z0-9_]*)\s*===\s*false\b/g;
@@ -178,6 +178,32 @@ export function buildProcessCompletionExpression(procFile: RawProcessFileLike): 
 
   const questions: RawQuestion[] = Array.isArray(procFile?.questions) ? procFile.questions : [];
 
+  const presenceExprForField = (fieldKey: string): string => {
+    const k = String(fieldKey || '').trim();
+    if (!k) return 'false';
+
+    // Stricter validity for known fields to prevent premature completion on placeholders/internal ids.
+    if (k === 'user_id') {
+      // Israeli national ID: 9 digits (after stripping non-digits).
+      // Do NOT accept UUIDs or arbitrary strings.
+      return '(__present(userData.user_id)'
+        + ' && /^[0-9\\s\\-\\.]+$/.test(String(userData.user_id).trim())'
+        + ' && String(userData.user_id).replace(/\\D/g, \'\').length === 9)';
+    }
+    if (k === 'insured_relation_to_business') {
+      // Must be one of the known options (Hebrew or English fallbacks).
+      const TOKENS = '["בעלים","מורשה חתימה","מנהל","אחר","owner","authorized signer","manager","other"]';
+      return '(__present(userData.insured_relation_to_business)'
+        + ` && __includes(${TOKENS}, String(userData.insured_relation_to_business).trim().toLowerCase()))`;
+    }
+    if (k === 'referral_source') {
+      // Require a non-trivial string (avoid single-char / placeholders).
+      return '(__present(userData.referral_source) && String(userData.referral_source).trim().length >= 2)';
+    }
+
+    return `__present(userData.${k})`;
+  };
+
   const reqChecks: string[] = [];
   for (const q of questions) {
     if (!q) continue;
@@ -206,7 +232,7 @@ export function buildProcessCompletionExpression(procFile: RawProcessFileLike): 
     }
 
     if (!isRequiredNowExpr) continue;
-    reqChecks.push(`(!(${isRequiredNowExpr}) || __present(userData.${fieldKey}))`);
+    reqChecks.push(`(!(${isRequiredNowExpr}) || ${presenceExprForField(fieldKey)})`);
   }
 
   const allRequiredSatisfiedExpr = reqChecks.length ? reqChecks.join(' && ') : 'true';

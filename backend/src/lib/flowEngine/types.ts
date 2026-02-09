@@ -30,6 +30,8 @@ export type ProcessMessageResult = {
 export type FieldsExtractionContext = {
   /** Descriptions of fields to extract, keyed by field slug */
   fieldsDescription: Record<string, string>;
+  /** Field primitive types (string/number/boolean) keyed by field slug */
+  fieldsType?: Record<string, 'string' | 'number' | 'boolean'>;
   /** Description of the current stage */
   stageDescription: string;
   /** Optional prompt for additional context */

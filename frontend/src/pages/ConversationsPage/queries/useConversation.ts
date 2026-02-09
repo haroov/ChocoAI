@@ -35,7 +35,7 @@ export const useConversation = (conversationId: string) => {
 export type ConversationDetails = {
   user?: User;
   conversation: Omit<ConversationListItem, 'messages' | 'user'> & { messages: Message[] };
-  userData?: Record<string, string>;
+  userData?: Record<string, unknown>;
   activeFlow: {
     name: string;
     slug: string;
@@ -44,7 +44,10 @@ export type ConversationDetails = {
     stages: Array<{
       slug: string;
       name?: string;
+      description?: string;
       isCompleted: boolean;
+      fieldsToCollect?: string[];
+      kind?: 'user' | 'system' | 'error';
     }>;
   } | null;
   completedFlows: Array<{
@@ -55,7 +58,10 @@ export type ConversationDetails = {
     stages: Array<{
       slug: string;
       name?: string;
+      description?: string;
       isCompleted: boolean;
+      fieldsToCollect?: string[];
+      kind?: 'user' | 'system' | 'error';
     }>;
   }>;
   log: Array<{

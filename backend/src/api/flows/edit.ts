@@ -3,6 +3,8 @@ import { prisma } from '../../core';
 import { FlowSchema } from '../../lib/flowEngine';
 import { validateFlowSchemaPayload } from './helpers/validateFlowSchemaPayload';
 import { syncFlowToFiles } from './helpers/syncFlowToFiles';
+import fs from 'node:fs';
+import { buildTopicSplitProcessPrompt } from '../../lib/flowEngine/builtInFlows/chocoClalSmbTopicSplitProcessFlows';
 
 registerRoute('put', '/api/v1/flows/:id', async (req, res) => {
   try {
@@ -208,6 +210,37 @@ registerRoute('put', '/api/v1/flows/:id', async (req, res) => {
     let fileSync: any = { ok: false, skipped: true, reason: 'disabled' };
     if (shouldSyncToFiles) {
       fileSync = syncFlowToFiles({ flowId: id, schema, renames });
+    }
+
+    // Live prompt regeneration for Topic-Split process flows:
+    // When a user edits a flow in Settings (e.g., priorities/descriptions),
+    // we sync to the process JSON file and then re-generate the `main.prompt`
+    // so the runtime behavior updates immediately without requiring a server restart.
+    try {
+      const slug = String(schema?.slug || '').trim();
+      const isTopicSplit = /^flow_(0[1-9]|1[0-9]|2[0-3])_/.test(slug);
+      if (isTopicSplit && fileSync?.ok === true && Array.isArray(fileSync?.writtenFiles)) {
+        const processKey = slug.slice('flow_'.length);
+        const procPath = (fileSync.writtenFiles as string[])
+          .find((p: string) => p.endsWith(`${processKey}.json`) && p.includes('chocoClalSmbTopicSplit'));
+        if (procPath && fs.existsSync(procPath)) {
+          const raw = fs.readFileSync(procPath, 'utf8');
+          const procFile = JSON.parse(raw);
+          const prompt = buildTopicSplitProcessPrompt(procFile);
+          const currentMain = (schema as any)?.definition?.stages?.main || {};
+          (schema as any).definition.stages.main = { ...currentMain, prompt };
+
+          // Persist the regenerated prompt immediately.
+          await prisma.flow.update({
+            where: { id },
+            data: {
+              definition: (schema as any).definition,
+            },
+          });
+        }
+      }
+    } catch {
+      // best-effort; never block saving
     }
 
     if (fileSync?.ok === false && !fileSync?.skipped) {

@@ -25,6 +25,7 @@ import { switchCaseGuard } from '../../utils/switchCaseGuard';
 import { prisma } from '../../core/prisma';
 import { GuidestarOrganisation, OrganisationRegion, USAOrganisation } from '../../types/kycOrganisation';
 import { FieldDefinition, FieldsExtractionContext, FlowDefinition } from './types';
+import { inferFirstLastFromText, isBadNameValue, repairNameFieldsFromInference } from './nameInference';
 
 class FlowHelpers {
   private isAutoPopulating = false;
@@ -38,6 +39,7 @@ class FlowHelpers {
 
   generateExtractionContext(fields: FlowDefinition['fields'], stageDescription: string): FieldsExtractionContext {
     const fieldsDescription: Record<string, string> = {};
+    const fieldsType: Record<string, 'string' | 'number' | 'boolean'> = {};
     const zodSchemaObject: Record<string, z.ZodTypeAny> = {};
 
     Object.entries(fields).forEach(([key, field]) => {
@@ -63,11 +65,15 @@ class FlowHelpers {
       }
 
       fieldsDescription[key] = field.description;
+      if (field.type === 'boolean' || field.type === 'number' || field.type === 'string') {
+        fieldsType[key] = field.type;
+      }
       zodSchemaObject[key] = rule.nullish();
     });
 
     return {
       fieldsDescription,
+      fieldsType,
       stageDescription,
       zodSchema: z.object(zodSchemaObject),
     };
@@ -330,91 +336,42 @@ class FlowHelpers {
     }
 
     // === Name fallback inference (when user sent full name but extraction missed part) ===
-    // This is intentionally conservative: only fills missing name fields, never overwrites explicit values.
-    const inferFirstLastFromText = (text: string): { first: string | null; last: string | null } => {
-      const raw = String(text || '').replace(/\s+/g, ' ').trim();
-      if (!raw) return { first: null, last: null };
-
-      // Cut at common separators/labels (phone/email) so we keep just the name portion.
-      const cutKeywords = /(,|\n|(?:\bנייד\b)|(?:\bטלפון\b)|(?:\bאימייל\b)|(?:\bמייל\b)|(?:\bemail\b)|(?:\bphone\b)|@|\d)/i;
-      const idx = raw.search(cutKeywords);
-      const head = (idx >= 0 ? raw.slice(0, idx) : raw).trim();
-      if (!head) return { first: null, last: null };
-
-      const heToken = (t: string): boolean => /^[\u0590-\u05FF]{2,}$/.test(t);
-      const normalizeChunk = (s: string): string => String(s || '')
-        .replace(/[“”"׳״']/g, '')
-        .replace(/^(שמי|שם|קוראים לי|אני)\s*[:\-–—]?\s*/i, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      // Prefer parsing the last comma-separated chunk, e.g.
-      // "..., ליאב גפן, נייד 050..." -> "ליאב גפן"
-      const chunks = head
-        .split(/[,;\n]+/)
-        .map((c) => normalizeChunk(c))
-        .filter(Boolean);
-
-      const stop = new Set<string>([
-        // greetings
-        'הי', 'היי', 'שלום', 'אהלן', 'הלו',
-        'אני', 'צריך', 'רוצה', 'מבקש', 'הצעת', 'הצעה', 'ביטוח', 'לעסק', 'לעסקי',
-        'משרד', 'עורך', 'עורכי', 'דין', 'עו״ד', 'עו"ד',
-      ]);
-
-      const parseChunk = (chunk: string): { first: string | null; last: string | null } => {
-        const tokens = chunk
-          .split(/\s+/)
-          .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
-          .filter(Boolean);
-
-        const he = tokens
-          .filter((t) => heToken(t))
-          .filter((t) => !stop.has(t));
-
-        if (he.length >= 2) {
-          // Use last two Hebrew tokens as name (common in Hebrew: "<first> <last>")
-          return { first: he[he.length - 2], last: he[he.length - 1] };
-        }
-        if (he.length === 1) {
-          return { first: he[0], last: null };
-        }
-        return { first: null, last: null };
-      };
-
-      for (let i = chunks.length - 1; i >= 0; i -= 1) {
-        const parsed = parseChunk(chunks[i]);
-        if (parsed.first) return parsed;
-      }
-
-      // Regex fallback: "שמי <first> <last>" embedded in a longer sentence
-      const m = head.match(/(?:שמי|קוראים לי)\s+([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})/);
-      if (m) {
-        const first = String(m[1] || '').trim();
-        const last = String(m[2] || '').trim();
-        if (first && last) return { first, last };
-      }
-
-      // Final fallback: use the first 2-5 tokens of the head (legacy behavior)
-      const cleaned = normalizeChunk(head);
-      if (!cleaned) return { first: null, last: null };
-
-      const tokens = cleaned
-        .split(/\s+/)
-        .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
-        .filter(Boolean)
-        .filter((t) => !/^(נייד|טלפון|אימייל|מייל)$/i.test(t));
-
-      // Avoid garbage / too-long strings
-      if (tokens.length < 2 || tokens.length > 5) return { first: null, last: null };
-
-      const first = tokens[0];
-      const last = tokens.slice(1).join(' ').trim();
-      if (!first || !last) return { first: null, last: null };
-      return { first, last };
-    };
+    // Implemented in `nameInference.ts` (shared + unit-tested).
 
     const augmentedData: Record<string, unknown> = { ...data };
+
+    // Guardrail: referral_source answers like "גוגל" can be mistakenly inferred as a first name by heuristics.
+    // If referral_source is present in this update, never let it overwrite first-name fields.
+    try {
+      const rs = String((augmentedData as any).referral_source ?? '').trim();
+      if (rs) {
+        const rsLower = rs.toLowerCase();
+        const referralTokens = new Set([
+          'גוגל', 'google',
+          'פייסבוק', 'facebook',
+          'אינסטגרם', 'instagram',
+          'טיקטוק', 'tiktok',
+          'לינקדאין', 'linkedin',
+          'המלצה', 'ממליצים', 'recommendation',
+          'סוכן', 'agent',
+          'פרסום', 'ads', 'ad',
+        ]);
+        const shouldDropIfSeen = (val: unknown): boolean => {
+          const v = String(val ?? '').trim();
+          if (!v) return false;
+          const vLower = v.toLowerCase();
+          return v === rs || referralTokens.has(vLower) || (referralTokens.has(rsLower) && referralTokens.has(vLower));
+        };
+        for (const k of ['first_name', 'user_first_name', 'proposer_first_name'] as const) {
+          if (k in augmentedData && shouldDropIfSeen((augmentedData as any)[k])) {
+            delete (augmentedData as any)[k];
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     const mightNeedNameInference = !!conversationId && (
       'proposer_first_name' in augmentedData ||
       'proposer_last_name' in augmentedData ||
@@ -436,38 +393,39 @@ class FlowHelpers {
     if (mightNeedNameInference) {
       try {
         const current = await this.getUserData(userId, flowId);
-        const isBadName = (v: unknown): boolean => {
-          const s = String(v ?? '').trim();
-          if (!s) return false;
-          const lowered = s.toLowerCase();
-          if (['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey'].includes(lowered)) return true;
-          // Contact labels / common non-names (seen in real conversations when users paste "name + phone + email")
-          if ([
-            'נייד', 'טלפון', 'מספר', 'מספר טלפון', 'פלאפון', 'נייד:',
-            'אימייל', 'מייל', 'דוא״ל', 'דואל', 'אמייל', 'email', 'e-mail', 'mail', 'phone',
-          ].includes(lowered)) return true;
-          // If it contains digits / @ it's definitely not a name token.
-          if (/\d/.test(s) || /@/.test(s)) return true;
-          return false;
-        };
+        const isBadName = isBadNameValue;
         const isValidEmail = (v: unknown): boolean => {
           const s = String(v ?? '').trim();
           if (!s) return false;
           // Minimal email sanity: local@domain.tld
           return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
         };
-        const needProposerFirst = (!current.proposer_first_name && !augmentedData.proposer_first_name)
-          || isBadName(augmentedData.proposer_first_name);
-        const needProposerLast = (!current.proposer_last_name && !augmentedData.proposer_last_name)
-          || isBadName(augmentedData.proposer_last_name);
-        const needFirst = (!current.first_name && !augmentedData.first_name)
-          || isBadName(augmentedData.first_name);
-        const needLast = (!current.last_name && !augmentedData.last_name)
-          || isBadName(augmentedData.last_name);
-        const needUserFirst = (!current.user_first_name && !augmentedData.user_first_name)
-          || isBadName(augmentedData.user_first_name);
-        const needUserLast = (!current.user_last_name && !augmentedData.user_last_name)
-          || isBadName(augmentedData.user_last_name);
+        const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+        const isMissingOrBad = (val: unknown): boolean => {
+          const s = String(val ?? '').trim();
+          if (!s) return true;
+          return isBadName(s);
+        };
+        const isExplicitGood = (key: string): boolean => {
+          if (!(key in augmentedData)) return false;
+          const v = (augmentedData as any)[key];
+          const s = String(v ?? '').trim();
+          if (!s) return false;
+          return !isBadName(s);
+        };
+
+        const needProposerFirst = !isExplicitGood('proposer_first_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.proposer_first_name, current.proposer_first_name));
+        const needProposerLast = !isExplicitGood('proposer_last_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.proposer_last_name, current.proposer_last_name));
+        const needFirst = !isExplicitGood('first_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.first_name, current.first_name));
+        const needLast = !isExplicitGood('last_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.last_name, current.last_name));
+        const needUserFirst = !isExplicitGood('user_first_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.user_first_name, current.user_first_name));
+        const needUserLast = !isExplicitGood('user_last_name')
+          && isMissingOrBad(pickNonEmpty(augmentedData.user_last_name, current.user_last_name));
         const needProposerEmail = !isValidEmail(current.proposer_email) && !isValidEmail(augmentedData.proposer_email);
         const needEmail = !isValidEmail(current.email) && !isValidEmail(augmentedData.email);
 
@@ -481,40 +439,11 @@ class FlowHelpers {
 
           // Infer names
           const inferred = inferFirstLastFromText(lastText);
-          const shouldRepairNames = Boolean(inferred.first && inferred.last)
-            && (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast);
-
-          if (shouldRepairNames) {
-            // If any name slot looks missing/invalid, repair BOTH first+last from the message.
-            // This fixes cases like last_name="נייד" or swapped partials.
-            const first = inferred.first!;
-            const last = inferred.last!;
-            if (needProposerFirst || isBadName(augmentedData.proposer_first_name)) augmentedData.proposer_first_name = first;
-            if (needProposerLast || isBadName(augmentedData.proposer_last_name)) augmentedData.proposer_last_name = last;
-            if (needFirst || isBadName(augmentedData.first_name)) augmentedData.first_name = first;
-            if (needLast || isBadName(augmentedData.last_name)) augmentedData.last_name = last;
-            if (needUserFirst || isBadName(augmentedData.user_first_name)) augmentedData.user_first_name = first;
-            if (needUserLast || isBadName(augmentedData.user_last_name)) augmentedData.user_last_name = last;
-          } else {
-            // Partial inference: fill only missing/bad slots.
-            if (inferred.first) {
-              if (needProposerFirst) augmentedData.proposer_first_name = inferred.first;
-              if (needFirst) augmentedData.first_name = inferred.first;
-              if (needUserFirst) augmentedData.user_first_name = inferred.first;
-            }
-            if (inferred.last) {
-              if (needProposerLast) augmentedData.proposer_last_name = inferred.last;
-              if (needLast) augmentedData.last_name = inferred.last;
-              if (needUserLast) augmentedData.user_last_name = inferred.last;
-            } else {
-              // If extractor put full name into proposer_first_name, split it conservatively.
-              const pf = String(augmentedData.proposer_first_name ?? '').replace(/\s+/g, ' ').trim();
-              if (pf && needProposerLast && pf.split(' ').length >= 2) {
-                const parts = pf.split(' ');
-                augmentedData.proposer_first_name = parts[0];
-                augmentedData.proposer_last_name = parts.slice(1).join(' ');
-              }
-            }
+          if (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast) {
+            // Key fix: if *either* side of a name pair is missing/bad, repair BOTH together for that slot.
+            // This prevents states like: user_first_name="גפן", user_last_name="נייד" after a contact-block paste.
+            const repaired = repairNameFieldsFromInference({ current, augmented: augmentedData, inferred });
+            Object.assign(augmentedData, repaired);
           }
 
           // Infer email if missing/invalid

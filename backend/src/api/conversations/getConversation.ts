@@ -6,7 +6,10 @@ import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 type UiFlowStage = {
   slug: string;
   name?: string;
+  description?: string;
   isCompleted: boolean;
+  fieldsToCollect: string[];
+  kind: 'user' | 'system' | 'error';
 };
 
 type UiFlow = {
@@ -19,11 +22,63 @@ type UiFlow = {
 
 const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowStage[] => {
   const stagesObj = definition?.stages || {};
-  return Object.entries(stagesObj).map(([stageSlug, stageDef]: any) => ({
-    slug: stageSlug,
-    name: stageDef?.name,
-    isCompleted: completedStageSlugs.has(stageSlug),
-  }));
+
+  const sortFieldsByUiPolicy = (fieldSlugs: string[]): string[] => {
+    const mode = String(definition?.config?.ui?.fieldsSort || '').trim();
+    if (mode !== 'priorityAsc') return fieldSlugs;
+    const fields = definition?.fields || {};
+    const pr = (slug: string): number => {
+      const n = Number(fields?.[slug]?.priority);
+      return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+    };
+    return [...fieldSlugs].sort((a, b) => {
+      const ap = pr(a);
+      const bp = pr(b);
+      if (ap !== bp) return ap - bp;
+      return String(a).localeCompare(String(b));
+    });
+  };
+
+  const inferKind = (stageSlug: string, stageDef: any): UiFlowStage['kind'] => {
+    const slug = String(stageSlug || '').trim().toLowerCase();
+    if (slug === 'error') return 'error';
+    if (['route', 'resolvesegment', 'decidenextstep'].includes(slug)) return 'system';
+
+    const desc = String(stageDef?.description || '').trim();
+    if (/^system\s*:/i.test(desc)) return 'system';
+
+    const prompt = String(stageDef?.prompt || '').trim();
+    if (/CRITICAL:\s*This stage should NOT generate a response message\./i.test(prompt)) return 'system';
+
+    return 'user';
+  };
+
+  const extractRequiredFields = (stageDef: any): string[] => {
+    const cond = String(stageDef?.orchestration?.customCompletionCheck?.condition || '').trim();
+    if (!cond) return Array.isArray(stageDef?.fieldsToCollect) ? stageDef.fieldsToCollect : [];
+
+    const out = new Set<string>();
+    const re = /__present\s*\(\s*userData\.([A-Za-z_][A-Za-z0-9_]*)\s*\)/g;
+    for (const match of cond.matchAll(re)) {
+      if (match?.[1]) out.add(String(match[1]));
+    }
+    return Array.from(out);
+  };
+
+  return Object.entries(stagesObj)
+    .map(([stageSlug, stageDef]: any) => {
+      const kind = inferKind(stageSlug, stageDef);
+      return ({
+        slug: stageSlug,
+        name: stageDef?.name,
+        description: stageDef?.description,
+        isCompleted: completedStageSlugs.has(stageSlug),
+        fieldsToCollect: sortFieldsByUiPolicy(extractRequiredFields(stageDef)),
+        kind,
+      });
+    })
+    // Hide internal/system/error stages in UI (as requested).
+    .filter((s) => s.kind === 'user');
 };
 
 registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Response) => {
@@ -88,9 +143,26 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       try {
         const bad = new Set(['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey']);
         const first = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
+        const last = String((userData as any).user_last_name || (userData as any).last_name || '').trim();
         const lowered = first.toLowerCase();
-        const needsRepair = first && (bad.has(lowered) || lowered === 'לקוח');
-        if (needsRepair) {
+        const referralTokens = new Set([
+          'גוגל', 'google',
+          'פייסבוק', 'facebook',
+          'אינסטגרם', 'instagram',
+          'טיקטוק', 'tiktok',
+          'לינקדאין', 'linkedin',
+          'המלצה', 'recommendation',
+          'סוכן', 'agent',
+        ]);
+        const referral = String((userData as any).referral_source || '').trim();
+        const needsRepair = first && (
+          bad.has(lowered)
+          || lowered === 'לקוח'
+          || (referral && referral === first && referralTokens.has(lowered))
+        );
+        const missingLastName = !!first && !last;
+
+        if (needsRepair || missingLastName) {
           const texts = (conversation.messages || [])
             .filter((m) => m.role === 'user')
             .map((m) => String(m.content || ''))
@@ -100,12 +172,21 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           const m = joined.match(/(?:^|[,\n|]\s*)([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})(?=\s*(?:[,\n|]|$))/);
           const inferredFirst = m ? String(m[1] || '').trim() : '';
           const inferredLast = m ? String(m[2] || '').trim() : '';
-          if (inferredFirst && inferredFirst !== first) {
+          const shouldRepairMissingLast = missingLastName && inferredFirst && inferredLast && (
+            first === inferredLast || inferredFirst !== first
+          );
+          if ((needsRepair || shouldRepairMissingLast) && inferredFirst && inferredFirst !== first) {
             await flowHelpers.setUserData(userId, overlayFlowId || activeUserFlow?.flow?.id || '', {
               first_name: inferredFirst,
               ...(inferredLast ? { last_name: inferredLast } : {}),
             }, conversation.id);
             // Refresh local snapshot for response
+            userData = await flowHelpers.getUserData(userId, overlayFlowId);
+          } else if (shouldRepairMissingLast && inferredLast) {
+            // Only set missing last name if first name looks plausible but last name is missing.
+            await flowHelpers.setUserData(userId, overlayFlowId || activeUserFlow?.flow?.id || '', {
+              last_name: inferredLast,
+            }, conversation.id);
             userData = await flowHelpers.getUserData(userId, overlayFlowId);
           }
         }

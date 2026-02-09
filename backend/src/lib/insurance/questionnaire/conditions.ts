@@ -82,8 +82,8 @@ function prefixIdentifiersWithUserData(expr: string): string {
 function rewriteBooleanEqualityComparisons(compiledJs: string): string {
   // Same rationale as topic-split compiler:
   // tolerate boolean-like values persisted as strings (or numbered selects), so `a = true` works even if a="true".
-  const TRUE_TOKENS = "['true','1','כן','חדש','new','y','yes']";
-  const FALSE_TOKENS = "['false','0','לא','קיים','existing','n','no']";
+  const TRUE_TOKENS = '["true","1","כן","חדש","new","y","yes"]';
+  const FALSE_TOKENS = '["false","0","לא","קיים","existing","n","no"]';
 
   const trueRe = /\buserData\.([A-Za-z_][A-Za-z0-9_]*)\s*===\s*true\b/g;
   const falseRe = /\buserData\.([A-Za-z_][A-Za-z0-9_]*)\s*===\s*false\b/g;

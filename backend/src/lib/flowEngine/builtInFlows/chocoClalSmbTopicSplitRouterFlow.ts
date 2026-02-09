@@ -88,6 +88,27 @@ function uniq<T>(arr: T[]): T[] {
   return Array.from(new Set(arr.filter((x: any) => x !== undefined && x !== null && x !== '')));
 }
 
+function normalizePriority(v: unknown): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+}
+
+function orderQuestionsByUiPolicy(procFile: RawProcessFile, questions: any[]): any[] {
+  // Topic-split flows are orchestrated by priority; always present questions ordered by priority
+  // to match the Settings "Priority" field and reduce LLM ambiguity.
+  return [...questions].sort((a: any, b: any) => {
+    const ap = normalizePriority(a?.priority);
+    const bp = normalizePriority(b?.priority);
+    if (ap !== bp) return ap - bp;
+    const ak = String(a?.field_key_en || '');
+    const bk = String(b?.field_key_en || '');
+    if (ak !== bk) return ak.localeCompare(bk);
+    const aq = String(a?.q_id || '');
+    const bq = String(b?.q_id || '');
+    return aq.localeCompare(bq);
+  });
+}
+
 function simplifyQuestions(rawQuestions: any[]): any[] {
   return (rawQuestions || []).map((q) => ({
     q_id: q.q_id,
@@ -145,7 +166,7 @@ function buildProcessPrompt(procFile: RawProcessFile): string {
   const askIf = p.ask_if ? p.ask_if : '—';
   const audience = p.audience || 'customer';
 
-  const questions = simplifyQuestions(procFile.questions || []);
+  const questions = orderQuestionsByUiPolicy(procFile, simplifyQuestions(procFile.questions || []));
   const validators = procFile.validators || [];
   const handoff = procFile.handoff_triggers || [];
   const attachments = procFile.attachments_checklist || [];
@@ -238,18 +259,19 @@ function buildFlowComponents() {
     const stageSlug = `p${procKey}`;
     const nextStageSlug = i < procFiles.length - 1 ? `p${procFiles[i + 1].process.process_key}` : 'done';
 
-    const questions = simplifyQuestions(procFile.questions || []);
-    const questionFieldKeys = uniq(questions.map((q: any) => q.field_key_en).filter(Boolean) as string[]);
+    const questions = orderQuestionsByUiPolicy(procFile, simplifyQuestions(procFile.questions || []));
+    const customerQuestions = questions.filter((q: any) => String(q?.audience || 'customer') === 'customer');
+    const questionFieldKeys = uniq(customerQuestions.map((q: any) => q.field_key_en).filter(Boolean) as string[]);
     const fields = uniq([...questionFieldKeys]);
 
     // Register dynamic fields
-    for (const q of questions) {
+    for (const q of customerQuestions) {
       if (q.field_key_en) {
         const override = (procFile as any)?.field_schemas?.[q.field_key_en];
         fieldDefinitions[q.field_key_en] = {
           type: override?.type || mapDataTypeToFieldType(q.data_type),
           description: override?.description || q.question_he || q.field_key_en,
-          priority: override?.priority ?? q.priority,
+          priority: normalizePriority(override?.priority ?? q.priority),
         };
       }
     }

@@ -3,6 +3,11 @@ import { logger } from '../../../../utils/logger';
 import { flowHelpers } from '../../flowHelpers';
 import { ToolExecutor, ToolResult } from '../types';
 import { insuranceRouterNextTool } from '../../../insurance/flowRouter/routerTool';
+import fs from 'fs';
+import path from 'path';
+import kseval from 'kseval';
+import MANIFEST_JSON from '../../builtInFlows/chocoClalSmbTopicSplit/MANIFEST.PROD.json';
+import { buildProcessCompletionExpression } from '../../builtInFlows/chocoClalSmbTopicSplitCompletion';
 
 function uniqStrings(items: string[]): string[] {
   return Array.from(new Set(items.map((x) => String(x || '').trim()).filter(Boolean)));
@@ -27,6 +32,56 @@ function looksLikeMostlyDigits(v: unknown): boolean {
   if (!s) return false;
   const digits = s.replace(/\D/g, '');
   return digits.length >= 6 && digits.length === s.replace(/\s+/g, '').length;
+}
+
+const MANIFEST: any = MANIFEST_JSON as any;
+
+function __present(v: unknown): boolean {
+  if (v === undefined || v === null) return false;
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (!s) return false;
+    const lowered = s.toLowerCase();
+    if (lowered === 'null' || lowered === ':null' || lowered === 'undefined' || lowered === ':undefined') return false;
+    return true;
+  }
+  if (Array.isArray(v)) return v.length > 0;
+  // boolean false is a valid answer
+  return true;
+}
+
+function __includes(container: unknown, needle: unknown): boolean {
+  if (container === null || container === undefined) return false;
+  const n = String(needle ?? '');
+  if (!n) return false;
+  if (Array.isArray(container)) return container.map(String).includes(n);
+  if (typeof container === 'string') return container.includes(n);
+  return false;
+}
+
+function loadProcessFileForKey(processKey: string): any | null {
+  const procMeta = (MANIFEST?.processes || []).find((p: any) => String(p?.process_key) === String(processKey));
+  const file = String(procMeta?.file || '').trim();
+  if (!file) return null;
+  try {
+    const p = path.join(__dirname, '../../builtInFlows/chocoClalSmbTopicSplit', file);
+    const raw = fs.readFileSync(p, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function isProcessActuallyComplete(processKey: string, userData: Record<string, unknown>): boolean | null {
+  if (!kseval.native) return null;
+  const procFile = loadProcessFileForKey(processKey);
+  if (!procFile) return null;
+  try {
+    const expr = buildProcessCompletionExpression(procFile);
+    return Boolean(kseval.native.evaluate(expr, { userData, __present, __includes }));
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -75,6 +130,54 @@ export const insuranceMarkProcessCompleteTool: ToolExecutor = async (
     const completed = Array.isArray((mergedUserData as any).completed_processes)
       ? (mergedUserData as any).completed_processes.map(String)
       : [];
+
+    // --- Guardrail: prevent routing out of a process when it's not actually complete ---
+    // We observed rare states where the UI / flowHistory indicated completion but required fields were still missing
+    // (e.g., conditional fields, cross-flow overlay inconsistencies, or extraction edge cases).
+    //
+    // Before we mutate completed_processes and route, re-evaluate the process completion expression against current userData.
+    // If it fails, bounce back to the process main stage so the assistant continues collecting the missing info.
+    const actuallyComplete = isProcessActuallyComplete(processKey, mergedUserData as any);
+    if (actuallyComplete === false) {
+      logger.warn('[insurance.markProcessComplete] Process not complete; bouncing back to main stage', {
+        conversationId,
+        userId: convo.userId,
+        currentFlowSlug,
+        processKey,
+      });
+
+      // Roll back UI "completed" marker for the user stage (usually `main`) in this session.
+      // Without this, the admin UI may show the flow as Completed even though we are resuming it.
+      try {
+        await prisma.flowHistory.deleteMany({
+          where: {
+            userId: convo.userId,
+            flowId: userFlow.flowId,
+            sessionId: userFlow.id,
+            stage: { in: ['main'] },
+          },
+        });
+      } catch {
+        // best-effort
+      }
+
+      // Stay in current flow and return to main stage.
+      await prisma.userFlow.update({
+        where: { id: userFlow.id },
+        data: { flowId: userFlow.flowId, stage: 'main' },
+      });
+
+      return {
+        success: true,
+        data: {
+          repaired: true,
+          reason: 'process_incomplete',
+          targetFlowSlug: currentFlowSlug,
+          targetStage: 'main',
+          processKey,
+        },
+      };
+    }
 
     // --- Guardrail: prevent accidental completion due to polluted fields ---
     // We observed cases where a single answer (e.g., user_id or business_name) polluted

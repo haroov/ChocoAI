@@ -132,5 +132,37 @@ describe('topic-split process completion expression', () => {
     const expr = buildProcessCompletionExpression(procFile);
     expect(evalExpr(expr, { a: 'ok' })).toBe(true);
   });
+
+  test('user_id requires 9 digits (prevents premature completion on internal ids)', () => {
+    const procFile = {
+      process: { audience: 'customer', ask_if: null },
+      questions: [
+        { field_key_en: 'user_id', required_mode: 'required', input_type: 'text' },
+      ],
+    };
+    const expr = buildProcessCompletionExpression(procFile);
+
+    expect(evalExpr(expr, {})).toBe(false);
+    expect(evalExpr(expr, { user_id: 'cml8j4wiz0000p6nhdygno04f' })).toBe(false);
+    expect(evalExpr(expr, { user_id: '12345678' })).toBe(false);
+    expect(evalExpr(expr, { user_id: '123456789' })).toBe(true);
+    expect(evalExpr(expr, { user_id: '123-456-789' })).toBe(true);
+  });
+
+  test('insured_relation_to_business must be one of allowed options', () => {
+    const procFile = {
+      process: { audience: 'customer', ask_if: null },
+      questions: [
+        { field_key_en: 'insured_relation_to_business', required_mode: 'required', input_type: 'select' },
+      ],
+    };
+    const expr = buildProcessCompletionExpression(procFile);
+
+    expect(evalExpr(expr, {})).toBe(false);
+    expect(evalExpr(expr, { insured_relation_to_business: 'xyz' })).toBe(false);
+    expect(evalExpr(expr, { insured_relation_to_business: 'בעלים' })).toBe(true);
+    expect(evalExpr(expr, { insured_relation_to_business: 'מנהל' })).toBe(true);
+    expect(evalExpr(expr, { insured_relation_to_business: 'owner' })).toBe(true);
+  });
 });
 

@@ -99,7 +99,16 @@
       "subsection": "A. Proposer details & contact",
       "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
       "question_he": "שם פרטי",
-      "prompt_he": "ברשותך מה שמך המלא, אימייל וטלפון נייד?",
+      "prompt_he": "מה השם הפרטי שלך?",
+      "conversational": {
+        "alternatives_he": [
+          "מה השם הפרטי שלך?",
+          "איך קוראים לך (שם פרטי)?"
+        ],
+        "why_he": "כדי לפנות אליך בצורה אישית ולהשלים את פרטי הקשר.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
       "field_key_en": "first_name",
       "data_type": "string",
       "input_type": "text",

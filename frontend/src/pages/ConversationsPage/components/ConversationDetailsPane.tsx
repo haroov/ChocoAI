@@ -48,7 +48,10 @@ interface FlowTrace {
 interface FlowStage {
   slug: string;
   name?: string;
+  description?: string;
   isCompleted: boolean;
+  fieldsToCollect?: string[];
+  kind?: 'user' | 'system' | 'error';
 }
 
 interface Flow {
@@ -126,16 +129,18 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   // but in the UI we prefer user_* for "User" contact details.
   const canonicalizeUserDataForDisplay = (ud: Record<string, unknown>) => {
     const out: Record<string, unknown> = { ...ud };
-    const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+    const pickNonEmpty = (...vals: unknown[]) => vals.find(
+      (v) => v !== null && v !== undefined && String(v).trim() !== '',
+    );
 
     const userFirst = pickNonEmpty(ud.user_first_name, ud.first_name, ud.proposer_first_name);
     const userLast = pickNonEmpty(ud.user_last_name, ud.last_name, ud.proposer_last_name);
     const userPhone = pickNonEmpty(
       ud.user_phone,
       ud.phone,
-      (ud as any).mobile_phone,
+      ud.mobile_phone,
       ud.proposer_mobile_phone,
-      (ud as any).proposer_phone,
+      ud.proposer_phone,
     );
     const userEmail = pickNonEmpty(ud.user_email, ud.email, ud.proposer_email);
 
@@ -148,9 +153,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     delete out.proposer_first_name;
     delete out.proposer_last_name;
     delete out.proposer_mobile_phone;
-    delete (out as any).proposer_phone;
+    delete out.proposer_phone;
     delete out.proposer_email;
-    delete (out as any).mobile_phone;
+    delete out.mobile_phone;
     delete out.first_name;
     delete out.last_name;
     delete out.phone;
@@ -250,16 +255,139 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     }
   }, [scrollToStageId]);
 
-  // Calculate overall progress
-  const totalStages = flowHistory.reduce((sum, flow) => sum + flow.stages.length, 0);
-  const completedStages = flowHistory.reduce(
-    (sum, flow) => sum + flow.stages.filter((s) => s.isCompleted).length,
-    0,
-  );
+  const isPresentValue = (v: unknown): boolean => {
+    if (v === undefined || v === null) return false;
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return false;
+      const lowered = s.toLowerCase();
+      if (
+        lowered === 'null'
+        || lowered === ':null'
+        || lowered === 'undefined'
+        || lowered === ':undefined'
+      ) return false;
+      return true;
+    }
+    if (Array.isArray(v)) return v.length > 0;
+    // boolean false is a valid answer
+    return true;
+  };
+
+  const isFieldSatisfied = (field: string, value: unknown): boolean => {
+    if (!isPresentValue(value)) return false;
+    const key = String(field || '').trim();
+
+    if (key === 'user_id') {
+      const raw = String(value ?? '').trim();
+      if (!/^[0-9\s\-.]+$/.test(raw)) return false;
+      const digits = raw.replace(/\D/g, '');
+      return digits.length === 9;
+    }
+    if (key === 'insured_relation_to_business') {
+      const v = String(value ?? '').trim().toLowerCase();
+      const allowed = new Set([
+        'בעלים',
+        'מורשה חתימה',
+        'מנהל',
+        'אחר',
+        'owner',
+        'authorized signer',
+        'manager',
+        'other',
+      ]);
+      return allowed.has(v);
+    }
+    if (key === 'referral_source') {
+      return String(value ?? '').trim().length >= 2;
+    }
+
+    return true;
+  };
+
+  const FIELD_LABELS_HE: Record<string, string> = {
+    is_new_customer: 'סטטוס לקוח',
+    first_name: 'שם פרטי',
+    last_name: 'שם משפחה',
+    user_first_name: 'שם פרטי',
+    user_last_name: 'שם משפחה',
+    mobile_phone: 'נייד',
+    user_phone: 'טלפון',
+    phone: 'טלפון',
+    email: 'אימייל',
+    user_email: 'אימייל',
+    business_segment: 'עיסוק',
+    business_site_type: 'סוג העסק',
+    user_id: 'תעודת זהות',
+    insured_relation_to_business: 'תפקיד בעסק',
+    referral_source: 'מקור הגעה',
+  };
+
+  const labelForField = (field: string): string => {
+    const k = String(field || '').trim();
+    return FIELD_LABELS_HE[k] || k;
+  };
+
+  const formatMissingFieldsInline = (missing: string[], maxToShow = 3) => {
+    const labels = missing.map(labelForField);
+    const shown = labels.slice(0, maxToShow);
+    const rest = Math.max(0, labels.length - shown.length);
+    return `${shown.join(', ')}${rest > 0 ? ` +${rest}` : ''}`;
+  };
+
+  const parseIsNewCustomer = (v: unknown): boolean | null => {
+    if (v === true) return true;
+    if (v === false) return false;
+    const s = String(v ?? '').trim().toLowerCase();
+    if (!s) return null;
+    if (['true', '1', 'כן', 'חדש', 'new', 'y', 'yes', 'לקוח חדש'].includes(s)) return true;
+    if (['false', '0', 'לא', 'קיים', 'existing', 'n', 'no', 'לקוח קיים', 'ותיק'].includes(s)) return false;
+    return null;
+  };
+
+  const getStageFieldProgress = (stage: FlowStage, trace: FlowTrace | null) => {
+    const rawRequired = Array.isArray(stage.fieldsToCollect) ? stage.fieldsToCollect : [];
+    // Apply minimal conditional logic so "missing fields" matches actual completion semantics.
+    // (Flow 01: referral_source is required only for new customers.)
+    const isNewCustomer = parseIsNewCustomer(userData.is_new_customer);
+    const required = rawRequired.filter((f) => !(f === 'referral_source' && isNewCustomer === false));
+
+    if (required.length === 0) {
+      return { required, collected: [] as string[], missing: [] as string[] };
+    }
+    const collected = required.filter((field) => {
+      const value = userData[field] ?? trace?.userDataSnapshot?.[field];
+      return isFieldSatisfied(field, value);
+    });
+    const missing = required.filter((f) => !collected.includes(f));
+    return { required, collected, missing };
+  };
+
+  const getFlowFieldProgress = (flow: Flow) => {
+    const rawRequired = Array.from(new Set(
+      flow.stages.flatMap((s) => (Array.isArray(s.fieldsToCollect) ? s.fieldsToCollect : [])),
+    ));
+    const isNewCustomer = parseIsNewCustomer(userData.is_new_customer);
+    const required = rawRequired.filter((f) => !(f === 'referral_source' && isNewCustomer === false));
+    const collected = required.filter((field) => isFieldSatisfied(field, userData[field]));
+    const missing = required.filter((f) => !collected.includes(f));
+    return { required, collected, missing };
+  };
+
+  // Overall Progress (Data collection): aggregate required fields across flows, not stages.
+  // Most flows have a single user stage, so stage-based progress is low-signal.
+  const overallRequiredFields = Array.from(new Set(
+    flowHistory.flatMap((flow) => getFlowFieldProgress(flow).required),
+  ));
+  const overallCollectedFields = overallRequiredFields.filter((field) => isFieldSatisfied(field, userData[field]));
+  const overallMissingFields = overallRequiredFields.filter((f) => !overallCollectedFields.includes(f));
 
   // Get current stage
   const currentStage = activeFlow?.stages.find((s) => !s.isCompleted);
-  const currentStageName = currentStage?.name || currentStage?.slug || '';
+  const hiddenStageSlugs = new Set(['route', 'error', 'resolveSegment', 'decidenextstep']);
+  const currentStageName = currentStageSlug && hiddenStageSlugs.has(currentStageSlug)
+    ? 'System'
+    : (currentStage?.name || currentStage?.slug || '');
 
   // Get trace for a specific stage
   const getTraceForStage = (flowSlug: string, stageSlug: string): FlowTrace | null => {
@@ -299,7 +427,10 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       .filter(([_, v]) => v !== null && v !== undefined && v !== ''),
   );
 
-  const pickByPredicate = (obj: Record<string, unknown>, pred: (k: string, v: unknown) => boolean) => Object.fromEntries(
+  const pickByPredicate = (
+    obj: Record<string, unknown>,
+    pred: (k: string, v: unknown) => boolean,
+  ) => Object.fromEntries(
     Object.entries(obj).filter(([k, v]) => pred(k, v) && v !== null && v !== undefined && v !== ''),
   );
 
@@ -314,6 +445,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'is_new_customer',
     // identity
     'user_id',
+    // required in Flow 01
+    'insured_relation_to_business',
+    'referral_source',
     // client/device telemetry (when available)
     'client_user_agent',
     'client_device',
@@ -362,6 +496,13 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     )),
   };
 
+  // Fields explicitly collected by any flow/stage in this conversation (union of fieldsToCollect).
+  // This ensures flow-specific fields (e.g. flow02 has_* and ch*_selected) always appear in Collected Data.
+  const flowDefinedFieldKeys = Array.from(new Set(
+    flowHistory.flatMap((f) => f.stages.flatMap((s) => (Array.isArray(s.fieldsToCollect) ? s.fieldsToCollect : []))),
+  ));
+  const flowDefinedData = pickNonEmptyKeys(displayUserData, flowDefinedFieldKeys);
+
   // Build collected entities
   const collectedEntities: CollectedEntityType[] = [
     {
@@ -370,6 +511,14 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       instances: Object.keys(userOnlyData).length > 0 ? [{
         id: 'user-data',
         data: userOnlyData,
+      }] : [],
+    },
+    {
+      type: 'flow-defined',
+      label: 'Flow fields',
+      instances: Object.keys(flowDefinedData).length > 0 ? [{
+        id: 'flow-fields',
+        data: flowDefinedData,
       }] : [],
     },
     {
@@ -577,17 +726,18 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium">Overall Progress</span>
           <span className="text-gray-600">
-            {completedStages}
+            {overallCollectedFields.length}
             /
-            {totalStages}
+            {overallRequiredFields.length}
             {' '}
-            stages
+            fields
+            {overallMissingFields.length > 0 ? ` (${overallMissingFields.length} missing)` : ''}
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-gray-800 h-2 rounded-full transition-all"
-            style={{ width: `${totalStages > 0 ? (completedStages / totalStages) * 100 : 0}%` }}
+            style={{ width: `${overallRequiredFields.length > 0 ? (overallCollectedFields.length / overallRequiredFields.length) * 100 : 0}%` }}
           />
         </div>
       </div>
@@ -616,6 +766,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     const isExpanded = expandedFlows.has(flowKey);
     const { start, end } = getFlowTimes(flow.slug);
     const completedStagesCount = flow.stages.filter((s) => s.isCompleted).length;
+    const flowFieldProgress = getFlowFieldProgress(flow);
     const isCurrentActive = !!activeFlow &&
       flow.sessionId === activeFlow.sessionId &&
       flow.slug === activeFlow.slug;
@@ -671,7 +822,28 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
               {flow.stages.length}
               {' '}
               stages
+              {flowFieldProgress.required.length > 0 && (
+                <>
+                  {' '}
+                  ·
+                  {' '}
+                  fields:
+                  {flowFieldProgress.collected.length}
+                  /
+                  {flowFieldProgress.required.length}
+                </>
+              )}
             </div>
+            {flowFieldProgress.missing.length > 0 && (
+              <div
+                className="text-xs text-orange-700 mt-1"
+                title={flowFieldProgress.missing.map(labelForField).join(', ')}
+              >
+                Missing:
+                {' '}
+                {formatMissingFieldsInline(flowFieldProgress.missing)}
+              </div>
+            )}
             {start && (
               <div>
                 Started
@@ -697,7 +869,28 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                 {flow.stages.length}
                 {' '}
                 stages
+                {flowFieldProgress.required.length > 0 && (
+                  <>
+                    {' '}
+                    ·
+                    {' '}
+                    fields:
+                    {flowFieldProgress.collected.length}
+                    /
+                    {flowFieldProgress.required.length}
+                  </>
+                )}
               </div>
+              {flowFieldProgress.missing.length > 0 && (
+                <div
+                  className="text-xs text-orange-700 mt-1"
+                  title={flowFieldProgress.missing.map(labelForField).join(', ')}
+                >
+                  Missing:
+                  {' '}
+                  {formatMissingFieldsInline(flowFieldProgress.missing)}
+                </div>
+              )}
               {start && (
                 <div>
                   Started
@@ -751,6 +944,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                     const trace = getTraceForStage(flow.slug, stage.slug);
                     const stageKey = `${flow.sessionId}-${stage.slug}`;
                     const isStageExpanded = expandedStages.has(stageKey);
+                    const stageFieldProgress = getStageFieldProgress(stage, trace);
                     const hasDetails = trace && (
                       trace.fieldsCollected.length > 0 ||
                       trace.toolsExecuted.length > 0 ||
@@ -815,13 +1009,40 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                               </span>
                             </div>
                             {trace ? (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {moment(trace.enteredAt).format('M/D/YYYY, h:mm:ss A')}
-                                {trace.completedAt && (
-                                  <>
-                                    {' → '}
-                                    {moment(trace.completedAt).format('M/D/YYYY, h:mm:ss A')}
-                                  </>
+                              <div className="mt-1 space-y-1">
+                                <div className="text-xs text-gray-500">
+                                  {moment(trace.enteredAt).format('M/D/YYYY, h:mm:ss A')}
+                                  {trace.completedAt && (
+                                    <>
+                                      {' → '}
+                                      {moment(trace.completedAt).format('M/D/YYYY, h:mm:ss A')}
+                                    </>
+                                  )}
+                                  {stageFieldProgress.required.length > 0 && (
+                                    <>
+                                      {' '}
+                                      ·
+                                      {' '}
+                                      Fields
+                                      {' '}
+                                      {stageFieldProgress.collected.length}
+                                      /
+                                      {stageFieldProgress.required.length}
+                                      {stageFieldProgress.missing.length > 0
+                                        ? ` (${stageFieldProgress.missing.length} missing)`
+                                        : ''}
+                                    </>
+                                  )}
+                                </div>
+                                {stageFieldProgress.missing.length > 0 && (
+                                  <div
+                                    className="text-xs text-orange-700"
+                                    title={stageFieldProgress.missing.map(labelForField).join(', ')}
+                                  >
+                                    Missing:
+                                    {' '}
+                                    {formatMissingFieldsInline(stageFieldProgress.missing)}
+                                  </div>
                                 )}
                               </div>
                             ) : isNotStarted ? null : (
@@ -888,6 +1109,38 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                         {/* Stage Details (expanded) */}
                         {isStageExpanded && trace && (
                           <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+                            {/* Required Fields (derived from stage definition) */}
+                            {stageFieldProgress.required.length > 0 && (
+                              <div>
+                                <div className="text-xs font-semibold text-gray-700 mb-2">
+                                  Required Fields
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  {stageFieldProgress.required.map((field) => {
+                                    const value = trace.userDataSnapshot?.[field] ?? userData[field];
+                                    const present = isPresentValue(value);
+                                    return (
+                                      <div key={field} className="flex items-center gap-2">
+                                        <div className={[
+                                          'w-2 h-2 rounded-full',
+                                          present ? 'bg-green-500' : 'bg-gray-300',
+                                        ].join(' ')}
+                                        />
+                                        <span className="font-mono text-gray-600">{field}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {stageFieldProgress.missing.length > 0 && (
+                                  <div className="text-xs text-orange-700 mt-2">
+                                    Missing:
+                                    {' '}
+                                    {stageFieldProgress.missing.join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
                             {/* Fields Collected */}
                             {trace.fieldsCollected.length > 0 && (
                               <div>
@@ -1135,9 +1388,13 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                                     </button>
                                   </div>
                                   <div className="text-gray-800 break-words">
-                                    {isMasked
-                                      ? maskValue(key, formattedValue)
-                                      : (typeof formattedValue === 'object' ? JSON.stringify(formattedValue, null, 2) : String(formattedValue))}
+                                    {(() => {
+                                      if (isMasked) return maskValue(key, formattedValue);
+                                      if (typeof formattedValue === 'object') {
+                                        return JSON.stringify(formattedValue, null, 2);
+                                      }
+                                      return String(formattedValue);
+                                    })()}
                                   </div>
                                 </div>
                               </div>
