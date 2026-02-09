@@ -1,0 +1,197 @@
+{
+  "module_key": "premises_legal_requirements",
+  "questions": [
+    {
+      "q_id": "Q066",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "קיים רישיון עסק בתוקף?",
+      "prompt_he": "קיים רישיון עסק בתוקף? (אפשרויות: כן, לא)",
+      "field_key_en": "business_license_valid",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].licenses.business_license_in_force.answer",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "קיים רישיון עסק בתוקף? (אפשרויות: כן, לא)",
+        "whatsapp": "קיים רישיון עסק בתוקף? (אפשרויות: כן, לא)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q067",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "אם כן – לצרף צילום רישיון עסק",
+      "prompt_he": "אם כן, – לצרף צילום רישיון עסק?",
+      "field_key_en": "business_license_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "business_license_valid = true",
+      "json_path": "attachments.business_license",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "business_license_valid = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – לצרף צילום רישיון עסק?",
+        "whatsapp": "אם כן, – לצרף צילום רישיון עסק?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q068",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "אם לא – פרט את הסיבות",
+      "prompt_he": "נא לפרט: אם לא – פרט את הסיבות.",
+      "field_key_en": "business_license_no_reason",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "business_license_valid = false",
+      "json_path": "locations[0].licenses.business_license_in_force.details",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "business_license_valid = false",
+      "prompt_variants": {
+        "web_chat": "נא לפרט: אם לא – פרט את הסיבות.",
+        "whatsapp": "נא לפרט: אם לא – פרט את הסיבות."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q069",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "קיים אישור כבאות אש בתוקף?",
+      "prompt_he": "קיים אישור כבאות אש בתוקף? (אפשרויות: כן, לא)",
+      "field_key_en": "fire_dept_approval_valid",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].licenses.fire_department_approval_in_force.answer",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "קיים אישור כבאות אש בתוקף? (אפשרויות: כן, לא)",
+        "whatsapp": "קיים אישור כבאות אש בתוקף? (אפשרויות: כן, לא)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q070",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "אם כן – צרף צילום אישור כבאות אש",
+      "prompt_he": "אם כן, – צרף צילום אישור כבאות אש?",
+      "field_key_en": "fire_dept_approval_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "fire_dept_approval_valid = true",
+      "json_path": "attachments.fire_department_approval",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "fire_dept_approval_valid = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – צרף צילום אישור כבאות אש?",
+        "whatsapp": "אם כן, – צרף צילום אישור כבאות אש?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q071",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "I. Legal requirements",
+      "stage_title_he": "חלק א — רישיונות ואישורים",
+      "question_he": "אם לא – פרט את הסיבות",
+      "prompt_he": "נא לפרט: אם לא – פרט את הסיבות.",
+      "field_key_en": "fire_dept_approval_no_reason",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "fire_dept_approval_valid = false",
+      "json_path": "locations[0].licenses.fire_department_approval_in_force.details",
+      "module_key": "premises_legal_requirements",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "fire_dept_approval_valid = false",
+      "prompt_variants": {
+        "web_chat": "נא לפרט: אם לא – פרט את הסיבות.",
+        "whatsapp": "נא לפרט: אם לא – פרט את הסיבות."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

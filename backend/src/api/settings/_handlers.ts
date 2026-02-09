@@ -72,8 +72,8 @@ type SettingsVersionData = {
 
 const DEFAULT_SETTINGS: SettingsData = {
   models: {
-    primary: 'gpt-5.2',
-    fallback: 'gpt-4o',
+    primary: 'gpt-4o-mini',
+    fallback: 'gpt-4o-mini',
     timeoutMs: 8000,
     retries: 2,
     stream: true,

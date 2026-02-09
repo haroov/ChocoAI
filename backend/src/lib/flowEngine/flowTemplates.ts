@@ -1,7 +1,4 @@
 import { FlowSchema } from './types';
-import { signUpFlowSchema } from './builtInFlows/signUp';
-import { kycFlowSchema } from './builtInFlows/kyc';
-import { campaignManagementFlowSchema } from './builtInFlows/campaignManagement';
 
 export type FlowTemplate = {
   name: string;
@@ -11,24 +8,8 @@ export type FlowTemplate = {
 };
 
 const templates: FlowTemplate[] = [
-  {
-    name: signUpFlowSchema.name,
-    slug: signUpFlowSchema.slug,
-    description: signUpFlowSchema.description,
-    schema: signUpFlowSchema,
-  },
-  {
-    name: kycFlowSchema.name,
-    slug: kycFlowSchema.slug,
-    description: kycFlowSchema.description,
-    schema: kycFlowSchema,
-  },
-  {
-    name: campaignManagementFlowSchema.name,
-    slug: campaignManagementFlowSchema.slug,
-    description: campaignManagementFlowSchema.description,
-    schema: campaignManagementFlowSchema,
-  },
+  // Intentionally empty for now.
+  // Built-in flows are automatically synced on startup from `builtInFlows/`.
 ];
 
 export function getAvailableTemplates(): FlowTemplate[] {

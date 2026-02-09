@@ -1,9 +1,31 @@
+import { execFileSync } from 'node:child_process';
 import express from 'express';
 import { prisma, config } from './core';
 import { initServer } from './server';
 import { logger } from './utils/logger';
 
+function findPidListeningOnPort(port: number): number | null {
+  // Best-effort helper for local development (macOS/Linux).
+  // Returns the FIRST PID that listens on the port, or null if unknown.
+  try {
+    const out = execFileSync('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const firstLine = String(out || '')
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)[0];
+    if (!firstLine) return null;
+    const pid = Number(firstLine);
+    return Number.isFinite(pid) ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
 const bootstrap = async () => {
+  console.log('DEBUG: Starting bootstrap...');
   let resolve, reject: (...args: unknown[]) => void;
   const promise = new Promise((res, rej) => {
     resolve = res;
@@ -12,10 +34,24 @@ const bootstrap = async () => {
 
   const app = express();
 
+  console.log('DEBUG: Calling initServer...');
   await initServer(app);
+  console.log('DEBUG: initServer done, calling listen...');
   app.listen(config.port, (error) => {
-    if (error) reject(error);
-    else {
+    if (error) {
+      const anyErr = error as any;
+      if (anyErr?.code === 'EADDRINUSE') {
+        const pid = findPidListeningOnPort(Number(config.port));
+        const pidMsg = pid ? ` (PID ${pid})` : '';
+        logger.error(
+          `Port ${config.port} is already in use${pidMsg}. It looks like a dev server is already running.`,
+        );
+        logger.error(
+          `Stop the process${pid ? ` (kill ${pid})` : ''} or change the configured port, then restart.`,
+        );
+      }
+      reject(error);
+    } else {
       logger.info(`🚀 ChocoAI Server running on port ${config.port}`);
     }
   });
@@ -23,12 +59,10 @@ const bootstrap = async () => {
   return promise;
 };
 
-if (require.main === module) {
-  bootstrap().catch((err) => {
-    logger.error('Error starting server:', err);
-    process.exit(1);
-  });
-}
+bootstrap().catch((err) => {
+  logger.error('Error starting server:', err);
+  process.exit(1);
+});
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

@@ -1,0 +1,5539 @@
+{
+  "catalog_id": "clal_segments_catalog_prod",
+  "catalog_version": "1.0.0",
+  "environment": "production",
+  "generated_at_iso": "2026-02-04T15:20:48.032076+00:00",
+  "locale": "he-IL",
+  "currency": "ILS",
+  "insurer": {
+    "insurer_code": "CLAL",
+    "insurer_name_he": "כלל ביטוח"
+  },
+  "insurance_products": [
+    {
+      "product_key": "clal_express_business",
+      "product_name_he": "כלל עסקים – אקספרס (תוכנית ביטוח לפי סגמנטים)",
+      "insurer_code": "CLAL",
+      "channel": "digital_agent",
+      "notes_he": "חבילות ברירת מחדל לפי סגמנט כולל סמלי סיכון/קולקטיב."
+    },
+    {
+      "product_key": "clal_smb_business",
+      "product_name_he": "כלל ביטוח – ביטוח עסק (טופס הצעה מלא SMB)",
+      "insurer_code": "CLAL",
+      "channel": "digital_agent",
+      "notes_he": "לסגמנטים שאינם מכוסים במסלול אקספרס או כאשר נדרש חיתום רחב יותר."
+    },
+    {
+      "product_key": "clal_cyber",
+      "product_name_he": "כלל ביטוח – ביטוח סייבר",
+      "insurer_code": "CLAL",
+      "channel": "digital_agent"
+    },
+    {
+      "product_key": "clal_med_pi",
+      "product_name_he": "כלל ביטוח – אחריות מקצועית (רפואה/פארא-רפואי)",
+      "insurer_code": "CLAL",
+      "channel": "digital_agent"
+    }
+  ],
+  "segment_groups": [
+    {
+      "group_id": "shops",
+      "group_name_he": "חנויות",
+      "default_site_type_he": "חנות",
+      "default_package_key": "clal_express_shops_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      }
+    },
+    {
+      "group_id": "clinics",
+      "group_name_he": "מרפאות",
+      "default_site_type_he": "קליניקה/מרפאה",
+      "default_package_key": "clal_express_clinics_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code": 557
+      }
+    },
+    {
+      "group_id": "beauty_and_hair",
+      "group_name_he": "מכוני קוסמטיקה ומספרות",
+      "default_site_type_he": "מספרה/מכון קוסמטיקה",
+      "default_package_key": "clal_express_beauty_and_hair_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code": 469
+      }
+    },
+    {
+      "group_id": "food",
+      "group_name_he": "מזון והסעדה",
+      "default_site_type_he": "מסעדה/בית קפה/מזון",
+      "default_package_key": "clal_express_food_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code": 160
+      }
+    },
+    {
+      "group_id": "synagogue",
+      "group_name_he": "בתי כנסת",
+      "default_site_type_he": "בית כנסת",
+      "default_package_key": "clal_express_synagogue_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code": 216
+      }
+    },
+    {
+      "group_id": "buildings_owners",
+      "group_name_he": "מבנים",
+      "default_site_type_he": "מבנה/נכס",
+      "default_package_key": "clal_express_buildings_owners_v1",
+      "clal": {
+        "is_express": true,
+        "product_key": "clal_express_business",
+        "collective_code": 145
+      }
+    },
+    {
+      "group_id": "professional_offices",
+      "group_name_he": "משרדים ושירותים מקצועיים",
+      "default_site_type_he": "משרד",
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "clal": {
+        "is_express": false,
+        "product_key": "clal_smb_business",
+        "collective_code": null
+      }
+    },
+    {
+      "group_id": "online_business",
+      "group_name_he": "עסקים דיגיטליים ללא מקום פיזי",
+      "default_site_type_he": "ללא מקום פיזי",
+      "default_package_key": "choco_clal_online_business_base_v1",
+      "clal": {
+        "is_express": false,
+        "product_key": "clal_cyber",
+        "collective_code": null
+      }
+    }
+  ],
+  "packages": {
+    "clal_express_shops_v1": {
+      "package_key": "clal_express_shops_v1",
+      "package_name_he": "כלל אקספרס – חנויות – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "shops",
+      "default_limits": {
+        "building": 3000000,
+        "contents_and_stock": 1600000,
+        "burglary": {
+          "closed_mall": 1600000,
+          "other_sites": 500000
+        },
+        "business_interruption": {
+          "option_daily": {
+            "daily_limit": 7500,
+            "max_days": 120
+          },
+          "option_consequential": {
+            "sum_insured": 3800000
+          }
+        },
+        "earthquake_and_natural_perils": "included",
+        "electronic_equipment": {
+          "basis": "residual",
+          "limit": 100000
+        },
+        "money": {
+          "in_safe": 50000,
+          "in_transit": 50000
+        },
+        "goods_in_transit": {
+          "limit": 50000,
+          "data_quality": {
+            "source_text": "50,0000",
+            "normalized": true,
+            "needs_review": true
+          }
+        },
+        "third_party": {
+          "limit_per_occurrence": 10000000,
+          "limit_aggregate": 10000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 50,
+          "wage_basis_max": 3000000
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {
+        "building": [
+          {
+            "name": "דמי שכירות חלופיים",
+            "limit_type": "percentage_of_sum_insured",
+            "value": 0.1
+          },
+          {
+            "name": "שבר זכוכית",
+            "limit_type": "percentage_of_sum_insured",
+            "value": 0.05
+          },
+          {
+            "name": "נזק ללוחות חשמל",
+            "limit": 200000
+          },
+          {
+            "name": "השלמת 'כל הסיכונים'",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 200000
+              }
+            ]
+          },
+          {
+            "name": "הוצאות לפינוי הריסות",
+            "limit_type": "percentage_of_indemnity",
+            "value": 0.1
+          },
+          {
+            "name": "הוצאות בגין דרישות רשויות",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_indemnity",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 100000
+              }
+            ]
+          },
+          {
+            "name": "הוצאות שכר אדריכלים ואחרים",
+            "limit_type": "percentage_of_indemnity",
+            "value": 0.1
+          }
+        ],
+        "contents": [
+          {
+            "name": "עליה עונתית בערך המלאי",
+            "limit_type": "percentage_extra",
+            "value": 0.2,
+            "period_note": "30 יום לפני ראש השנה/פסח/רמדאן"
+          },
+          {
+            "name": "דמי שכירות חלופיים (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 15000
+              }
+            ]
+          },
+          {
+            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.05
+              },
+              {
+                "type": "fixed",
+                "amount": 25000
+              }
+            ]
+          },
+          {
+            "name": "התמוטטות מדפים",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 100000
+              }
+            ]
+          },
+          {
+            "name": "השלמת 'כל הסיכונים' לתכולה",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 500000
+              }
+            ]
+          },
+          {
+            "name": "הוצאות שמירה נוספות",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.05
+              },
+              {
+                "type": "fixed",
+                "amount": 10000
+              }
+            ]
+          },
+          {
+            "name": "חפצים אישיים",
+            "limit": 2500
+          },
+          {
+            "name": "קלקול תכולת מקרר",
+            "limit": 5000,
+            "upgrade_available_to": 25000
+          },
+          {
+            "name": "שחזור מסמכים",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 100000
+              }
+            ]
+          }
+        ],
+        "third_party": [
+          {
+            "name": "ביטול חריג חבות מוצר",
+            "limit_note": "עד 50% מגבול האחריות לפרק, מקסימום 1,000,000 ₪; קיימים חריגים למוצרים מסוימים"
+          }
+        ]
+      },
+      "available_extensions": {},
+      "eligibility": {
+        "description": "חנויות בקניון סגור, מרכזי קניות פתוחים או חנויות רחוב",
+        "risk_code_groups": [
+          {
+            "group_code": 69,
+            "description": "חנויות בקניון סגור/בנין משרדים"
+          },
+          {
+            "group_code": 70,
+            "description": "חנויות בקניון או מרכז מסחרי פתוח/רחוב"
+          }
+        ]
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "clal_express_clinics_v1": {
+      "package_key": "clal_express_clinics_v1",
+      "package_name_he": "כלל אקספרס – מרפאות – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "clinics",
+      "default_limits": {
+        "building": 2500000,
+        "contents_and_stock": 1200000,
+        "burglary": {
+          "closed_mall_or_office_building": 1200000,
+          "other_sites": 1000000
+        },
+        "business_interruption": {
+          "daily_limit": 7500,
+          "max_days": 120
+        },
+        "earthquake_and_natural_perils": "included",
+        "electronic_equipment": {
+          "basis": "residual",
+          "limit": 100000
+        },
+        "money": {
+          "in_safe": 50000,
+          "in_transit": 50000
+        },
+        "third_party": {
+          "limit_per_occurrence": 10000000,
+          "limit_aggregate": 10000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 50,
+          "wage_basis_max": 3000000
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {
+        "building": [
+          {
+            "name": "דמי שכירות חלופיים",
+            "limit_type": "percentage_of_sum_insured",
+            "value": 0.1
+          },
+          {
+            "name": "שבר זכוכית",
+            "limit_type": "percentage_of_sum_insured",
+            "value": 0.05
+          },
+          {
+            "name": "נזק ללוחות חשמל",
+            "limit": 200000
+          },
+          {
+            "name": "השלמת 'כל הסיכונים'",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 200000
+              }
+            ]
+          }
+        ],
+        "contents": [
+          {
+            "name": "דמי שכירות מרפאה חלופית (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 15000
+              }
+            ]
+          },
+          {
+            "name": "תיק רופא גם מחוץ למרפאה",
+            "limit": 5000
+          },
+          {
+            "name": "חפצים אישיים",
+            "limit": 2500
+          },
+          {
+            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.05
+              },
+              {
+                "type": "fixed",
+                "amount": 25000
+              }
+            ]
+          }
+        ]
+      },
+      "available_extensions": {},
+      "eligibility": {
+        "description": "מרפאות פרטיות לייעוץ/אבחון/טיפול (למעט פעולות המוגדרות כהתערבות כירורגית)",
+        "risk_code_collective": 557,
+        "risk_codes_example": [
+          {
+            "code": 295465,
+            "description": "מרפאה וטרינרית - לחיות מחמד ביתיות"
+          },
+          {
+            "code": 295518,
+            "description": "מרפאה לרפואה משלימה / אלטרנטיבית"
+          },
+          {
+            "code": 295524,
+            "description": "מרפאה פסיכולוג/ית / פסיכיאטר/ית"
+          }
+        ]
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "clal_express_beauty_and_hair_v1": {
+      "package_key": "clal_express_beauty_and_hair_v1",
+      "package_name_he": "כלל אקספרס – מכוני קוסמטיקה ומספרות – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "beauty_and_hair",
+      "default_limits": {
+        "building": 2500000,
+        "contents_and_stock": 1500000,
+        "burglary": 1000000,
+        "business_interruption": {
+          "option_daily": {
+            "daily_limit": 7500,
+            "max_days": 120
+          },
+          "option_consequential": {
+            "sum_insured": 3800000
+          }
+        },
+        "earthquake_and_natural_perils": "included",
+        "electronic_equipment": {
+          "basis": "residual",
+          "limit": 100000
+        },
+        "money": {
+          "in_safe": 50000,
+          "in_transit": 50000
+        },
+        "goods_in_transit": {
+          "limit": 50000
+        },
+        "third_party": {
+          "limit_per_occurrence": 4000000,
+          "limit_aggregate": 4000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 10,
+          "wage_basis_max": 3000000
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {
+        "contents": [
+          {
+            "name": "אבדן לכספי בית העסק",
+            "limit": 5000
+          },
+          {
+            "name": "כיסוי למכשירים אלקטרוניים במסגרת ביטוח ציוד אלקטרוני (ברכישה)",
+            "limit": 7500
+          }
+        ]
+      },
+      "available_extensions": {},
+      "eligibility": {
+        "description": "מכוני קוסמטיקה ומספרות",
+        "risk_code_collective": 469,
+        "risk_codes": [
+          {
+            "code": 285469,
+            "description": "מכון קוסמטיקה"
+          },
+          {
+            "code": 90516,
+            "description": "מספרה"
+          },
+          {
+            "code": 285970,
+            "description": "מספרה לבעלי חיים"
+          },
+          {
+            "code": 285969,
+            "description": "מכון קוסמטיקה ומספרה"
+          }
+        ]
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "clal_express_food_v1": {
+      "package_key": "clal_express_food_v1",
+      "package_name_he": "כלל אקספרס – מזון – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "food",
+      "default_limits": {
+        "building": {
+          "closed_mall_or_office_building": 4000000,
+          "other_sites": 2000000
+        },
+        "contents_and_stock": 1500000,
+        "burglary": {
+          "closed_mall_or_office_building": 1500000,
+          "other_sites": 500000
+        },
+        "business_interruption": {
+          "option_daily": {
+            "daily_limit": 7500,
+            "max_days": 120
+          },
+          "option_consequential": {
+            "sum_insured": 2000000
+          }
+        },
+        "earthquake_and_natural_perils": "included",
+        "electronic_equipment": {
+          "basis": "residual",
+          "limit": 100000
+        },
+        "money": {
+          "in_safe": 50000,
+          "in_transit": 50000
+        },
+        "goods_in_transit": {
+          "limit": 50000
+        },
+        "third_party": {
+          "limit_per_occurrence": 10000000,
+          "limit_aggregate": 10000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 50,
+          "wage_basis_max": 6000000
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {
+        "contents": [
+          {
+            "name": "קלקול תכולת מקרר",
+            "limit": 25000,
+            "upgrade_available_to": 50000
+          },
+          {
+            "name": "דמי שכירות חלופיים (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 15000
+              }
+            ]
+          },
+          {
+            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.05
+              },
+              {
+                "type": "fixed",
+                "amount": 25000
+              }
+            ]
+          },
+          {
+            "name": "שחזור מסמכים",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 100000
+              }
+            ]
+          },
+          {
+            "name": "השלמה ל'כל הסיכונים' לתכולה",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 500000
+              }
+            ]
+          },
+          {
+            "name": "חפצים אישיים",
+            "limit": 2500
+          }
+        ],
+        "third_party": [
+          {
+            "name": "ביטול חריג חבות המוצר",
+            "limit_note": "עד 50% מגבול האחריות לפרק, מקסימום 1,000,000 ₪; קיימים חריגים למוצרים מסוימים"
+          }
+        ]
+      },
+      "available_extensions": {},
+      "eligibility": {
+        "description": "עסקי מזון וענף המסעדנות",
+        "risk_code_collective": 160,
+        "risk_codes_example": [
+          {
+            "code": 160973,
+            "description": "קונדיטוריה"
+          },
+          {
+            "code": 160868,
+            "description": "בית קפה"
+          },
+          {
+            "code": 160975,
+            "description": "פלאפל/שווארמה"
+          }
+        ]
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "clal_express_synagogue_v1": {
+      "package_key": "clal_express_synagogue_v1",
+      "package_name_he": "כלל אקספרס – בתי כנסת – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "synagogue",
+      "default_limits": {
+        "building": 2500000,
+        "contents_excluding_torah_and_sacred_objects": 1500000,
+        "burglary_excluding_torah_and_sacred_objects": 1000000,
+        "all_risks_torah_and_sacred_objects": {
+          "per_scroll": 100000,
+          "aggregate": 800000
+        },
+        "business_interruption": {
+          "daily_limit": 7500,
+          "max_days": 120
+        },
+        "earthquake_and_natural_perils": "included",
+        "money": {
+          "in_safe": 25000,
+          "in_transit": 25000
+        },
+        "third_party": {
+          "limit_per_occurrence": 5000000,
+          "limit_aggregate": 5000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 50
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {},
+      "available_extensions": {},
+      "eligibility": {
+        "description": "בתי כנסת עד 500 מתפללים (לפי החוברת)",
+        "risk_code_collective": 216,
+        "risk_codes": [
+          {
+            "code": 150216,
+            "description": "בית כנסת"
+          }
+        ],
+        "max_locations_override": 1
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "clal_express_buildings_owners_v1": {
+      "package_key": "clal_express_buildings_owners_v1",
+      "package_name_he": "כלל אקספרס – מבנים (בעלי מבנים) – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_express_business",
+      "currency": "ILS",
+      "defaults_source": "clal_express_brochure_13-2933",
+      "segment_id": "buildings_owners",
+      "default_limits": {
+        "building": 2500000,
+        "contents_and_stock": 100000,
+        "burglary": 100000,
+        "business_interruption": {
+          "option_daily": {
+            "daily_limit": 7500,
+            "max_days": 120
+          },
+          "option_consequential": {
+            "sum_insured": 1000000
+          }
+        },
+        "earthquake_and_natural_perils": "included",
+        "electronic_equipment": {
+          "basis": "residual",
+          "limit": 100000
+        },
+        "money": {
+          "in_safe": 50000,
+          "in_transit": 50000
+        },
+        "goods_in_transit": {
+          "limit": 50000
+        },
+        "third_party": {
+          "limit_per_occurrence": 4000000,
+          "limit_aggregate": 4000000
+        },
+        "employers_liability": {
+          "limit_per_occurrence": 20000000,
+          "limit_aggregate": 20000000,
+          "max_employees": 50,
+          "wage_basis_max": 3000000
+        }
+      },
+      "default_deductibles": {},
+      "included_extensions": {
+        "property": [
+          {
+            "name": "רכוש בבניה/בהקמה/בשיפוץ",
+            "limit": 250000
+          },
+          {
+            "name": "שבר זכוכית",
+            "limit_type": "percentage_of_sum_insured",
+            "value": 0.05
+          },
+          {
+            "name": "נזק ללוחות חשמל",
+            "limit": 200000
+          },
+          {
+            "name": "התמוטטות מבנים",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 250000
+              }
+            ]
+          },
+          {
+            "name": "השלמת 'כל הסיכונים' למבנה",
+            "limit_type": "min_of",
+            "options": [
+              {
+                "type": "percentage_of_sum_insured",
+                "value": 0.1
+              },
+              {
+                "type": "fixed",
+                "amount": 200000
+              }
+            ]
+          }
+        ]
+      },
+      "available_extensions": {},
+      "eligibility": {
+        "description": "בעלי מבנים המושכרים לאחרים (משרדים/חנויות) – לפי סמלי סיכון",
+        "risk_code_collective": 145,
+        "risk_codes_example": [
+          {
+            "code": 145776,
+            "description": "בעל מבנה המושכר לאחרים ומשמש למשרדים"
+          },
+          {
+            "code": 145779,
+            "description": "בעל מבנה המושכר לאחרים ומשמש לחנות"
+          }
+        ]
+      },
+      "notes_he": "",
+      "important_logic_he": []
+    },
+    "choco_clal_professional_office_base_v1": {
+      "package_key": "choco_clal_professional_office_base_v1",
+      "package_name_he": "שוקו × כלל – משרד מקצועי – ברירת מחדל (טופס הצעה מלא)",
+      "insurer_code": "CLAL",
+      "product_key": "clal_smb_business",
+      "currency": "ILS",
+      "defaults_source": "choco_internal_defaults_2026-02",
+      "default_limits": {
+        "building": {
+          "selected": false,
+          "sum_insured_ils": null
+        },
+        "contents_and_stock": {
+          "selected": true,
+          "sum_insured_ils": 250000,
+          "stock_sum_insured_ils": 0
+        },
+        "burglary": {
+          "selected": true,
+          "basis": "first_loss",
+          "sum_insured_ils": 100000
+        },
+        "business_interruption": {
+          "selected": false
+        },
+        "earthquake_and_natural_perils": {
+          "selected": true
+        },
+        "electronic_equipment": {
+          "selected": true,
+          "hardware_coverage_type": "full",
+          "hardware_sum_insured_ils": 150000,
+          "mobile_selected": true,
+          "mobile_sum_insured_ils": 50000
+        },
+        "money": {
+          "selected": true,
+          "in_safe_sum_insured_ils": 20000,
+          "in_transit_sum_insured_ils": 20000
+        },
+        "third_party": {
+          "selected": true,
+          "limit_ils": 1000000
+        },
+        "employers_liability": {
+          "selected": true,
+          "limit_ils": 20000000
+        },
+        "product_liability": {
+          "selected": false
+        },
+        "cyber": {
+          "selected": false
+        }
+      },
+      "default_deductibles": {
+        "property_each_and_every_claim_ils": 2500,
+        "burglary_each_and_every_claim_ils": 2500,
+        "third_party_each_and_every_claim_ils": 2500
+      },
+      "notes_he": "ברירת מחדל פנימית לשוקו עבור עסקים משרדיים (ללא ייצור/שיווק מוצרים). מיועד כנקודת פתיחה לשיחה ולמילוי טופס ההצעה; אינו מחליף חיתום.",
+      "important_logic_he": [
+        "ביטוח מבנה: נבחר רק אם הלקוח בעלים/חוכר של המבנה או נדרש שיעבוד/בנק.",
+        "אחריות מעבידים: תופעל רק אם יש עובדים בפועל.",
+        "סייבר: מומלץ במיוחד אם קיימים מאגרי מידע, מידע רגיש, או פעילות מקוונת משמעותית."
+      ]
+    },
+    "choco_clal_online_business_base_v1": {
+      "package_key": "choco_clal_online_business_base_v1",
+      "package_name_he": "שוקו × כלל – עסק דיגיטלי ללא מקום פיזי – ברירת מחדל",
+      "insurer_code": "CLAL",
+      "product_key": "clal_cyber",
+      "currency": "ILS",
+      "defaults_source": "choco_internal_defaults_2026-02",
+      "default_limits": {
+        "building": {
+          "selected": false
+        },
+        "contents_and_stock": {
+          "selected": false
+        },
+        "burglary": {
+          "selected": false
+        },
+        "business_interruption": {
+          "selected": false
+        },
+        "third_party": {
+          "selected": true,
+          "limit_ils": 1000000
+        },
+        "employers_liability": {
+          "selected": false
+        },
+        "cyber": {
+          "selected": true,
+          "limit_ils": null
+        }
+      },
+      "notes_he": "ברירת מחדל פנימית לשוקו לעסקים ללא מיקום פיזי משמעותי. הדגש הוא על סייבר וחבות כלפי צד שלישי. גבולות אחריות/פרטי כיסוי סייבר יוגדרו לפי הצעת כלל.",
+      "important_logic_he": [
+        "אם קיימת תכולה/משרד בפועל – יש לעבור למסלול משרד מקצועי/טופס עסק.",
+        "אם יש עובדים – לשקול גם אחריות מעבידים."
+      ]
+    }
+  },
+  "segments": [
+    {
+      "segment_id": "clal_shops_45273",
+      "segment_name_he": "מזון בעלי חיים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מזון בעלי חיים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 45273,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_20229",
+      "segment_name_he": "אביזרי אופנה - מכירה אחסנה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "אביזרי אופנה - מכירה אחסנה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 20229,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160272",
+      "segment_name_he": "מאפיות - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מאפיות - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160272,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_25825",
+      "segment_name_he": "ציוד היקפי למחשבים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "ציוד היקפי למחשבים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 25825,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_25829",
+      "segment_name_he": "מערכות קול",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מערכות קול",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 25829,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160649",
+      "segment_name_he": "מעדניה / סלטים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מעדניה / סלטים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160649,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_30203",
+      "segment_name_he": "אומנות - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "אומנות - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 30203,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160966",
+      "segment_name_he": "תבלינים וקפה - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "תבלינים וקפה - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160966,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_40231",
+      "segment_name_he": "קרמיקה וסניטריה - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "קרמיקה וסניטריה - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 40231,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160572",
+      "segment_name_he": "סיטונאות- מזון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "סיטונאות- מזון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160572,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_85228",
+      "segment_name_he": "מתנות וכלי בית",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מתנות וכלי בית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 85228,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_175264",
+      "segment_name_he": "מיזוג אויר (קירור) – מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מיזוג אויר (קירור) – מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 175264,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_205287",
+      "segment_name_he": "פרזול - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "פרזול - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 205287,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90820",
+      "segment_name_he": "חנות פרחים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חנות פרחים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90820,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_205289",
+      "segment_name_he": "מכניקה עדינה - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מכניקה עדינה - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 205289,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90821",
+      "segment_name_he": "אופניים - מכירה ואחסנה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "אופניים - מכירה ואחסנה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90821,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_205424",
+      "segment_name_he": "שכפול מפתחות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "שכפול מפתחות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 205424,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_100236",
+      "segment_name_he": "נברשות ונורות - מכירה ואחסנה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "נברשות ונורות - מכירה ואחסנה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 100236,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_205747",
+      "segment_name_he": "כספות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "כספות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 205747,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_100233",
+      "segment_name_he": "מוצרים ביתיים לבנים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מוצרים ביתיים לבנים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 100233,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_205786",
+      "segment_name_he": "מערכת סכום",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מערכת סכום",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 205786,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115227",
+      "segment_name_he": "חנות דקורציה עיצוב פנים או וילונות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חנות דקורציה עיצוב פנים או וילונות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115227,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_215280",
+      "segment_name_he": "קרטון ונייר - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "קרטון ונייר - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 215280,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115238",
+      "segment_name_he": "כובעים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "כובעים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115238,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_215281",
+      "segment_name_he": "מכשירי כתיבה - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מכשירי כתיבה - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 215281,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115670",
+      "segment_name_he": "בדים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "בדים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115670,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_215477",
+      "segment_name_he": "בתי מסחר לספרים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "בתי מסחר לספרים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 215477,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115239",
+      "segment_name_he": "הלבשה, אופנה, בוטיקים, מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "הלבשה, אופנה, בוטיקים, מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115239,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_220278",
+      "segment_name_he": "נרות / שעווה - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "נרות / שעווה - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 220278,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115481",
+      "segment_name_he": "טקסטיל לבית- מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "טקסטיל לבית- מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115481,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_235587",
+      "segment_name_he": "בגדים ומוצרי עור",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "בגדים ומוצרי עור",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 235587,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115509",
+      "segment_name_he": "שטיחים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "שטיחים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115509,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_235586",
+      "segment_name_he": "הנעלה - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "הנעלה - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 235586,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_125351",
+      "segment_name_he": "חומרי ניקוי - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חומרי ניקוי - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 125351,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_240492",
+      "segment_name_he": "מברשות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מברשות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 240492,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_130812",
+      "segment_name_he": "כלי נגינה - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "כלי נגינה - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 130812,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_240591",
+      "segment_name_he": "חנות רהיטים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חנות רהיטים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 240591,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_135698",
+      "segment_name_he": "כלי עבודה - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "כלי עבודה - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 135698,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_245394",
+      "segment_name_he": "פלסטיק - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "פלסטיק - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 245394,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_150448",
+      "segment_name_he": "תשמישי קדושה/תפילין",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "תשמישי קדושה/תפילין",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 150448,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_245743",
+      "segment_name_he": "כלים חד פעמיים",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "כלים חד פעמיים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 245743,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160383",
+      "segment_name_he": "משקאות קלים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "משקאות קלים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160383,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_255570",
+      "segment_name_he": "מוצרי פרסום",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מוצרי פרסום",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 255570,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160459",
+      "segment_name_he": "דבש - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "דבש - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160459,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_260792",
+      "segment_name_he": "פרוות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "פרוות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 260792,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160781",
+      "segment_name_he": "פירות וירקות - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "פירות וירקות - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160781,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_275503",
+      "segment_name_he": "צלמים – מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "צלמים – מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 275503,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160270",
+      "segment_name_he": "מיני סופרמרקט / מכולת - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מיני סופרמרקט / מכולת - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160270,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_285605",
+      "segment_name_he": "פאות נוכריות",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "פאות נוכריות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 285605,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90822",
+      "segment_name_he": "אורטופדיה - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "אורטופדיה - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90822,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90826",
+      "segment_name_he": "מדפסות וציוד נלווה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "מדפסות וציוד נלווה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90826,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90823",
+      "segment_name_he": "סידקית",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "סידקית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90823,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90827",
+      "segment_name_he": "ציוד משרדי – מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "ציוד משרדי – מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90827,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90824",
+      "segment_name_he": "חנות סטוק - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חנות סטוק - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90824,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90828",
+      "segment_name_he": "ספרים – מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "ספרים – מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90828,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90829",
+      "segment_name_he": "סטריאו וקולנוע ביתי - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "סטריאו וקולנוע ביתי - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90829,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_90825",
+      "segment_name_he": "הלבשה תחתונה - מכירה",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "הלבשה תחתונה - מכירה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90825,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_160267",
+      "segment_name_he": "ממתקים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "ממתקים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160267,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_115240",
+      "segment_name_he": "חנות הלבשה/הנעלה - קניון סגור",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "חנות הלבשה/הנעלה - קניון סגור",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 115240,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_shops_245297",
+      "segment_name_he": "צעצועים - מכירה ואחסון",
+      "segment_group_id": "shops",
+      "business_profile_defaults": {
+        "segment_group_he": "חנויות",
+        "site_type_he": "חנות",
+        "primary_activity_he": "צעצועים - מכירה ואחסון",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 245297,
+        "collective_code": null,
+        "collective_code_rules": [
+          {
+            "collective_code": 69,
+            "collective_name_he": "חנויות בקניון סגור/בנין משרדים",
+            "when_he": "כאשר החנות נמצאת בקניון סגור או בתוך בניין משרדים"
+          },
+          {
+            "collective_code": 70,
+            "collective_name_he": "חנויות בקניון או מרכז מסחרי פתוח/רחוב",
+            "when_he": "כאשר החנות נמצאת בקניון/מרכז מסחרי פתוח או ברחוב"
+          }
+        ]
+      },
+      "default_package_key": "clal_express_shops_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_shops_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ אם יש מידע לקוחות/סליקה/מערכות מחשוב"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295465",
+      "segment_name_he": "מרפאה וטרינרית - לחיות מחמד ביתיות",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאה וטרינרית - לחיות מחמד ביתיות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295465,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295518",
+      "segment_name_he": "מרפאה לרפואה משלימה / אלטרנטיבית",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאה לרפואה משלימה / אלטרנטיבית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295518,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295524",
+      "segment_name_he": "מרפאה פסיכולוג/ית / פסיכיאטר/ית",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאה פסיכולוג/ית / פסיכיאטר/ית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295524,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295557",
+      "segment_name_he": "אבחון וטיפול (לא כירורגי) רפואה כללית/ מרפאת מומחים ליעוץ",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "אבחון וטיפול (לא כירורגי) רפואה כללית/ מרפאת מומחים ליעוץ",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295557,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295478",
+      "segment_name_he": "מרפאה לתיקון ליקויי למידה/ קלינאי/ת תקשורת",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאה לתיקון ליקויי למידה/ קלינאי/ת תקשורת",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295478,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295849",
+      "segment_name_he": "מרפאה לגמילה מעישון / תזונה ודיאטה",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאה לגמילה מעישון / תזונה ודיאטה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295849,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295850",
+      "segment_name_he": "מרפאת שינה / כאב",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת שינה / כאב",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295850,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295851",
+      "segment_name_he": "מרפאת שיניים - ללא מעבדה / טכנאות שיניים",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת שיניים - ללא מעבדה / טכנאות שיניים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295851,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295852",
+      "segment_name_he": "מרפאת עיניים - ללא ייצור / תיקון / וללא התערבות כירורגית",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת עיניים - ללא ייצור / תיקון / וללא התערבות כירורגית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295852,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295853",
+      "segment_name_he": "מרפאת אורתופדיה /פיזיותרפיה / כירופרקטיקה",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת אורתופדיה /פיזיותרפיה / כירופרקטיקה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295853,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295854",
+      "segment_name_he": "מרפאת נשים / גניקולוג/ית",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת נשים / גניקולוג/ית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295854,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295856",
+      "segment_name_he": "מרפאת אסתטיקה - ללא התערבות כירורגית",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת אסתטיקה - ללא התערבות כירורגית",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295856,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295891",
+      "segment_name_he": "מרפאת ריפוי בעיסוק",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת ריפוי בעיסוק",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295891,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295892",
+      "segment_name_he": "מרפאת פלדנקרייז",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת פלדנקרייז",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295892,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295893",
+      "segment_name_he": "מרפאת טיפול בתנועה ובדרמה",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת טיפול בתנועה ובדרמה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295893,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295894",
+      "segment_name_he": "מרפאת אורולוגיה",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מרפאת אורולוגיה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295894,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_clinics_295895",
+      "segment_name_he": "מעבדת שיניים",
+      "segment_group_id": "clinics",
+      "business_profile_defaults": {
+        "segment_group_he": "מרפאות",
+        "site_type_he": "קליניקה/מרפאה",
+        "primary_activity_he": "מעבדת שיניים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 295895,
+        "collective_code": 557,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_clinics_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity_optional",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_clinics_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "לפי מקצוע/היקף פעילות – מומלץ לבדוק התאמה"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "מומלץ במיוחד אם נשמר מידע רפואי/אישי"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_beauty_and_hair_285469",
+      "segment_name_he": "מכון קוסמטיקה",
+      "segment_group_id": "beauty_and_hair",
+      "business_profile_defaults": {
+        "segment_group_he": "מכוני קוסמטיקה ומספרות",
+        "site_type_he": "מספרה/מכון קוסמטיקה",
+        "primary_activity_he": "מכון קוסמטיקה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 285469,
+        "collective_code": 469,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_beauty_and_hair_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_beauty_and_hair_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_beauty_and_hair_90516",
+      "segment_name_he": "מספרה",
+      "segment_group_id": "beauty_and_hair",
+      "business_profile_defaults": {
+        "segment_group_he": "מכוני קוסמטיקה ומספרות",
+        "site_type_he": "מספרה/מכון קוסמטיקה",
+        "primary_activity_he": "מספרה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 90516,
+        "collective_code": 469,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_beauty_and_hair_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_beauty_and_hair_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_beauty_and_hair_285970",
+      "segment_name_he": "מספרה לבעלי חיים",
+      "segment_group_id": "beauty_and_hair",
+      "business_profile_defaults": {
+        "segment_group_he": "מכוני קוסמטיקה ומספרות",
+        "site_type_he": "מספרה/מכון קוסמטיקה",
+        "primary_activity_he": "מספרה לבעלי חיים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 285970,
+        "collective_code": 469,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_beauty_and_hair_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_beauty_and_hair_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_beauty_and_hair_285969",
+      "segment_name_he": "מכון קוסמטיקה ומספרה",
+      "segment_group_id": "beauty_and_hair",
+      "business_profile_defaults": {
+        "segment_group_he": "מכוני קוסמטיקה ומספרות",
+        "site_type_he": "מספרה/מכון קוסמטיקה",
+        "primary_activity_he": "מכון קוסמטיקה ומספרה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 285969,
+        "collective_code": 469,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_beauty_and_hair_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_beauty_and_hair_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160967",
+      "segment_name_he": "אסייתי / סושי",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "אסייתי / סושי",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160967,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160973",
+      "segment_name_he": "קונדיטוריה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "קונדיטוריה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160973,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160968",
+      "segment_name_he": "דוכן מיצים / קרפ",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "דוכן מיצים / קרפ",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160968,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160974",
+      "segment_name_he": "שיפודיה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "שיפודיה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160974,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160969",
+      "segment_name_he": "המבורגר",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "המבורגר",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160969,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160975",
+      "segment_name_he": "פלאפל/שווארמה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "פלאפל/שווארמה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160975,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160970",
+      "segment_name_he": "חומוסיה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "חומוסיה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160970,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160868",
+      "segment_name_he": "בית קפה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "בית קפה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160868,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160971",
+      "segment_name_he": "עגלת קפה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "עגלת קפה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160971,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_5444",
+      "segment_name_he": "קייטרינג",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "קייטרינג",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 5444,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160972",
+      "segment_name_he": "פיצריה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "פיצריה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160972,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_food_160594",
+      "segment_name_he": "גלידריה",
+      "segment_group_id": "food",
+      "business_profile_defaults": {
+        "segment_group_he": "מזון והסעדה",
+        "site_type_he": "מסעדה/בית קפה/מזון",
+        "primary_activity_he": "גלידריה",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 160594,
+        "collective_code": 160,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_food_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_food_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional",
+          "notes_he": "רלוונטי במיוחד לקופות ממוחשבות/סליקה/משלוחים"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_synagogue_150216",
+      "segment_name_he": "בית כנסת",
+      "segment_group_id": "synagogue",
+      "business_profile_defaults": {
+        "segment_group_he": "בתי כנסת",
+        "site_type_he": "בית כנסת",
+        "primary_activity_he": "בית כנסת",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 150216,
+        "collective_code": 216,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_synagogue_v1",
+      "relevant_insurance_types": [
+        "business_combined"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_synagogue_v1",
+          "priority": "core"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_buildings_owners_145776",
+      "segment_name_he": "בעל מבנה המושכר לאחרים ומשמש למשרדים",
+      "segment_group_id": "buildings_owners",
+      "business_profile_defaults": {
+        "segment_group_he": "מבנים",
+        "site_type_he": "מבנה/נכס מניב",
+        "primary_activity_he": "בעל מבנה המושכר לאחרים ומשמש למשרדים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 145776,
+        "collective_code": 145,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_buildings_owners_v1",
+      "relevant_insurance_types": [
+        "business_combined"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_buildings_owners_v1",
+          "priority": "core"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_buildings_owners_145777",
+      "segment_name_he": "בעל קומה במבנה משרדים המושכר לאחרים ומשמש למשרדים",
+      "segment_group_id": "buildings_owners",
+      "business_profile_defaults": {
+        "segment_group_he": "מבנים",
+        "site_type_he": "מבנה/נכס מניב",
+        "primary_activity_he": "בעל קומה במבנה משרדים המושכר לאחרים ומשמש למשרדים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 145777,
+        "collective_code": 145,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_buildings_owners_v1",
+      "relevant_insurance_types": [
+        "business_combined"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_buildings_owners_v1",
+          "priority": "core"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_buildings_owners_145778",
+      "segment_name_he": "בעל יחידת משרד במבנה משרדים המושכר לאחרים ומשמש למשרד",
+      "segment_group_id": "buildings_owners",
+      "business_profile_defaults": {
+        "segment_group_he": "מבנים",
+        "site_type_he": "מבנה/נכס מניב",
+        "primary_activity_he": "בעל יחידת משרד במבנה משרדים המושכר לאחרים ומשמש למשרד",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 145778,
+        "collective_code": 145,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_buildings_owners_v1",
+      "relevant_insurance_types": [
+        "business_combined"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_buildings_owners_v1",
+          "priority": "core"
+        }
+      ]
+    },
+    {
+      "segment_id": "clal_buildings_owners_145779",
+      "segment_name_he": "בעל מבנה המושכר לאחרים ומשמש לחנות",
+      "segment_group_id": "buildings_owners",
+      "business_profile_defaults": {
+        "segment_group_he": "מבנים",
+        "site_type_he": "מבנה/נכס מניב",
+        "primary_activity_he": "בעל מבנה המושכר לאחרים ומשמש לחנות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_express_business",
+        "risk_symbol_code": 145779,
+        "collective_code": 145,
+        "collective_code_rules": null
+      },
+      "default_package_key": "clal_express_buildings_owners_v1",
+      "relevant_insurance_types": [
+        "business_combined"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_express_business",
+          "package_key": "clal_express_buildings_owners_v1",
+          "priority": "core"
+        }
+      ]
+    },
+    {
+      "segment_id": "law_firm",
+      "segment_name_he": "משרד עורכי דין",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "ייעוץ משפטי וייצוג",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "mapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "מופה למוצר עסקים כללי ללא סמל סיכון ייעודי (חתמות רגילה)"
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "accounting_firm",
+      "segment_name_he": "משרד רואי חשבון / הנהלת חשבונות",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "שירותי הנהלת חשבונות, ביקורת וייעוץ פיננסי",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "it_services_office",
+      "segment_name_he": "שירותי IT / פיתוח תוכנה (משרד)",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "פיתוח תוכנה, שירותי מחשוב וניהול תשתיות",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": "לעיתים נדרש גם כיסוי אחריות מקצועית טכנולוגית/Errors & Omissions – בהתאם למוצרי כלל/חיתום."
+    },
+    {
+      "segment_id": "marketing_agency",
+      "segment_name_he": "משרד פרסום / דיגיטל / סושיאל",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "שיווק דיגיטלי, פרסום וניהול קמפיינים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "management_consulting",
+      "segment_name_he": "ייעוץ עסקי / ניהולי",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "ייעוץ אסטרטגי וניהולי",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "clal_professional_offices_lawyer",
+      "segment_name_he": "משרד עורכי דין",
+      "segment_group_id": "professional_offices",
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "עריכת דין",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "notes_he": "משרד עורכי דין - טופס הצעה מלא"
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_med_pi",
+          "priority": "optional",
+          "notes_he": "אחריות מקצועית לעו\"ד"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "ecommerce_online",
+      "segment_name_he": "מסחר מקוון (ללא חנות פיזית)",
+      "segment_group_id": "online_business",
+      "business_profile_defaults": {
+        "segment_group_he": "עסקים דיגיטליים ללא מקום פיזי",
+        "site_type_he": "ללא מקום פיזי",
+        "primary_activity_he": "מסחר אונליין / שירות דיגיטלי",
+        "has_physical_location": false
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_online_business_base_v1",
+      "relevant_insurance_types": [
+        "cyber",
+        "third_party_liability_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_cyber",
+          "package_key": "choco_clal_online_business_base_v1",
+          "priority": "core"
+        }
+      ],
+      "notes_he": null
+    }
+  ],
+  "notes_he": [
+    "שדות המפתח באנגלית; התוכן בעברית (ככל האפשר).",
+    "עבור סגמנטים במסלול כלל אקספרס נשמרים סמלי הסיכון וקודי הקולקטיב כפי שמופיעים בחוברת כלל עסקים.",
+    "עבור סגמנטים שאינם במסלול אקספרס (לדוגמה: משרד עורכי דין), אין במקורות שסופקו קוד סגמנט/סמל סיכון – נשמר mapping_status=unmapped ונדרש מיפוי מול כלל."
+  ],
+  "source_files_local": [
+    {
+      "path": "/mnt/data/13-2933 asakim_hoveret.pdf",
+      "purpose_he": "סמלי סיכון/קולקטיב וסכומי ברירת מחדל למסלול אקספרס"
+    },
+    {
+      "path": "/mnt/data/express_clal_packages_catalog.json",
+      "purpose_he": "חבילות ברירת מחדל שחולצו למסלול אקספרס"
+    }
+  ]
+}

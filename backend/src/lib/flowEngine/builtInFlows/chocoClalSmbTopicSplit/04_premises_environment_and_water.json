@@ -1,0 +1,495 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "04_premises_environment_and_water",
+    "title_he": "סביבת העסק + סיכוני מים/שיטפון/נזקי טבע",
+    "description_he": "סביבה, שכנים, חומרים מסוכנים, קיר משותף, חלקים מתחת לקרקע ושיטפונות.",
+    "ask_if": "(has_physical_premises = true) OR (ch1_contents_selected = true) OR (ch2_building_selected = true) OR (ch4_burglary_selected = true) OR (ch5_money_selected = true) OR (ch10_electronic_selected = true)",
+    "audience": "customer",
+    "included_module_keys": [
+      "premises_surroundings",
+      "premises_water_flood_risk"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q051",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה",
+      "prompt_he": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה.",
+      "field_key_en": "environment_description",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.description",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה.",
+        "whatsapp": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q052",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "ציין את העסקים והמבנים בשכנות ולמה הם משמשים",
+      "prompt_he": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים.",
+      "field_key_en": "neighboring_businesses",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.neighboring_businesses",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים.",
+        "whatsapp": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q053",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה?",
+      "prompt_he": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
+      "field_key_en": "hazardous_goods_nearby",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.hazardous_goods_nearby.answer",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q054",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "hazardous_goods_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "hazardous_goods_nearby = true",
+      "json_path": "locations[0].surroundings.hazardous_goods_nearby.details",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "hazardous_goods_nearby = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q055",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל?",
+      "prompt_he": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
+      "field_key_en": "shared_wall",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.shared_wall_with_neighbors.answer",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
+        "whatsapp": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q056",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "shared_wall_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "shared_wall = true",
+      "json_path": "locations[0].surroundings.shared_wall_with_neighbors.details",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "shared_wall = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q090",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע?",
+      "prompt_he": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
+      "field_key_en": "below_ground",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.below_ground_parts.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
+        "whatsapp": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q091",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)?",
+      "prompt_he": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
+      "field_key_en": "flood_source_nearby",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.nearby_flood_source.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q092",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "flood_source_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "flood_source_nearby = true",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.nearby_flood_source.details",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "flood_source_nearby = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q093",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה?",
+      "prompt_he": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
+      "field_key_en": "nature_damage_last_3y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.previous_flooding_events_last_3_years.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q094",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "nature_damage_last_3y_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "nature_damage_last_3y = true",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.previous_flooding_events_last_3_years.details",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "nature_damage_last_3y = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [
+    {
+      "trigger_key": "hazardous_goods_nearby",
+      "when": "hazardous_goods_nearby = true",
+      "reason_he": "סחורות מסוכנות/מתלקחות בסביבה סמוכה",
+      "action": "route_to_underwriter"
+    }
+  ],
+  "attachments_checklist": []
+}

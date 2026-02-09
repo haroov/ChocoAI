@@ -1,0 +1,356 @@
+{
+  "module_key": "premises_building_characteristics",
+  "questions": [
+    {
+      "q_id": "Q037",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "זיקת המציע למבנה",
+      "prompt_he": "נא לבחור זיקת המציע למבנה: (אפשרויות: בעלים, שוכר, חוכר לדורות)",
+      "field_key_en": "building_relation",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "בעלים, שוכר, חוכר לדורות",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].building_info.relationship_to_building",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור זיקת המציע למבנה: (אפשרויות: בעלים, שוכר, חוכר לדורות)",
+        "whatsapp": "נא לבחור זיקת המציע למבנה: (אפשרויות: בעלים, שוכר, חוכר לדורות)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בעלים"
+          },
+          {
+            "n": 2,
+            "label_he": "שוכר"
+          },
+          {
+            "n": 3,
+            "label_he": "חוכר לדורות"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q038",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "שנת הקמת המבנה",
+      "prompt_he": "נא לציין שנת הקמת המבנה (מספר).",
+      "field_key_en": "building_year_built",
+      "data_type": "number",
+      "input_type": "integer",
+      "constraints": ">=1800",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].building_info.year_built",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שנת הקמת המבנה (מספר).",
+        "whatsapp": "נא לציין שנת הקמת המבנה (מספר)."
+      },
+      "priority": 3,
+      "validation": {
+        "min": 1800
+      },
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q039",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "העסק בקומה",
+      "prompt_he": "נא לציין העסק בקומה (מספר).",
+      "field_key_en": "business_floor",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].building_info.floor",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין העסק בקומה (מספר).",
+        "whatsapp": "נא לציין העסק בקומה (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q040",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "מתוך קומות",
+      "prompt_he": "נא לציין מתוך קומות (מספר).",
+      "field_key_en": "building_total_floors",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].building_info.total_floors",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מתוך קומות (מספר).",
+        "whatsapp": "נא לציין מתוך קומות (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q041",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "שטח בית העסק מ\"ר",
+      "prompt_he": "נא לציין שטח בית העסק מ\"ר (מספר).",
+      "field_key_en": "premises_area_sqm",
+      "data_type": "number",
+      "input_type": "number",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].building_info.area_sqm",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שטח בית העסק מ\"ר (מספר).",
+        "whatsapp": "נא לציין שטח בית העסק מ\"ר (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q042",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "המבנה בנוי (חומרי בנייה)",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור המבנה בנוי (חומרי בנייה): (אפשרויות: אבן, לבנים ובטון, אסכורית/פח, עץ, אחר)",
+      "field_key_en": "building_materials",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "אבן, לבנים ובטון, אסכורית/פח, עץ, אחר",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].building_info.construction_materials",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור המבנה בנוי (חומרי בנייה): (אפשרויות: אבן, לבנים ובטון, אסכורית/פח, עץ, אחר)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור המבנה בנוי (חומרי בנייה): (אפשרויות: אבן, לבנים ובטון, אסכורית/פח, עץ, אחר)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "אבן"
+          },
+          {
+            "n": 2,
+            "label_he": "לבנים ובטון"
+          },
+          {
+            "n": 3,
+            "label_he": "אסכורית/פח"
+          },
+          {
+            "n": 4,
+            "label_he": "עץ"
+          },
+          {
+            "n": 5,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q043",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "אחר – פרט (חומרי בנייה)",
+      "prompt_he": "נא לציין אחר – פרט (חומרי בנייה).",
+      "field_key_en": "building_materials_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "building_materials includes 'אחר'",
+      "json_path": "locations[0].building_info.construction_materials_other",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "building_materials includes 'אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אחר – פרט (חומרי בנייה).",
+        "whatsapp": "נא לציין אחר – פרט (חומרי בנייה)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q044",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "הגג בנוי",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור הגג בנוי: (אפשרויות: בטון, רעפים, אסכורית/פח, אסבסט)",
+      "field_key_en": "roof_materials",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "בטון, רעפים, אסכורית/פח, אסבסט",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].building_info.roof_materials",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור הגג בנוי: (אפשרויות: בטון, רעפים, אסכורית/פח, אסבסט)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור הגג בנוי: (אפשרויות: בטון, רעפים, אסכורית/פח, אסבסט)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בטון"
+          },
+          {
+            "n": 2,
+            "label_he": "רעפים"
+          },
+          {
+            "n": 3,
+            "label_he": "אסכורית/פח"
+          },
+          {
+            "n": 4,
+            "label_he": "אסבסט"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q045",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "האם הבניין בנוי בשיטת הפל-קל?",
+      "prompt_he": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)",
+      "field_key_en": "pal_kal_construction",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].building_info.pal_kal_construction.answer",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q046",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "F. Building/premises information",
+      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "pal_kal_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "pal_kal_construction = true",
+      "json_path": "locations[0].building_info.pal_kal_construction.details",
+      "module_key": "premises_building_characteristics",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "pal_kal_construction = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

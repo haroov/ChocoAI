@@ -1,0 +1,215 @@
+{
+  "module_key": "cov_property_building",
+  "questions": [
+    {
+      "q_id": "Q103",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "ביטוח מבנה בית העסק",
+      "prompt_he": "האם נדרש ביטוח למבנה שבו העסק פועל? (לא/כן)",
+      "field_key_en": "ch2_building_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.property.by_location[0].chapter_2_building.selected",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "has_physical_premises = true",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם נדרש ביטוח למבנה שבו העסק פועל? (לא/כן)",
+        "whatsapp": "האם נדרש ביטוח למבנה שבו העסק פועל? (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q104",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "סכום ביטוח המבנה בערך כינון (בכתובת בית העסק)",
+      "prompt_he": "נא לציין סכום ביטוח המבנה בערך כינון (בכתובת בית העסק) (מספר).",
+      "field_key_en": "ch2_building_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch2_building_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_2_building.sum_insured_building_ils",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch2_building_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח המבנה בערך כינון (בכתובת בית העסק) (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח המבנה בערך כינון (בכתובת בית העסק) (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q105",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "סכום ביטוח בערך כינון לצמודי מבנה בלבד השייכים למציע",
+      "prompt_he": "נא לציין סכום ביטוח בערך כינון לצמודי מבנה בלבד השייכים למציע (מספר).",
+      "field_key_en": "ch2_building_fixtures_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch2_building_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_2_building.sum_insured_fixtures_ils",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch2_building_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח בערך כינון לצמודי מבנה בלבד השייכים למציע (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח בערך כינון לצמודי מבנה בלבד השייכים למציע (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q106",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "סה\"כ סכום ביטוח לכל המבנים",
+      "prompt_he": "נא לציין סה\"כ סכום ביטוח לכל המבנים (מספר).",
+      "field_key_en": "ch2_total_buildings_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch2_building_selected=true",
+      "json_path": "coverages.property.total_buildings_sum_insured_ils",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch2_building_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סה\"כ סכום ביטוח לכל המבנים (מספר).",
+        "whatsapp": "נא לציין סה\"כ סכום ביטוח לכל המבנים (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q107",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "כיסוי לסיכון רעידת אדמה (מבנה)",
+      "prompt_he": "האם כיסוי לסיכון רעידת אדמה (מבנה)? (אפשרויות: לא, כן)",
+      "field_key_en": "ch2_earthquake",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch2_building_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_2_building.earthquake",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch2_building_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לסיכון רעידת אדמה (מבנה)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לסיכון רעידת אדמה (מבנה)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q108",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 2: Fire extended - building",
+      "stage_title_he": "חלק ב — פרק 2: אש מורחב למבנה בית העסק",
+      "chapter": "2",
+      "question_he": "כיסוי לסיכון נזקי טבע (מבנה)",
+      "prompt_he": "האם כיסוי לסיכון נזקי טבע (מבנה)? (אפשרויות: לא, כן)",
+      "field_key_en": "ch2_nature",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch2_building_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_2_building.nature_perils",
+      "module_key": "cov_property_building",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch2_building_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לסיכון נזקי טבע (מבנה)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לסיכון נזקי טבע (מבנה)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ]
+}

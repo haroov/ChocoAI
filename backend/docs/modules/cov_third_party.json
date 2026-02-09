@@ -1,0 +1,81 @@
+{
+  "module_key": "cov_third_party",
+  "questions": [
+    {
+      "q_id": "Q130",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 7: Third party liability",
+      "stage_title_he": "חלק ב — פרק 7: אחריות כלפי צד שלישי",
+      "chapter": "7",
+      "question_he": "ביטוח אחריות כלפי צד ג'",
+      "prompt_he": "האם תרצה לבטח חבות כלפי צד שלישי (צד ג')? (לא/כן)",
+      "field_key_en": "ch7_third_party_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.liability.chapter_7_third_party.selected",
+      "module_key": "cov_third_party",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם תרצה לבטח חבות כלפי צד שלישי (צד ג')? (לא/כן)",
+        "whatsapp": "האם תרצה לבטח חבות כלפי צד שלישי (צד ג')? (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q131",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 7: Third party liability",
+      "stage_title_he": "חלק ב — פרק 7: אחריות כלפי צד שלישי",
+      "chapter": "7",
+      "question_he": "גבול אחריות למקרה ולכל תקופת הביטוח (מינ' 500,000 במדרגות 500,000 עד 10,000,000)",
+      "prompt_he": "נא לציין גבול אחריות למקרה ולכל תקופת הביטוח (מינ' 500,000 במדרגות 500,000 עד 10,000,000) (מספר).",
+      "field_key_en": "ch7_limit_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "constraints": "min=500000; max=10000000; step=500000",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch7_third_party_selected=true",
+      "notes_logic": "טופס מציין מינימום ומדרגות",
+      "json_path": "coverages.liability.chapter_7_third_party.limit_per_event_ils",
+      "module_key": "cov_third_party",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch7_third_party_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין גבול אחריות למקרה ולכל תקופת הביטוח (מינ' 500,000 במדרגות 500,000 עד 10,000,000) (מספר).",
+        "whatsapp": "נא לציין גבול אחריות למקרה ולכל תקופת הביטוח (מינ' 500,000 במדרגות 500,000 עד 10,000,000) (מספר)."
+      },
+      "priority": 2,
+      "validation": {
+        "min": 500000,
+        "max": 10000000,
+        "multipleOf": 500000
+      },
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

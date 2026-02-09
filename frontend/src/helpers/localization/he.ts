@@ -101,6 +101,8 @@ export const he = {
     defileFlowLevelFieldsMsg: 'תגדיר שדות ברמת הפלואו שישמשו בשלבים',
     noFieldsYetMsg: 'אין שדות עדיין – תוסיף אחד',
     addField: '+ שדה',
+    searchFields: 'חיפוש לפי שדה/תיאור',
+    sortByPriority: 'מיון לפי עדיפות (הדלקה/כיבוי)',
     type: 'סוג',
     string: 'טקסט',
     enum: 'רשימה',
@@ -137,6 +139,7 @@ export const he = {
     patternRegex: 'תבנית regex',
     minLength: 'מינימום תווים',
     maxLength: 'מקסימום תווים',
+    priority: 'עדיפות',
     validation: 'ולידציה',
     noIssues: 'הכל תקין ✅',
     focus: 'פוקוס',
@@ -144,6 +147,13 @@ export const he = {
     initialStageNotExist: 'שלב הפתיחה מצביע על משהו שלא קיים',
     edgePointsToMissingStage: 'חיבור מצביע לשלב חסר: {stage}',
     unreachableStage: 'שלב שלא ניתן להגיע אליו: {stage}',
+
+    // Missing field references repair
+    missingFieldRefsMsg: 'השלב הזה מצביע על שדות שלא קיימים בהגדרת השדות של הפלואו. אפשר להסיר אותם, או ליצור להם הגדרה כדי שנוכל לשמור.',
+    createFieldDefinition: 'צור',
+    removeFieldRef: 'הסר',
+    createdFieldDefinition: 'נוצרה הגדרה לשדה: {slug}',
+    autoCreatedMissingFieldsForSave: 'יצרתי אוטומטית {count} שדות חסרים כדי שאפשר יהיה לשמור.',
   },
 
   Notification: {

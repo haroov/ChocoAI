@@ -1,0 +1,285 @@
+{
+  "module_key": "cov_electronic_hardware",
+  "questions": [
+    {
+      "q_id": "Q180",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "ביטוח ציוד אלקטרוני",
+      "prompt_he": "האם יש ציוד אלקטרוני (מחשבים/שרתים/ציוד נייד) שתרצה לבטח? (לא/כן)",
+      "field_key_en": "ch10_electronic_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.selected",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש ציוד אלקטרוני (מחשבים/שרתים/ציוד נייד) שתרצה לבטח? (לא/כן)",
+        "whatsapp": "האם יש ציוד אלקטרוני (מחשבים/שרתים/ציוד נייד) שתרצה לבטח? (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q181",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "רשימת ציוד אלקטרוני מפורטת (לצרף)",
+      "prompt_he": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף).",
+      "field_key_en": "ch10_equipment_list_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "attachments.electronic_equipment_list",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף).",
+        "whatsapp": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q182",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "חלק א' (חומרה) – סוג כיסוי",
+      "prompt_he": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)",
+      "field_key_en": "ch10_hardware_coverage_type",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "כיסוי מלא, כיסוי שיורי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.hardware.coverage_type",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)",
+        "whatsapp": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "כיסוי מלא"
+          },
+          {
+            "n": 2,
+            "label_he": "כיסוי שיורי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q183",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "סכום ביטוח לציוד אלקטרוני",
+      "prompt_he": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר).",
+      "field_key_en": "ch10_hardware_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.hardware.sum_insured_ils",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q184",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "כיסוי לציוד אלקטרוני נייד",
+      "prompt_he": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_mobile_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.selected",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q185",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "אם כן – פרט סוג ציוד נייד",
+      "prompt_he": "אם כן, – פרט סוג ציוד נייד?",
+      "field_key_en": "ch10_mobile_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_mobile_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.type",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_mobile_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט סוג ציוד נייד?",
+        "whatsapp": "אם כן, – פרט סוג ציוד נייד?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q186",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "אם כן – סכום ביטוח לציוד נייד",
+      "prompt_he": "אם כן, – סכום ביטוח לציוד נייד?",
+      "field_key_en": "ch10_mobile_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_mobile_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.sum_insured_ils",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_mobile_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סכום ביטוח לציוד נייד?",
+        "whatsapp": "אם כן, – סכום ביטוח לציוד נייד?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q187",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "האם יש חוזה שירות תקף הכולל חלפים וציוד?",
+      "prompt_he": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_service_contract_valid",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.service_contract_valid",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)",
+        "whatsapp": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "module_key": "needs_business_activity",
+  "questions": [
+    {
+      "q_id": "Q033",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — סוג העסק והפעילות",
+      "question_he": "סוג העסק (בחירה)",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור סוג העסק (בחירה): (אפשרויות: משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר)",
+      "field_key_en": "business_site_type",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "הטופס מציג תיבות סימון",
+      "json_path": "business.site_type",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור סוג העסק (בחירה): (אפשרויות: משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור סוג העסק (בחירה): (אפשרויות: משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "משרד"
+          },
+          {
+            "n": 2,
+            "label_he": "חנות"
+          },
+          {
+            "n": 3,
+            "label_he": "בית מלאכה"
+          },
+          {
+            "n": 4,
+            "label_he": "מפעל/ביח\"ר"
+          },
+          {
+            "n": 5,
+            "label_he": "מחסן"
+          },
+          {
+            "n": 6,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q034",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — סוג העסק והפעילות",
+      "question_he": "אם אחר – פרט",
+      "prompt_he": "נא לציין אם אחר – פרט.",
+      "field_key_en": "business_site_type_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "business_site_type includes 'אחר'",
+      "json_path": "business.site_type_other",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "business_site_type includes 'אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אחר – פרט.",
+        "whatsapp": "נא לציין אם אחר – פרט."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q035",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — סוג העסק והפעילות",
+      "question_he": "העסק משמש ל-",
+      "prompt_he": "נא לציין העסק משמש ל-.",
+      "field_key_en": "business_used_for",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.used_for",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין העסק משמש ל-.",
+        "whatsapp": "נא לציין העסק משמש ל-."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q036",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — סוג העסק והפעילות",
+      "question_he": "פעילות בית העסק ומוצריו",
+      "prompt_he": "נא לפרט: פעילות בית העסק ומוצריו.",
+      "field_key_en": "business_activity_and_products",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.activity_description",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לפרט: פעילות בית העסק ומוצריו.",
+        "whatsapp": "נא לפרט: פעילות בית העסק ומוצריו."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

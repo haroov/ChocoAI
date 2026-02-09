@@ -1,11 +1,5 @@
-export * from './welcome';
-export * from './signUp';
-export * from './login';
-export * from './kyc';
-export * from './donorSupport';
+import { chocoClalSmbTopicSplitProcessFlows } from './chocoClalSmbTopicSplitProcessFlows';
 
-export * from './campaignManagement';
-export * from './gatewayUpdate';
-
-export * from './needsDiscovery';
-export * from './proposalForm';
+export {
+  chocoClalSmbTopicSplitProcessFlows,
+};

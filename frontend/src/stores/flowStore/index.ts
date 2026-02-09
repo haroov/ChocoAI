@@ -22,6 +22,8 @@ class FlowStore {
     graphIssues: GraphValidationIssue[];
     selectedStage: string | null;
     touched: boolean;
+    fieldRenames?: Record<string, string>; // oldSlug -> newSlug (for DB migration + traceability)
+    pendingFieldSlugEdits?: Record<string, string>; // oldSlug -> newSlug (applied on save/blur)
   };
 
   constructor() {
@@ -116,6 +118,8 @@ class FlowStore {
         }),
         selectedStage: null,
         touched: false,
+        fieldRenames: {},
+        pendingFieldSlugEdits: {},
       };
     });
 
@@ -221,6 +225,102 @@ class FlowStore {
       this.editorState.graphEdges = graphEdges;
     }
     this.editorState.touched = true;
+  }
+
+  setPendingFieldSlugEdit(from: string, to: string) {
+    if (!this.editorState) return;
+    if (!this.editorState.pendingFieldSlugEdits) this.editorState.pendingFieldSlugEdits = {};
+
+    const f = String(from ?? '').trim();
+    const t = String(to ?? '').trim();
+    if (!f) return;
+
+    if (!t || t === f) {
+      delete this.editorState.pendingFieldSlugEdits[f];
+      return;
+    }
+
+    this.editorState.pendingFieldSlugEdits[f] = t;
+    this.editorState.touched = true;
+  }
+
+  applyPendingFieldSlugEdits(): { ok: true; applied: number } | { ok: false; collisions: string[] } {
+    if (!this.editorState) return { ok: true, applied: 0 };
+
+    const pending = this.editorState.pendingFieldSlugEdits || {};
+    const entries = Object.entries(pending)
+      .map(([from, to]) => [String(from ?? '').trim(), String(to ?? '').trim()] as const)
+      .filter(([from, to]) => Boolean(from) && Boolean(to) && from !== to);
+
+    if (entries.length === 0) {
+      this.editorState.pendingFieldSlugEdits = {};
+      return { ok: true, applied: 0 };
+    }
+
+    const currentFields = this.editorState.flow.definition.fields;
+    const currentStages = this.editorState.flow.definition.stages;
+
+    const renamingFrom = new Set(entries.map(([from]) => from));
+    const targets = new Set<string>();
+    const collisions: string[] = [];
+
+    for (const [from, to] of entries) {
+      if (targets.has(to)) collisions.push(`'${from}' → '${to}' (duplicate target)`);
+      targets.add(to);
+      if (to in currentFields && !renamingFrom.has(to)) collisions.push(`'${from}' → '${to}' (already exists)`);
+    }
+
+    if (collisions.length) return { ok: false, collisions };
+
+    const renameMap = new Map(entries);
+    const newFields: FlowSchema['definition']['fields'] = {};
+    for (const [slug, def] of Object.entries(currentFields)) {
+      newFields[renameMap.get(slug) || slug] = def;
+    }
+
+    const newStages: FlowSchema['definition']['stages'] = {};
+    for (const [stageSlug, stageDef] of Object.entries(currentStages)) {
+      const mapped = stageDef.fieldsToCollect.map((f) => renameMap.get(f) || f);
+      const deduped = Array.from(new Set(mapped));
+      newStages[stageSlug] = {
+        ...stageDef,
+        fieldsToCollect: deduped.filter((f) => f in newFields),
+      };
+    }
+
+    this.editorState.flow.definition.fields = newFields;
+    this.editorState.flow.definition.stages = newStages;
+    this.editorState.pendingFieldSlugEdits = {};
+    this.recordFieldRenames(Object.fromEntries(entries));
+    this.editorState.touched = true;
+
+    return { ok: true, applied: entries.length };
+  }
+
+  recordFieldRenames(renames: Record<string, string>) {
+    if (!this.editorState) return;
+    if (!this.editorState.fieldRenames) this.editorState.fieldRenames = {};
+
+    // Compose renames so chained renames collapse (A->B then B->C becomes A->C).
+    for (const [fromRaw, toRaw] of Object.entries(renames || {})) {
+      const from = String(fromRaw ?? '').trim();
+      const to = String(toRaw ?? '').trim();
+      if (!from || !to || from === to) continue;
+
+      // Update existing mappings that pointed to "from" to now point to "to"
+      for (const [k, v] of Object.entries(this.editorState.fieldRenames)) {
+        if (v === from) this.editorState.fieldRenames[k] = to;
+      }
+
+      this.editorState.fieldRenames[from] = to;
+    }
+
+    this.editorState.touched = true;
+  }
+
+  clearRecordedFieldRenames() {
+    if (!this.editorState) return;
+    this.editorState.fieldRenames = {};
   }
 
   // Draft management methods

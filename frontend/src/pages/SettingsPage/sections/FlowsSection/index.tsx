@@ -102,9 +102,9 @@ export const FlowsSection: React.FC = () => {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-4">
+        <div className="grid grid-cols-1 gap-4 w-full">
           {flows.map((f) => (
-            <Card key={f.id} shadow="sm" className="border border-default-200 bg-default-50 w-96">
+            <Card key={f.id} shadow="sm" className="border border-default-200 bg-default-50 w-full" style={{ maxWidth: '100%', width: '100%' }}>
               <CardHeader className="flex items-center justify-between">
                 <div>
                   <h5 className="text-lg line-clamp-1">{f.name}</h5>

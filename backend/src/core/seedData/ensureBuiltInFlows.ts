@@ -11,13 +11,30 @@ import { logger } from '../../utils/logger';
  * The system will automatically upsert it into the database on startup.
  */
 export const ensureBuiltInFlows = async () => {
+  const isFlowSchemaLike = (x: any): boolean => !!x
+    && typeof x === 'object'
+    && typeof x.slug === 'string'
+    && typeof x.name === 'string'
+    && typeof x.definition === 'object';
+
   // 1. Gather all schemas from the module exports
   // We look for objects that look like FlowSchemas (have slug, name, definition)
-  const flowsToSync = Object.values(builtInFlows).filter((exportItem: any) => exportItem &&
-      typeof exportItem === 'object' &&
-      'slug' in exportItem &&
-      'definition' in exportItem);
+  // Also support arrays of FlowSchemas (for generated collections).
+  console.log('DEBUG: ensureBuiltInFlows - gathering exports...');
+  const flowsToSync: any[] = [];
+  for (const exportItem of Object.values(builtInFlows) as any[]) {
+    if (isFlowSchemaLike(exportItem)) {
+      flowsToSync.push(exportItem);
+      continue;
+    }
+    if (Array.isArray(exportItem)) {
+      for (const item of exportItem) {
+        if (isFlowSchemaLike(item)) flowsToSync.push(item);
+      }
+    }
+  }
 
+  console.log(`DEBUG: ensureBuiltInFlows - flowsToSync length: ${flowsToSync.length}`);
   logger.info(`[FlowSync] Found ${flowsToSync.length} built-in flows to sync.`);
 
   // Enforce a single defaultForNewUsers flow among built-ins to avoid ambiguous routing.
@@ -72,24 +89,29 @@ export const ensureBuiltInFlows = async () => {
     });
   }
 
-  // Remove old flows (only if they have no messages referencing them)
-  // First, set flowId to null for messages referencing old flows to avoid foreign key constraint
-  const oldFlowSlugs: string[] = [];
-  const oldFlows = await prisma.flow.findMany({
-    where: { slug: { in: oldFlowSlugs } },
-    select: { id: true },
+  // 4. Cleanup: Remove any flows NOT in built-ins list.
+  // User request: keep only the curated built-in flows.
+  const keepSlugs = new Set<string>(flowsToSync.map((s: any) => String(s.slug)));
+  const flowsToDelete = await prisma.flow.findMany({
+    where: { slug: { notIn: Array.from(keepSlugs) } },
+    select: { id: true, slug: true },
   });
 
-  if (oldFlows.length > 0) {
-    const oldFlowIds = oldFlows.map((f) => f.id);
-    // Set flowId to null for messages referencing old flows
+  if (flowsToDelete.length > 0) {
+    const ids = flowsToDelete.map((f) => f.id);
+    logger.info(`[FlowSync] Deleting ${flowsToDelete.length} non-built-in flows`, {
+      slugs: flowsToDelete.map((f) => f.slug),
+    });
+
+    // First, set flowId to null for messages referencing these flows to avoid FK constraint (Message.flow onDelete: NoAction)
     await prisma.message.updateMany({
-      where: { flowId: { in: oldFlowIds } },
+      where: { flowId: { in: ids } },
       data: { flowId: null },
     });
-    // Now we can safely delete the old flows
+
+    // Now we can safely delete the flows (cascades to userFlow/userData/flowHistory)
     await prisma.flow.deleteMany({
-      where: { id: { in: oldFlowIds } },
+      where: { id: { in: ids } },
     });
   }
 };

@@ -5,9 +5,30 @@ import { prisma } from '../../core';
 import { validateField } from './helpers/__validateFields';
 import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 
+async function getUserDataForFlowOnly(userId: string, flowId: string | null | undefined) {
+  if (!flowId) return {};
+  const rows = await prisma.userData.findMany({
+    where: { userId, flowId },
+    select: { key: true, value: true, type: true },
+  });
+  const out: Record<string, unknown> = {};
+  for (const row of rows) {
+    let value: unknown;
+    switch (row.type) {
+      case 'string': value = row.value; break;
+      case 'number': value = Number(row.value); break;
+      case 'boolean': value = row.value === 'true'; break;
+      default: value = row.value;
+    }
+    out[row.key] = value;
+  }
+  return out;
+}
+
 registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const idRaw = (req.params as any).id as unknown;
+    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
 
     if (!id) {
       res.status(400).json({
@@ -17,10 +38,7 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
       return;
     }
 
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      include: { messages: true, events: true, apiCalls: true },
-    });
+    const conversation = await prisma.conversation.findUnique({ where: { id } });
     if (!conversation) {
       res.status(404).json({
         ok: false,
@@ -34,12 +52,16 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
     let fields: Record<string, any> = {};
     if (conversation.userId) {
       const userFlow = await prisma.userFlow.findUnique({ where: { userId: conversation.userId } });
-      fields = await flowHelpers.getUserData(conversation.userId, userFlow?.flowId);
+      // IMPORTANT: For the "Collected Data" panel, scope to the active flow only.
+      // Merging cross-flow keys causes confusing duplicates (same value across multiple unrelated keys).
+      fields = await getUserDataForFlowOnly(conversation.userId, userFlow?.flowId);
     } else {
-      const timelineEvent = conversation.events
-        ?.filter((evt: any) => evt.kind === 'timeline' && (evt.data as any)?.details)
-        ?.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())?.[0];
-      fields = (timelineEvent?.data as any)?.details || {};
+      // Legacy fallback: pull the latest timeline event with `data.details` (if present).
+      const timeline = await prisma.event.findFirst({
+        where: { conversationId: conversation.id, kind: 'timeline' },
+        orderBy: { createdAt: 'desc' },
+      });
+      fields = (timeline?.data as any)?.details || {};
     }
 
     const role = fields.role || 'customer';

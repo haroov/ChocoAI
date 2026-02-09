@@ -575,6 +575,34 @@ export class FlowEngine {
         ? 'CRITICAL: The user is communicating in English. You MUST respond ONLY in English throughout this entire conversation. Maintain English language consistency at all times.'
         : '';
 
+    // Determine per-stage question orchestration policy (generic; no flow-specific logic).
+    // Defaults: WhatsApp=1 question per turn, Web=2 questions per turn.
+    let conversationChannel: 'web' | 'whatsapp' | null = null;
+    try {
+      const convo = await prisma.conversation.findUnique({
+        where: { id: options.conversationId },
+        select: { channel: true },
+      });
+      const raw = String((convo as any)?.channel || '').toLowerCase();
+      if (raw === 'whatsapp') conversationChannel = 'whatsapp';
+      else if (raw === 'web') conversationChannel = 'web';
+    } catch {
+      // ignore - fall back to defaults
+    }
+
+    const qp = stage.orchestration?.questionPolicy;
+    const defaultMaxQuestions = conversationChannel === 'whatsapp' ? 1 : 2;
+    const maxQuestionsPerTurn = (() => {
+      const byChannel = qp?.maxQuestionsPerTurn;
+      const v = conversationChannel === 'whatsapp'
+        ? byChannel?.whatsapp
+        : byChannel?.web;
+      const n = Number(v ?? defaultMaxQuestions);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : defaultMaxQuestions;
+    })();
+    const suppressCoreMissingFieldsSection = qp?.suppressCoreMissingFieldsSection === true;
+    const disableBulkCollectionRule = qp?.disableBulkCollectionRule === true || maxQuestionsPerTurn <= 1;
+
     // Get extra context from Valentine's system (user name, organizations, assistant hints)
     let extraContextString: string | null = null;
     let extraTemplateContext: Record<string, string | GuidestarOrganisation | USAOrganisation | undefined> = {};
@@ -722,7 +750,7 @@ export class FlowEngine {
       '- Get to the point immediately - no unnecessary explanations',
       '- Professional but friendly tone',
       '- No repetitive phrases or filler words',
-      '- If asking a question, ask ONE question only, not multiple',
+      `- If asking questions, ask at most ${maxQuestionsPerTurn} question(s) per message`,
     ];
 
     // Add recovery instructions if needed
@@ -1047,10 +1075,11 @@ export class FlowEngine {
       }
     }
 
-    if (stage.prompt) {
-      const processedPrompt = this.replaceTemplateVariables(stage.prompt, mergedTemplateContext);
-      systemPrompt.push(processedPrompt);
-    }
+    // IMPORTANT: Inject the stage prompt LAST (after generic missing-field guidance),
+    // so the stage's own instructions and exact copy remain the final, most salient instruction.
+    const stagePromptToInject = stage.prompt
+      ? this.replaceTemplateVariables(stage.prompt, mergedTemplateContext)
+      : '';
 
     // Apply systemPromptHooks after stage prompt
     if (stage.orchestration?.systemPromptHooks?.afterPrompt) {
@@ -1073,16 +1102,47 @@ export class FlowEngine {
       }
     }
 
-    if (stage.fieldsToCollect.length > 0) {
+    if (stage.fieldsToCollect.length > 0 && !suppressCoreMissingFieldsSection) {
       const fields = flowHelpers.extractStageFields(flowDefinition, options.stage);
-      const missingFields = fields.filter(([fieldSlug]) => !options.collectedFields.includes(fieldSlug));
+
+      // When a stage defines a customCompletionCheck, treat its requiredFields as the "required" list
+      // for prompting. This prevents the agent from repeatedly asking optional fields (e.g. "*_other")
+      // that are present in fieldsToCollect but not required under current condition.
+      let requiredFieldSlugs = stage.fieldsToCollect;
+      const cc = stage.orchestration?.customCompletionCheck;
+      if (cc?.requiredFields?.length) {
+        try {
+          const kseval = (await import('kseval')).default;
+          const shouldUse = (cc.condition
+            ? (kseval.native?.evaluate(cc.condition, {
+              userData: actualUserData,
+              templateContext: mergedTemplateContext,
+              stage: options.stage,
+            }) ?? false)
+            : true);
+          if (shouldUse) {
+            requiredFieldSlugs = cc.requiredFields;
+          }
+        } catch {
+          // Ignore completion-check evaluation errors and fall back to fieldsToCollect
+        }
+      }
+
+      const missingFields = fields.filter(([fieldSlug]) =>
+        requiredFieldSlugs.includes(fieldSlug) && !(
+          fieldSlug in actualUserData &&
+          actualUserData[fieldSlug] !== undefined &&
+          actualUserData[fieldSlug] !== null &&
+          actualUserData[fieldSlug] !== ''
+        ),
+      );
 
       if (missingFields.length > 0) {
         const fieldsContext = missingFields.map((field) => `* ${field[1].description}`);
         systemPrompt.push(`You need to ask for the following fields:\n${fieldsContext.join('\n')}`);
 
         // CRITICAL: Smart bulk field collection - when 3+ fields missing, ask for ALL in single turn
-        if (missingFields.length >= 3) {
+        if (!disableBulkCollectionRule && missingFields.length >= 3) {
           const fieldNames = missingFields.map(([slug, field]) => {
             // Extract field name from description (first sentence or key phrase)
             const desc = field.description;
@@ -1096,7 +1156,7 @@ export class FlowEngine {
               `EFFICIENCY RULE (CRITICAL): יש לך ${missingFields.length} שדות חסרים (${fieldNames.join(', ')}).`,
               'אתה חובה לשאול על כולם בהודעה אחת, לא אחד אחד.',
               'צור שאלה טבעית ומשולבת שמבקשת את כל המידע החסר בבת אחת.',
-              'דוגמה: "אנא ספק לי את [שדה 1], [שדה 2], ו-[שדה 3]. תוכל לספק אותם?"',
+              'דוגמה (קצר וישיר): "מעולה — מה [שדה 1], [שדה 2] ו-[שדה 3]?"',
               'חשוב: עבור מידע עובדתי (כמו אימייל, טלפון, כתובת), בקש את הנתונים ישירות - אל תבקש "לספר עליהם".',
             );
           } else {
@@ -1104,7 +1164,7 @@ export class FlowEngine {
               `EFFICIENCY RULE (CRITICAL): You have ${missingFields.length} missing fields (${fieldNames.join(', ')}).`,
               'You MUST ask for ALL of them in a SINGLE message, not one by one.',
               'Create a natural, bundled question that requests all missing information at once.',
-              'Example: "Please provide me with [field 1], [field 2], and [field 3]. Can you provide them?"',
+              'Example (short + direct): "Great — what are [field 1], [field 2], and [field 3]?"',
               'Important: For factual data (like email, phone, address), request the data directly - do not ask to "tell me about them".',
             );
           }
@@ -1114,9 +1174,12 @@ export class FlowEngine {
       } else {
         // CRITICAL: Double-check that ALL required fields are actually present before saying completion
         // This prevents premature "that's it" messages when fields aren't actually saved
-        const allRequiredFieldsPresent = stage.fieldsToCollect.every((fieldSlug) =>
-          options.collectedFields.includes(fieldSlug),
-        );
+        const allRequiredFieldsPresent = stage.fieldsToCollect.every((fieldSlug) => (
+          fieldSlug in actualUserData &&
+          actualUserData[fieldSlug] !== undefined &&
+          actualUserData[fieldSlug] !== null &&
+          actualUserData[fieldSlug] !== ''
+        ));
 
         if (allRequiredFieldsPresent) {
           // All fields are actually collected - proceed to next stage (signup)
@@ -1124,20 +1187,23 @@ export class FlowEngine {
           const collectedList = stage.fieldsToCollect.map((slug) => `${slug}: ✓`).join(', ');
           systemPrompt.push(
             `CRITICAL: All required fields collected: ${collectedList}`,
-            'The system will automatically proceed to signup NOW.',
+            'The system will automatically proceed to the next step NOW.',
             'Do NOT ask:',
             '- "Is there anything else?" or "anything more?" or "anything important to know?"',
             '- "Would you like to draft campaign text?" or "Shall I help you with..."',
             '- Any additional questions or next steps',
-            'Simply acknowledge briefly (1 sentence) and STOP. The system handles signup automatically.',
-            'Example: "מצוין, יש לנו את כל המידע. ממשיכים להרשמה." (Hebrew)',
-            'Example: "Perfect. We have everything. Proceeding to registration." (English)',
+            'Simply acknowledge briefly (1 sentence) and STOP. The system handles the transition automatically.',
+            'Example (Hebrew): "מעולה — ממשיכים לשלב הבא."',
+            'Example (English): "Great — moving to the next step."',
           );
         } else {
           // Some fields are missing - list them and ask for them
-          const trulyMissingFields = stage.fieldsToCollect.filter(
-            (fieldSlug) => !options.collectedFields.includes(fieldSlug),
-          );
+          const trulyMissingFields = stage.fieldsToCollect.filter((fieldSlug) => !(
+            fieldSlug in actualUserData &&
+            actualUserData[fieldSlug] !== undefined &&
+            actualUserData[fieldSlug] !== null &&
+            actualUserData[fieldSlug] !== ''
+          ));
           const fields = flowHelpers.extractStageFields(flowDefinition, options.stage);
           const missingFields = fields.filter(([slug]) => trulyMissingFields.includes(slug));
 
@@ -1199,6 +1265,10 @@ export class FlowEngine {
           }
         }
       }
+    }
+
+    if (stagePromptToInject) {
+      systemPrompt.push(stagePromptToInject);
     }
 
     const resp = llmService.generateResponse({

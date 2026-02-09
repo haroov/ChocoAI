@@ -102,7 +102,7 @@ Admin access is seeded automatically—log in at http://localhost:8080/settings 
 
 ```
 username: admin
-password: (set via ADMIN_SEED_PASSWORD; defaults to "admin")
+password: (set via ADMIN_SEED_PASSWORD; defaults to "admin" in dev)
 ```
 
 Once logged in you can view streaming conversations, inspect API logs, and resend OTPs.

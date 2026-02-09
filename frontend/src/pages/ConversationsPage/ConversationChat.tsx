@@ -56,7 +56,7 @@ export const ConversationChat: React.FC<{ conversationId: string}> = observer(({
   return (
     <div className="w-full h-full flex">
       <Chat
-        title={getConversationTitle({ channel: conversation.channel, user: data.user })}
+        title={getConversationTitle({ channel: conversation.channel, user: data.user, userData: (conversation as any).userData || data.userData })}
         messages={[
           ...apiMessages,
           ...uniqueStoreMessages,

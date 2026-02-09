@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:watch": "tsc && vite build --watch",
     "build:widget": "NODE_ENV=production vite build --config vite.config.widget.ts --mode production",
     "check": "tsc && eslint",
     "lint": "eslint",

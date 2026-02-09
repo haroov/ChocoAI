@@ -1,0 +1,295 @@
+{
+  "module_key": "cov_property_contents",
+  "questions": [
+    {
+      "q_id": "Q095",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "ביטוח תכולת בית העסק",
+      "prompt_he": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)",
+      "field_key_en": "ch1_contents_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.selected",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "has_physical_premises = true",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)",
+        "whatsapp": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q096",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "סכום ביטוח לתכולה (למעט מלאי) בערך כינון",
+      "prompt_he": "נא לציין סכום ביטוח לתכולה (למעט מלאי) בערך כינון (מספר).",
+      "field_key_en": "ch1_contents_sum_excl_stock_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.sum_insured_contents_excl_stock_ils",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח לתכולה (למעט מלאי) בערך כינון (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח לתכולה (למעט מלאי) בערך כינון (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q097",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "סכום ביטוח למלאי",
+      "prompt_he": "נא לציין סכום ביטוח למלאי (מספר).",
+      "field_key_en": "ch1_stock_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.sum_insured_stock_ils",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח למלאי (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח למלאי (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q098",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "מעוניין לבטח את המלאי על בסיס הצהרתי",
+      "prompt_he": "האם מעוניין לבטח את המלאי על בסיס הצהרתי? (אפשרויות: לא, כן)",
+      "field_key_en": "ch1_stock_declaration_basis",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.stock_declaration_basis",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם מעוניין לבטח את המלאי על בסיס הצהרתי? (אפשרויות: לא, כן)",
+        "whatsapp": "האם מעוניין לבטח את המלאי על בסיס הצהרתי? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q099",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "הרחבת קלקול תכולת מקררים – סכום ביטוח",
+      "prompt_he": "נא לציין הרחבת קלקול תכולת מקררים – סכום ביטוח (מספר).",
+      "field_key_en": "ch1_fridge_spoilage_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_fridge_spoilage_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.fridge_spoilage.sum_insured_ils",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_fridge_spoilage_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין הרחבת קלקול תכולת מקררים – סכום ביטוח (מספר).",
+        "whatsapp": "נא לציין הרחבת קלקול תכולת מקררים – סכום ביטוח (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q100",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "הרחבת קלקול תכולת מקררים – האם נדרש?",
+      "prompt_he": "האם הרחבת קלקול תכולת מקררים – האם נדרש?? (אפשרויות: לא, כן)",
+      "field_key_en": "ch1_fridge_spoilage_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.fridge_spoilage.selected",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הרחבת קלקול תכולת מקררים – האם נדרש?? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הרחבת קלקול תכולת מקררים – האם נדרש?? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q101",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "כיסוי לסיכון רעידת אדמה לתכולה",
+      "prompt_he": "האם כיסוי לסיכון רעידת אדמה לתכולה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch1_earthquake_contents",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.earthquake",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לסיכון רעידת אדמה לתכולה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לסיכון רעידת אדמה לתכולה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q102",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - contents",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
+      "chapter": "1",
+      "question_he": "כיסוי לסיכון נזקי טבע לתכולה",
+      "prompt_he": "האם כיסוי לסיכון נזקי טבע לתכולה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch1_nature_perils_contents",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch1_contents_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.nature_perils",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch1_contents_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לסיכון נזקי טבע לתכולה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לסיכון נזקי טבע לתכולה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ]
+}

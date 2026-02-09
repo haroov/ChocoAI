@@ -1,0 +1,319 @@
+{
+  "module_key": "cov_electronic_data_restore",
+  "questions": [
+    {
+      "q_id": "Q188",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "ביטוח הוצאות שיחזור נתונים ותוכנה",
+      "prompt_he": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_data_restore_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.selected",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q189",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אמצעים לאגירת נתונים – תיאור",
+      "prompt_he": "נא לפרט: אמצעים לאגירת נתונים – תיאור.",
+      "field_key_en": "ch10_data_storage_means",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_means_description",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לפרט: אמצעים לאגירת נתונים – תיאור.",
+        "whatsapp": "נא לפרט: אמצעים לאגירת נתונים – תיאור."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q190",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "היכן נמצאים האמצעים לאגירת נתונים",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)",
+      "field_key_en": "ch10_data_storage_location",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_location",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בחדר המחשב"
+          },
+          {
+            "n": 2,
+            "label_he": "בחדר נפרד"
+          },
+          {
+            "n": 3,
+            "label_he": "אחר במבנה"
+          },
+          {
+            "n": 4,
+            "label_he": "אחר במבנה אחר/כתובת אחרת"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q191",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "היכן מאוחסנים? (ארון)",
+      "prompt_he": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)",
+      "field_key_en": "ch10_data_storage_cabinet",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "בארון פלדה, בארון חסין אש, אחר",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_cabinet",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)",
+        "whatsapp": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בארון פלדה"
+          },
+          {
+            "n": 2,
+            "label_he": "בארון חסין אש"
+          },
+          {
+            "n": 3,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q192",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אם אחר – פרט",
+      "prompt_he": "נא לציין אם אחר – פרט.",
+      "field_key_en": "ch10_data_storage_cabinet_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_storage_cabinet='אחר'",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_cabinet_other",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_storage_cabinet='אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אחר – פרט.",
+        "whatsapp": "נא לציין אם אחר – פרט."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q193",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "האם קיימת מערכת אל-פסק?",
+      "prompt_he": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_ups_present",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.ups_present",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)",
+        "whatsapp": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q194",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "תדירות ביצוע הגיבויים",
+      "prompt_he": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)",
+      "field_key_en": "ch10_backup_frequency",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.backup_frequency",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)",
+        "whatsapp": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "אחת ליום"
+          },
+          {
+            "n": 2,
+            "label_he": "אחת ליומיים"
+          },
+          {
+            "n": 3,
+            "label_he": "אחת לשבוע"
+          },
+          {
+            "n": 4,
+            "label_he": "אחת לשבועיים"
+          },
+          {
+            "n": 5,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q195",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אם אחר – פרט",
+      "prompt_he": "נא לציין אם אחר – פרט.",
+      "field_key_en": "ch10_backup_frequency_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_backup_frequency='אחר'",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.backup_frequency_other",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_backup_frequency='אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אחר – פרט.",
+        "whatsapp": "נא לציין אם אחר – פרט."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

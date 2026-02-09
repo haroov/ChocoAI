@@ -4,7 +4,8 @@ import { prisma } from '../../core';
 
 registerRoute('get', '/api/v1/conversations/:id/api-calls', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const idRaw = (req.params as any).id as unknown;
+    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
 
     if (!id) {
       res.status(400).json({

@@ -1,0 +1,563 @@
+{
+    "meta": {
+        "name": "Choco • Clal SMB • Extended Business Details",
+        "version": "1.0.0-prod-topic-split",
+        "generated_at_utc": "2026-02-04T18:00:42Z",
+        "language": {
+            "field_names": "en",
+            "content": "he"
+        },
+        "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+        "carrier": "Clal Insurance",
+        "channel_supported": [
+            "web_chat",
+            "whatsapp"
+        ]
+    },
+    "runtime": {
+        "engine_contract": {
+            "condition_dsl": "simple",
+            "channel_profiles": {
+                "web_chat": {
+                    "max_questions_per_turn": 2,
+                    "max_chars_per_message": 1200,
+                    "supports_quick_replies": true,
+                    "supports_multi_select": true,
+                    "supports_file_upload": true
+                },
+                "whatsapp": {
+                    "max_questions_per_turn": 1,
+                    "max_chars_per_message": 500
+                }
+            }
+        },
+        "conversation_policies": {
+            "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון."
+        }
+    },
+    "process": {
+        "process_key": "02b_extended_business_details",
+        "title_he": "השלמת פרטי המציע ופרטי העסק",
+        "description_he": "איסוף כתובות, תאריכי ביטוח ופרטים נוספים לאחר בירור הצרכים.",
+        "ask_if": null,
+        "audience": "customer",
+        "included_module_keys": [
+            "core_home_address",
+            "core_business_details",
+            "core_business_address",
+            "core_additional_locations",
+            "core_policy_term"
+        ],
+        "notes_best_practice_he": [
+            "שלב זה מגיע לאחר בירור הכיסויים, כדי להשלים את המידע הטכני."
+        ]
+    },
+    "questions": [
+        {
+            "q_id": "Q009",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "יישוב",
+            "prompt_he": "נא לציין יישוב מגורים.",
+            "field_key_en": "proposer_home_city",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "applicant.home_address.city",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q010",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "רחוב",
+            "prompt_he": "נא לציין רחוב.",
+            "field_key_en": "proposer_home_street",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "applicant.home_address.street",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q011",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "מס' בית",
+            "prompt_he": "נא לציין מס' בית.",
+            "field_key_en": "proposer_home_house_number",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "applicant.home_address.house_number",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q012",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "כניסה",
+            "prompt_he": "נא לציין כניסה.",
+            "field_key_en": "proposer_home_entrance",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "applicant.home_address.entrance",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q013",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "מס' דירה",
+            "prompt_he": "נא לציין מס' דירה.",
+            "field_key_en": "proposer_home_apartment",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "applicant.home_address.apartment",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q014",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "A. Proposer home address",
+            "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+            "question_he": "מיקוד",
+            "prompt_he": "נא לציין מיקוד.",
+            "field_key_en": "proposer_home_zip",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "applicant.home_address.zip_code",
+            "module_key": "core_home_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q015",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "שם בית העסק",
+            "prompt_he": "נא לציין שם בית העסק.",
+            "field_key_en": "business_name",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.name",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q016",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "מספר ת.ז./ח.פ./ח.צ.",
+            "prompt_he": "נא לציין מספר ת.ז./ח.פ./ח.צ. של העסק.",
+            "field_key_en": "business_registration_id",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.registration_id",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q017",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "סוג העסק",
+            "prompt_he": "נא לבחור סוג העסק:",
+            "field_key_en": "business_legal_entity_type",
+            "data_type": "enum",
+            "input_type": "select",
+            "options_he": "חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.legal_entity_type",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "numbered_options",
+                "options": [
+                    {
+                        "n": 1,
+                        "label_he": "חברה פרטית"
+                    },
+                    {
+                        "n": 2,
+                        "label_he": "עוסק מורשה"
+                    },
+                    {
+                        "n": 3,
+                        "label_he": "עוסק זעיר"
+                    },
+                    {
+                        "n": 4,
+                        "label_he": "שותפות רשומה"
+                    },
+                    {
+                        "n": 5,
+                        "label_he": "חברה ציבורית"
+                    }
+                ],
+                "answer_format": "מספר אחד (select)"
+            }
+        },
+        {
+            "q_id": "Q018",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "דואר אלקטרוני של בית העסק",
+            "prompt_he": "נא לציין דואר אלקטרוני של בית העסק.",
+            "field_key_en": "business_email",
+            "data_type": "string",
+            "input_type": "email",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.contact.email",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q019",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "מס' טלפון",
+            "prompt_he": "נא לציין מס' טלפון של העסק.",
+            "field_key_en": "business_phone",
+            "data_type": "string",
+            "input_type": "phone",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.contact.phone",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q021",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business details",
+            "stage_title_he": "חלק א — פרטי בית העסק",
+            "question_he": "מס' טלפון נייד",
+            "prompt_he": "נא לציין מס' טלפון נייד (אם יש).",
+            "field_key_en": "business_mobile",
+            "data_type": "string",
+            "input_type": "phone",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "business.contact.mobile",
+            "module_key": "core_business_details",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q022",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "יישוב",
+            "prompt_he": "נא לציין יישוב העסק.",
+            "field_key_en": "business_city",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "locations[0].address.city",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q023",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "רחוב",
+            "prompt_he": "נא לציין רחוב.",
+            "field_key_en": "business_street",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "locations[0].address.street",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q024",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "מס' בית",
+            "prompt_he": "נא לציין מס' בית.",
+            "field_key_en": "business_house_number",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "locations[0].address.house_number",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q025",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "כניסה",
+            "prompt_he": "נא לציין כניסה.",
+            "field_key_en": "business_entrance",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "locations[0].address.entrance",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q026",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "ת.ד.",
+            "prompt_he": "נא לציין ת.ד..",
+            "field_key_en": "business_po_box",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "locations[0].address.pobox",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q027",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Business address",
+            "stage_title_he": "חלק א — כתובת בית העסק",
+            "question_he": "מיקוד",
+            "prompt_he": "נא לציין מיקוד.",
+            "field_key_en": "business_zip",
+            "data_type": "string",
+            "input_type": "text",
+            "required": "N",
+            "required_mode": "optional",
+            "json_path": "locations[0].address.zip_code",
+            "module_key": "core_business_address",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 3,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q028",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Additional business locations",
+            "stage_title_he": "חלק א — כתובות נוספות / סניפים",
+            "question_he": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות?",
+            "prompt_he": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות? (אפשרויות: לא, כן)",
+            "field_key_en": "business_has_additional_locations",
+            "data_type": "boolean",
+            "input_type": "yes_no",
+            "options_he": "לא, כן",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "business.has_additional_locations",
+            "module_key": "core_additional_locations",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "yes_no",
+                "accepted_values": [
+                    "כן",
+                    "לא",
+                    "y",
+                    "n",
+                    "1",
+                    "0",
+                    "true",
+                    "false"
+                ]
+            }
+        },
+        {
+            "q_id": "Q029",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "B. Additional business locations",
+            "stage_title_he": "חלק א — כתובות נוספות / סניפים",
+            "question_he": "אם כן – מספר הכתובות הנוספות",
+            "prompt_he": "אם כן, מהו מספר הכתובות הנוספות?",
+            "field_key_en": "business_additional_locations_count",
+            "data_type": "number",
+            "input_type": "integer",
+            "constraints": ">=1",
+            "required": "Conditional",
+            "required_mode": "conditional",
+            "required_if": "business_has_additional_locations = true",
+            "json_path": "business.additional_locations_count",
+            "module_key": "core_additional_locations",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "ask_if": "business_has_additional_locations = true",
+            "priority": 2,
+            "validation": {
+                "min": 1
+            },
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        },
+        {
+            "q_id": "Q030",
+            "page": 1,
+            "section": "Part A",
+            "subsection": "C. Requested insurance period",
+            "stage_title_he": "חלק א — תקופת ביטוח מבוקשת",
+            "question_he": "מתאריך",
+            "prompt_he": "מאיזה תאריך תרצה שהביטוח יתחיל? (מינימום = היום)",
+            "field_key_en": "policy_start_date",
+            "data_type": "date",
+            "input_type": "date",
+            "required": "Y",
+            "required_mode": "required",
+            "json_path": "policy_term.start_date",
+            "module_key": "core_policy_term",
+            "audience": "customer",
+            "stage_key": "01_identification",
+            "priority": 1,
+            "whatsapp_rendering": {
+                "type": "free_text"
+            }
+        }
+    ],
+    "validators": [],
+    "handoff_triggers": [],
+    "attachments_checklist": []
+}

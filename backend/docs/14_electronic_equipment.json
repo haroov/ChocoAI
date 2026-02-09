@@ -1,0 +1,820 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "14_electronic_equipment",
+    "title_he": "שאלון ציוד אלקטרוני + שחזור נתונים + הוצאות תפעול נוספות",
+    "description_he": "ציוד אלקטרוני (חומרה/נייד), אמצעי גיבוי ושחזור, והוצאות תפעול נוספות אם נדרש.",
+    "ask_if": "ch10_electronic_selected = true",
+    "audience": "customer",
+    "included_module_keys": [
+      "cov_electronic_hardware",
+      "cov_electronic_data_restore",
+      "cov_electronic_extra_expenses"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q181",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "רשימת ציוד אלקטרוני מפורטת (לצרף)",
+      "prompt_he": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף).",
+      "field_key_en": "ch10_equipment_list_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "attachments.electronic_equipment_list",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף).",
+        "whatsapp": "נא לצרף/להעלות: רשימת ציוד אלקטרוני מפורטת (לצרף)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q182",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "חלק א' (חומרה) – סוג כיסוי",
+      "prompt_he": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)",
+      "field_key_en": "ch10_hardware_coverage_type",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "כיסוי מלא, כיסוי שיורי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.hardware.coverage_type",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)",
+        "whatsapp": "נא לבחור חלק א' (חומרה) – סוג כיסוי: (אפשרויות: כיסוי מלא, כיסוי שיורי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "כיסוי מלא"
+          },
+          {
+            "n": 2,
+            "label_he": "כיסוי שיורי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q183",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "סכום ביטוח לציוד אלקטרוני",
+      "prompt_he": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר).",
+      "field_key_en": "ch10_hardware_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.hardware.sum_insured_ils",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר).",
+        "whatsapp": "נא לציין סכום ביטוח לציוד אלקטרוני (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q184",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "כיסוי לציוד אלקטרוני נייד",
+      "prompt_he": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_mobile_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.selected",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לציוד אלקטרוני נייד? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q185",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "אם כן – פרט סוג ציוד נייד",
+      "prompt_he": "אם כן, – פרט סוג ציוד נייד?",
+      "field_key_en": "ch10_mobile_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_mobile_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.type",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_mobile_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט סוג ציוד נייד?",
+        "whatsapp": "אם כן, – פרט סוג ציוד נייד?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q186",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "אם כן – סכום ביטוח לציוד נייד",
+      "prompt_he": "אם כן, – סכום ביטוח לציוד נייד?",
+      "field_key_en": "ch10_mobile_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_mobile_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.mobile.sum_insured_ils",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_mobile_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סכום ביטוח לציוד נייד?",
+        "whatsapp": "אם כן, – סכום ביטוח לציוד נייד?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q187",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10: Electronic equipment",
+      "stage_title_he": "חלק ב — פרק 10: ציוד אלקטרוני (חומרה)",
+      "chapter": "10",
+      "question_he": "האם יש חוזה שירות תקף הכולל חלפים וציוד?",
+      "prompt_he": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_service_contract_valid",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.service_contract_valid",
+      "module_key": "cov_electronic_hardware",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)",
+        "whatsapp": "האם יש חוזה שירות תקף הכולל חלפים וציוד? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q188",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "ביטוח הוצאות שיחזור נתונים ותוכנה",
+      "prompt_he": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_data_restore_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.selected",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ביטוח הוצאות שיחזור נתונים ותוכנה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q189",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אמצעים לאגירת נתונים – תיאור",
+      "prompt_he": "נא לפרט: אמצעים לאגירת נתונים – תיאור.",
+      "field_key_en": "ch10_data_storage_means",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_means_description",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לפרט: אמצעים לאגירת נתונים – תיאור.",
+        "whatsapp": "נא לפרט: אמצעים לאגירת נתונים – תיאור."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q190",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "היכן נמצאים האמצעים לאגירת נתונים",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)",
+      "field_key_en": "ch10_data_storage_location",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_location",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור היכן נמצאים האמצעים לאגירת נתונים: (אפשרויות: בחדר המחשב, בחדר נפרד, אחר במבנה, אחר במבנה אחר/כתובת אחרת)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בחדר המחשב"
+          },
+          {
+            "n": 2,
+            "label_he": "בחדר נפרד"
+          },
+          {
+            "n": 3,
+            "label_he": "אחר במבנה"
+          },
+          {
+            "n": 4,
+            "label_he": "אחר במבנה אחר/כתובת אחרת"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q191",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "היכן מאוחסנים? (ארון)",
+      "prompt_he": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)",
+      "field_key_en": "ch10_data_storage_cabinet",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "בארון פלדה, בארון חסין אש, אחר",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_cabinet",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)",
+        "whatsapp": "נא לבחור היכן מאוחסנים? (ארון): (אפשרויות: בארון פלדה, בארון חסין אש, אחר)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בארון פלדה"
+          },
+          {
+            "n": 2,
+            "label_he": "בארון חסין אש"
+          },
+          {
+            "n": 3,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q192",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אם אחר – פרט",
+      "prompt_he": "נא לציין אם אחר – פרט.",
+      "field_key_en": "ch10_data_storage_cabinet_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_storage_cabinet='אחר'",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.storage_cabinet_other",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_storage_cabinet='אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אחר – פרט.",
+        "whatsapp": "נא לציין אם אחר – פרט."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q193",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "האם קיימת מערכת אל-פסק?",
+      "prompt_he": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_ups_present",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.ups_present",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)",
+        "whatsapp": "האם קיימת מערכת אל-פסק? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q194",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "תדירות ביצוע הגיבויים",
+      "prompt_he": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)",
+      "field_key_en": "ch10_backup_frequency",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_data_restore_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.backup_frequency",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_data_restore_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)",
+        "whatsapp": "נא לבחור תדירות ביצוע הגיבויים: (אפשרויות: אחת ליום, אחת ליומיים, אחת לשבוע, אחת לשבועיים, אחר)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "אחת ליום"
+          },
+          {
+            "n": 2,
+            "label_he": "אחת ליומיים"
+          },
+          {
+            "n": 3,
+            "label_he": "אחת לשבוע"
+          },
+          {
+            "n": 4,
+            "label_he": "אחת לשבועיים"
+          },
+          {
+            "n": 5,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q195",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part B): Data/software restoration",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ב): שיחזור נתונים ותוכנה",
+      "chapter": "10",
+      "question_he": "אם אחר – פרט",
+      "prompt_he": "נא לציין אם אחר – פרט.",
+      "field_key_en": "ch10_backup_frequency_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_backup_frequency='אחר'",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.data_restore.backup_frequency_other",
+      "module_key": "cov_electronic_data_restore",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_backup_frequency='אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אחר – פרט.",
+        "whatsapp": "נא לציין אם אחר – פרט."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q196",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "הוצאות תפעול נוספות – האם נדרש כיסוי?",
+      "prompt_he": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_extra_expenses_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.selected",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q197",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "הוצאות תפעול נוספות – סכום ביטוח",
+      "prompt_he": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר).",
+      "field_key_en": "ch10_extra_expenses_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_extra_expenses_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.sum_insured_ils",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_extra_expenses_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר).",
+        "whatsapp": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q198",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "תקופת השיפוי המבוקשת (ימים)",
+      "prompt_he": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)",
+      "field_key_en": "ch10_extra_expenses_indemnity_days",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "30,90,180,270,360",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_extra_expenses_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.indemnity_days",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_extra_expenses_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)",
+        "whatsapp": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "30"
+          },
+          {
+            "n": 2,
+            "label_he": "90"
+          },
+          {
+            "n": 3,
+            "label_he": "180"
+          },
+          {
+            "n": 4,
+            "label_he": "270"
+          },
+          {
+            "n": 5,
+            "label_he": "360"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": [
+    {
+      "q_id": "Q181",
+      "field_key_en": "ch10_equipment_list_attachment",
+      "title_he": "רשימת ציוד אלקטרוני מפורטת (לצרף)",
+      "when": "ch10_electronic_selected=true",
+      "json_path": "attachments.electronic_equipment_list",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    }
+  ]
+}

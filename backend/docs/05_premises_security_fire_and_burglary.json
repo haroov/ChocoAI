@@ -1,0 +1,695 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "05_premises_security_fire_and_burglary",
+    "title_he": "אמצעי מיגון, כיבוי ופריצה",
+    "description_he": "שאלון מיגון אש/פריצה: מטפים, גלאים, ספרינקלרים, אזעקה, דלתות, סורגים וכו׳.",
+    "ask_if": "(has_physical_premises = true) OR (ch1_contents_selected = true) OR (ch2_building_selected = true) OR (ch4_burglary_selected = true) OR (ch5_money_selected = true) OR (ch10_electronic_selected = true)",
+    "audience": "customer",
+    "included_module_keys": [
+      "premises_risk_mitigation"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q072",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מטפי כיבוי אש – סוג",
+      "prompt_he": "נא לציין מטפי כיבוי אש – סוג.",
+      "field_key_en": "fire_extinguisher_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.extinguishers.type",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מטפי כיבוי אש – סוג.",
+        "whatsapp": "נא לציין מטפי כיבוי אש – סוג."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q073",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מטפי כיבוי אש – משקל (ק\"ג)",
+      "prompt_he": "נא לציין מטפי כיבוי אש – משקל (ק\"ג) (מספר).",
+      "field_key_en": "fire_extinguisher_weight_kg",
+      "data_type": "number",
+      "input_type": "number",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.extinguishers.weight_kg",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מטפי כיבוי אש – משקל (ק\"ג) (מספר).",
+        "whatsapp": "נא לציין מטפי כיבוי אש – משקל (ק\"ג) (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q074",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מטפי כיבוי אש – כמות",
+      "prompt_he": "נא לציין מטפי כיבוי אש – כמות (מספר).",
+      "field_key_en": "fire_extinguisher_quantity",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.extinguishers.quantity",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מטפי כיבוי אש – כמות (מספר).",
+        "whatsapp": "נא לציין מטפי כיבוי אש – כמות (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q075",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "ברז שריפה – קוטר",
+      "prompt_he": "נא לציין ברז שריפה – קוטר.",
+      "field_key_en": "fire_hydrant_diameter",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.hydrant.diameter",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין ברז שריפה – קוטר.",
+        "whatsapp": "נא לציין ברז שריפה – קוטר."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q076",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "ברז שריפה – כמות",
+      "prompt_he": "נא לציין ברז שריפה – כמות (מספר).",
+      "field_key_en": "fire_hydrant_quantity",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.hydrant.quantity",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין ברז שריפה – כמות (מספר).",
+        "whatsapp": "נא לציין ברז שריפה – כמות (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q077",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מערכת ספרינקלרים (מתזים)",
+      "prompt_he": "האם מערכת ספרינקלרים (מתזים)?",
+      "field_key_en": "sprinklers_present",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.sprinklers.answer",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם מערכת ספרינקלרים (מתזים)?",
+        "whatsapp": "האם מערכת ספרינקלרים (מתזים)?"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q078",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "גלאי אש/עשן – סוג 1",
+      "prompt_he": "נא לציין גלאי אש/עשן – סוג 1.",
+      "field_key_en": "fire_smoke_detector_type_1",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.detectors[0].type",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין גלאי אש/עשן – סוג 1.",
+        "whatsapp": "נא לציין גלאי אש/עשן – סוג 1."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q079",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "גלאי אש/עשן – כמות 1",
+      "prompt_he": "נא לציין גלאי אש/עשן – כמות 1 (מספר).",
+      "field_key_en": "fire_smoke_detector_qty_1",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.detectors[0].quantity",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין גלאי אש/עשן – כמות 1 (מספר).",
+        "whatsapp": "נא לציין גלאי אש/עשן – כמות 1 (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q080",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "גלאי אש/עשן – סוג 2",
+      "prompt_he": "נא לציין גלאי אש/עשן – סוג 2.",
+      "field_key_en": "fire_smoke_detector_type_2",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.detectors[1].type",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין גלאי אש/עשן – סוג 2.",
+        "whatsapp": "נא לציין גלאי אש/עשן – סוג 2."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q081",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "גלאי אש/עשן – כמות 2",
+      "prompt_he": "נא לציין גלאי אש/עשן – כמות 2 (מספר).",
+      "field_key_en": "fire_smoke_detector_qty_2",
+      "data_type": "number",
+      "input_type": "integer",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.detectors[1].quantity",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין גלאי אש/עשן – כמות 2 (מספר).",
+        "whatsapp": "נא לציין גלאי אש/עשן – כמות 2 (מספר)."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q082",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "קירות/מחיצות הצבועים בחומר מעכב בעירה",
+      "prompt_he": "האם קירות/מחיצות הצבועים בחומר מעכב בעירה?",
+      "field_key_en": "fire_retardant_walls",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.fire_protection.fire_retardant_walls",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם קירות/מחיצות הצבועים בחומר מעכב בעירה?",
+        "whatsapp": "האם קירות/מחיצות הצבועים בחומר מעכב בעירה?"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q083",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מערכת אזעקה – סוג",
+      "prompt_he": "נא לציין מערכת אזעקה – סוג.",
+      "field_key_en": "alarm_system_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.alarm.type",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מערכת אזעקה – סוג.",
+        "whatsapp": "נא לציין מערכת אזעקה – סוג."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q084",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "מערכת אזעקה – מחוברת ל-",
+      "prompt_he": "נא לציין מערכת אזעקה – מחוברת ל-.",
+      "field_key_en": "alarm_connected_to",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.alarm.connected_to",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מערכת אזעקה – מחוברת ל-.",
+        "whatsapp": "נא לציין מערכת אזעקה – מחוברת ל-."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q085",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "דלתות בית העסק החיצוניות עשויות",
+      "prompt_he": "נא לבחור דלתות בית העסק החיצוניות עשויות: (אפשרויות: עץ, פלדה, זכוכית, אחר)",
+      "field_key_en": "external_doors_material",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "עץ, פלדה, זכוכית, אחר",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.doors.material",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור דלתות בית העסק החיצוניות עשויות: (אפשרויות: עץ, פלדה, זכוכית, אחר)",
+        "whatsapp": "נא לבחור דלתות בית העסק החיצוניות עשויות: (אפשרויות: עץ, פלדה, זכוכית, אחר)"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "עץ"
+          },
+          {
+            "n": 2,
+            "label_he": "פלדה"
+          },
+          {
+            "n": 3,
+            "label_he": "זכוכית"
+          },
+          {
+            "n": 4,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q086",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "אחר – פרט (דלתות)",
+      "prompt_he": "נא לציין אחר – פרט (דלתות).",
+      "field_key_en": "external_doors_material_other",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "external_doors_material = 'אחר'",
+      "json_path": "locations[0].risk_and_security.burglary_protection.doors.material_other",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "external_doors_material = 'אחר'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אחר – פרט (דלתות).",
+        "whatsapp": "נא לציין אחר – פרט (דלתות)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q087",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "ננעלות באמצעות",
+      "prompt_he": "נא לציין ננעלות באמצעות.",
+      "field_key_en": "external_doors_locking_method",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.doors.locking_method",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין ננעלות באמצעות.",
+        "whatsapp": "נא לציין ננעלות באמצעות."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q088",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "סורגים בחלונות/מזגנים/פתחים אחרים",
+      "prompt_he": "נא לבחור סורגים בחלונות/מזגנים/פתחים אחרים: (אפשרויות: לא, כן במלואם, כן באופן חלקי)",
+      "field_key_en": "window_bars",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "לא, כן במלואם, כן באופן חלקי",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.window_bars",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור סורגים בחלונות/מזגנים/פתחים אחרים: (אפשרויות: לא, כן במלואם, כן באופן חלקי)",
+        "whatsapp": "נא לבחור סורגים בחלונות/מזגנים/פתחים אחרים: (אפשרויות: לא, כן במלואם, כן באופן חלקי)"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "לא"
+          },
+          {
+            "n": 2,
+            "label_he": "כן במלואם"
+          },
+          {
+            "n": 3,
+            "label_he": "כן באופן חלקי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q089",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Risk mitigation measures",
+      "stage_title_he": "חלק א — אמצעי מיגון וכיבוי (אש/פריצה)",
+      "question_he": "חלון ראווה מוגן באמצעות",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור חלון ראווה מוגן באמצעות: (אפשרויות: תריס גלילה, סורגים, זכוכית משוריינת/מחוסמת)",
+      "field_key_en": "storefront_window_protection",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "תריס גלילה, סורגים, זכוכית משוריינת/מחוסמת",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "locations[0].risk_and_security.burglary_protection.storefront_protection",
+      "module_key": "premises_risk_mitigation",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור את האפשרויות המתאימות עבור חלון ראווה מוגן באמצעות: (אפשרויות: תריס גלילה, סורגים, זכוכית משוריינת/מחוסמת)",
+        "whatsapp": "נא לבחור את האפשרויות המתאימות עבור חלון ראווה מוגן באמצעות: (אפשרויות: תריס גלילה, סורגים, זכוכית משוריינת/מחוסמת)"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "תריס גלילה"
+          },
+          {
+            "n": 2,
+            "label_he": "סורגים"
+          },
+          {
+            "n": 3,
+            "label_he": "זכוכית משוריינת/מחוסמת"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": []
+}

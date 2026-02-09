@@ -35,17 +35,68 @@ export const FlowEditor: React.FC = observer(() => {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!flowStore.editorState) return;
+
+      // Apply any pending slug edits even if inputs didn't blur yet.
+      const renameRes = flowStore.applyPendingFieldSlugEdits();
+      if (!renameRes.ok) {
+        app.notification.error(`Cannot save due to field slug collisions: ${renameRes.collisions.join(', ')}`);
+        throw new Error('Field slug collisions');
+      }
+
+      // Ensure any pending field slug edits (onBlur reconciliations) are applied
+      // before we snapshot and send the payload.
+      try {
+        (document.activeElement as HTMLElement | null)?.blur?.();
+      } catch {
+        // ignore
+      }
+      await new Promise((r) => { setTimeout(r, 0); });
+
+      // Repair: ensure all fields referenced by stages exist in definition.fields.
+      // This prevents "references unknown field" save failures and lets the user fully edit via UI.
+      const flow = toJS(flowStore.editorState.flow);
+      const fields = { ...(flow.definition.fields || {}) };
+      const stages = { ...(flow.definition.stages || {}) };
+      const missingReferencedFields = new Set<string>();
+      for (const stage of Object.values<any>(stages)) {
+        if (!stage?.fieldsToCollect) continue;
+        for (const f of stage.fieldsToCollect) {
+          if (!(f in fields)) missingReferencedFields.add(String(f));
+        }
+      }
+      if (missingReferencedFields.size > 0) {
+        for (const f of missingReferencedFields) {
+          fields[f] = fields[f] || { type: 'string', description: '' };
+        }
+        // Deduplicate and keep order
+        for (const [stageSlug, stage] of Object.entries<any>(stages)) {
+          const deduped = Array.from(new Set((stage.fieldsToCollect || []).map(String)));
+          stages[stageSlug] = { ...stage, fieldsToCollect: deduped };
+        }
+        flow.definition = { ...flow.definition, fields, stages };
+        app.notification.warning(t('autoCreatedMissingFieldsForSave', { count: missingReferencedFields.size }));
+      }
+
+      const fieldRenames = flowStore.editorState.fieldRenames || {};
+      const payload = Object.keys(fieldRenames).length > 0
+        ? { ...flow, __meta: { fieldRenames } }
+        : flow;
+
       const resp = await apiClientStore.fetch(`/api/v1/flows/${flowId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toJS(flowStore.editorState.flow)),
+        body: JSON.stringify(payload),
       });
       const res = await resp.json();
       if (!res.ok) {
         app.notification.error(res.error || res.message);
         throw res;
       }
+      if (res.fileSync && res.fileSync.ok === false && !res.fileSync.skipped) {
+        app.notification.warning(`Saved, but failed to sync to backend JSON files: ${res.fileSync.error || 'unknown error'}`);
+      }
       await queryClient.invalidateQueries({ queryKey: ['flows', 'get', flowId] });
+      flowStore.clearRecordedFieldRenames();
     },
   });
 

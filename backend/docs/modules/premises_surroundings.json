@@ -1,0 +1,191 @@
+{
+  "module_key": "premises_surroundings",
+  "questions": [
+    {
+      "q_id": "Q051",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה",
+      "prompt_he": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה.",
+      "field_key_en": "environment_description",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.description",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה.",
+        "whatsapp": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q052",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "ציין את העסקים והמבנים בשכנות ולמה הם משמשים",
+      "prompt_he": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים.",
+      "field_key_en": "neighboring_businesses",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.neighboring_businesses",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים.",
+        "whatsapp": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q053",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה?",
+      "prompt_he": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
+      "field_key_en": "hazardous_goods_nearby",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.hazardous_goods_nearby.answer",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q054",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "hazardous_goods_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "hazardous_goods_nearby = true",
+      "json_path": "locations[0].surroundings.hazardous_goods_nearby.details",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "hazardous_goods_nearby = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q055",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל?",
+      "prompt_he": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
+      "field_key_en": "shared_wall",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].surroundings.shared_wall_with_neighbors.answer",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
+        "whatsapp": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q056",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "G. Nearby environment",
+      "stage_title_he": "חלק א — סביבת העסק (סיכונים סמוכים)",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "shared_wall_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "shared_wall = true",
+      "json_path": "locations[0].surroundings.shared_wall_with_neighbors.details",
+      "module_key": "premises_surroundings",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "shared_wall = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

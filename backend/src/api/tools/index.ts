@@ -2,6 +2,7 @@ import { registerRoute } from '../../utils/routesRegistry';
 import { prisma } from '../../core';
 import { flowAgent } from '../../lib/flowEngine/flowAgent';
 import { registerDynamicTool, executeTool } from '../../lib/flowEngine/tools';
+import type { ToolExecutionContext } from '../../lib/flowEngine/tools/types';
 
 registerRoute('get', '/api/v1/tools', async (req, res) => {
   try {
@@ -115,7 +116,7 @@ registerRoute('post', '/api/v1/tools', async (req, res) => {
     });
 
     // Register tool
-    await registerDynamicTool(toolName, async (payload, context) => {
+    await registerDynamicTool(toolName, async (payload: any, context: ToolExecutionContext) => {
       const { executeDynamicTool } = await import('../../lib/flowEngine/tools/dynamicToolExecutor');
       return executeDynamicTool(toolCode, payload, context);
     }, toolMetadata);
@@ -157,7 +158,7 @@ registerRoute('put', '/api/v1/tools/:id', async (req, res) => {
 
     // Re-register tool
     if (updated.code) {
-      await registerDynamicTool(updated.name, async (payload, context) => {
+      await registerDynamicTool(updated.name, async (payload: any, context: ToolExecutionContext) => {
         const { executeDynamicTool } = await import('../../lib/flowEngine/tools/dynamicToolExecutor');
         return executeDynamicTool(updated.code, payload, context);
       }, updated.metadata as any);

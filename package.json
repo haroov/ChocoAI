@@ -1,9 +1,12 @@
 {
+  "name": "chocoai",
+  "private": true,
   "version": "1.1.40",
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "dev": "concurrently 'npm run dev:backend' 'npm run dev:frontend'",
+    "dev:frontend:vite": "cd frontend && npm run dev",
+    "dev:frontend": "cd frontend && npm run build:watch",
+    "dev": "node scripts/dev.mjs",
     "dev:start": "bash start-dev.sh",
     "check": "cd backend && npm run check && cd ../frontend && npm run check",
     "test:choco-tools": "cd backend && npm run test:choco-tools"

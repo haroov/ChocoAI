@@ -87,4 +87,3 @@ export const insuranceGeneratePdfsTool: ToolExecutor = async (
     return { success: false, error: e?.message || 'Failed to generate PDFs' };
   }
 };
-

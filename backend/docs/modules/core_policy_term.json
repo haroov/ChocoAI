@@ -1,0 +1,61 @@
+{
+  "module_key": "core_policy_term",
+  "questions": [
+    {
+      "q_id": "Q030",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "C. Requested insurance period",
+      "stage_title_he": "חלק א — תקופת ביטוח מבוקשת",
+      "question_he": "מתאריך",
+      "prompt_he": "מאיזה תאריך תרצה שהביטוח יתחיל?",
+      "field_key_en": "policy_start_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "policy_term.start_date",
+      "module_key": "core_policy_term",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מאיזה תאריך תרצה שהביטוח יתחיל?",
+        "whatsapp": "מאיזה תאריך תרצה שהביטוח יתחיל?"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q031",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "C. Requested insurance period",
+      "stage_title_he": "חלק א — תקופת ביטוח מבוקשת",
+      "question_he": "ועד לתאריך",
+      "prompt_he": "מהו ועד לתאריך? (תאריך)",
+      "field_key_en": "policy_end_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "policy_term.end_date",
+      "module_key": "core_policy_term",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מהו ועד לתאריך? (תאריך)",
+        "whatsapp": "מהו ועד לתאריך? (תאריך)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

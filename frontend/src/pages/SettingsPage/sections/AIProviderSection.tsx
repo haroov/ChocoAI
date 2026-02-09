@@ -6,17 +6,20 @@ import { SectionHeader } from '../components/SectionHeader';
 import { apiClientStore } from '../../../stores/apiClientStore';
 
 const AVAILABLE_MODELS = [
-  'gpt-4o-mini',
-  'gpt-5',
-  'gpt-5-mini',
-  'gpt-5-nano',
+  'gpt-5.2',
+  'gpt-5.2-mini',
+  'gpt-5.2-nano',
   'gpt-5.1',
   'gpt-5.1-mini',
   'gpt-5.1-nano',
+  'gpt-5',
+  'gpt-5-mini',
+  'gpt-5-nano',
   'gpt-4.1',
   'gpt-4.1-mini',
   'o4-mini',
   'gpt-4o',
+  'gpt-4o-mini',
 ];
 
 export const AIProviderSection: React.FC = () => {

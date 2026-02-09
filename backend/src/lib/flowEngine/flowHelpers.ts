@@ -279,10 +279,47 @@ class FlowHelpers {
    */
   async setUserData(userId: string, flowId: string, data: Record<string, unknown>, conversationId?: string) {
     const userUpdateData: Record<string, unknown> = {};
+    // Some fields are intentionally transient pointers/state and must be clearable to empty string.
+    // By default we skip empty strings to avoid accidental overwrites, but these keys need explicit clearing.
+    const allowEmptyStringKeys = new Set<string>([
+      // Questionnaire transient answer + pointers
+      'questionnaire_answer',
+      'questionnaire_complete',
+      'questionnaire_current_qid',
+      'questionnaire_last_qid',
+      'questionnaire_stage_key',
+      'questionnaire_stage_title_he',
+      'questionnaire_stage_intro_to_send',
+      'questionnaire_field_key',
+      'questionnaire_json_path',
+      'questionnaire_prompt_he',
+      'questionnaire_options_he',
+      'questionnaire_data_type',
+      'questionnaire_input_type',
+      'questionnaire_constraints',
+      'questionnaire_channel',
+      'insured_form_json',
+      // Table draft state
+      '__questionnaire_table_draft_qid',
+      '__questionnaire_table_draft_rows_json',
+      // Last-action error context (must be clearable after success)
+      '__last_action_error_stage',
+      '__last_action_error_tool',
+      '__last_action_error_message',
+      '__last_action_error_code',
+      '__last_action_error_at',
+    ]);
 
     // Get conversation context for phone normalization if needed
     let conversationContext: { messages?: Array<{ content: string; role?: string }> } | undefined;
-    if (conversationId && data.phone) {
+    if (conversationId && (
+      data.phone
+      || (data as any).mobile_phone
+      || data.proposer_mobile_phone
+      || data.proposer_phone
+      || (data as any).user_phone
+      || (data as any).user_mobile_phone
+    )) {
       const messages = await prisma.message.findMany({
         where: { conversationId, role: 'user' },
         select: { content: true, role: true },
@@ -292,18 +329,419 @@ class FlowHelpers {
       conversationContext = { messages };
     }
 
-    for (const entry of Object.entries(data)) {
+    // === Name fallback inference (when user sent full name but extraction missed part) ===
+    // This is intentionally conservative: only fills missing name fields, never overwrites explicit values.
+    const inferFirstLastFromText = (text: string): { first: string | null; last: string | null } => {
+      const raw = String(text || '').replace(/\s+/g, ' ').trim();
+      if (!raw) return { first: null, last: null };
+
+      // Cut at common separators/labels (phone/email) so we keep just the name portion.
+      const cutKeywords = /(,|\n|(?:\bנייד\b)|(?:\bטלפון\b)|(?:\bאימייל\b)|(?:\bמייל\b)|(?:\bemail\b)|(?:\bphone\b)|@|\d)/i;
+      const idx = raw.search(cutKeywords);
+      const head = (idx >= 0 ? raw.slice(0, idx) : raw).trim();
+      if (!head) return { first: null, last: null };
+
+      const heToken = (t: string): boolean => /^[\u0590-\u05FF]{2,}$/.test(t);
+      const normalizeChunk = (s: string): string => String(s || '')
+        .replace(/[“”"׳״']/g, '')
+        .replace(/^(שמי|שם|קוראים לי|אני)\s*[:\-–—]?\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Prefer parsing the last comma-separated chunk, e.g.
+      // "..., ליאב גפן, נייד 050..." -> "ליאב גפן"
+      const chunks = head
+        .split(/[,;\n]+/)
+        .map((c) => normalizeChunk(c))
+        .filter(Boolean);
+
+      const stop = new Set<string>([
+        // greetings
+        'הי', 'היי', 'שלום', 'אהלן', 'הלו',
+        'אני', 'צריך', 'רוצה', 'מבקש', 'הצעת', 'הצעה', 'ביטוח', 'לעסק', 'לעסקי',
+        'משרד', 'עורך', 'עורכי', 'דין', 'עו״ד', 'עו"ד',
+      ]);
+
+      const parseChunk = (chunk: string): { first: string | null; last: string | null } => {
+        const tokens = chunk
+          .split(/\s+/)
+          .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
+          .filter(Boolean);
+
+        const he = tokens
+          .filter((t) => heToken(t))
+          .filter((t) => !stop.has(t));
+
+        if (he.length >= 2) {
+          // Use last two Hebrew tokens as name (common in Hebrew: "<first> <last>")
+          return { first: he[he.length - 2], last: he[he.length - 1] };
+        }
+        if (he.length === 1) {
+          return { first: he[0], last: null };
+        }
+        return { first: null, last: null };
+      };
+
+      for (let i = chunks.length - 1; i >= 0; i -= 1) {
+        const parsed = parseChunk(chunks[i]);
+        if (parsed.first) return parsed;
+      }
+
+      // Regex fallback: "שמי <first> <last>" embedded in a longer sentence
+      const m = head.match(/(?:שמי|קוראים לי)\s+([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})/);
+      if (m) {
+        const first = String(m[1] || '').trim();
+        const last = String(m[2] || '').trim();
+        if (first && last) return { first, last };
+      }
+
+      // Final fallback: use the first 2-5 tokens of the head (legacy behavior)
+      const cleaned = normalizeChunk(head);
+      if (!cleaned) return { first: null, last: null };
+
+      const tokens = cleaned
+        .split(/\s+/)
+        .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
+        .filter(Boolean)
+        .filter((t) => !/^(נייד|טלפון|אימייל|מייל)$/i.test(t));
+
+      // Avoid garbage / too-long strings
+      if (tokens.length < 2 || tokens.length > 5) return { first: null, last: null };
+
+      const first = tokens[0];
+      const last = tokens.slice(1).join(' ').trim();
+      if (!first || !last) return { first: null, last: null };
+      return { first, last };
+    };
+
+    const augmentedData: Record<string, unknown> = { ...data };
+    const mightNeedNameInference = !!conversationId && (
+      'proposer_first_name' in augmentedData ||
+      'proposer_last_name' in augmentedData ||
+      'user_first_name' in augmentedData ||
+      'user_last_name' in augmentedData ||
+      'first_name' in augmentedData ||
+      'last_name' in augmentedData ||
+      // If the user provided phone/email but the extractor missed the name fields,
+      // we still want to infer full name from the latest user message.
+      'proposer_mobile_phone' in augmentedData ||
+      'mobile_phone' in augmentedData ||
+      'user_phone' in augmentedData ||
+      'user_mobile_phone' in augmentedData ||
+      'phone' in augmentedData ||
+      'proposer_email' in augmentedData ||
+      'user_email' in augmentedData ||
+      'email' in augmentedData
+    );
+    if (mightNeedNameInference) {
+      try {
+        const current = await this.getUserData(userId, flowId);
+        const isBadName = (v: unknown): boolean => {
+          const s = String(v ?? '').trim();
+          if (!s) return false;
+          const lowered = s.toLowerCase();
+          if (['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey'].includes(lowered)) return true;
+          // Contact labels / common non-names (seen in real conversations when users paste "name + phone + email")
+          if ([
+            'נייד', 'טלפון', 'מספר', 'מספר טלפון', 'פלאפון', 'נייד:',
+            'אימייל', 'מייל', 'דוא״ל', 'דואל', 'אמייל', 'email', 'e-mail', 'mail', 'phone',
+          ].includes(lowered)) return true;
+          // If it contains digits / @ it's definitely not a name token.
+          if (/\d/.test(s) || /@/.test(s)) return true;
+          return false;
+        };
+        const isValidEmail = (v: unknown): boolean => {
+          const s = String(v ?? '').trim();
+          if (!s) return false;
+          // Minimal email sanity: local@domain.tld
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
+        };
+        const needProposerFirst = (!current.proposer_first_name && !augmentedData.proposer_first_name)
+          || isBadName(augmentedData.proposer_first_name);
+        const needProposerLast = (!current.proposer_last_name && !augmentedData.proposer_last_name)
+          || isBadName(augmentedData.proposer_last_name);
+        const needFirst = (!current.first_name && !augmentedData.first_name)
+          || isBadName(augmentedData.first_name);
+        const needLast = (!current.last_name && !augmentedData.last_name)
+          || isBadName(augmentedData.last_name);
+        const needUserFirst = (!current.user_first_name && !augmentedData.user_first_name)
+          || isBadName(augmentedData.user_first_name);
+        const needUserLast = (!current.user_last_name && !augmentedData.user_last_name)
+          || isBadName(augmentedData.user_last_name);
+        const needProposerEmail = !isValidEmail(current.proposer_email) && !isValidEmail(augmentedData.proposer_email);
+        const needEmail = !isValidEmail(current.email) && !isValidEmail(augmentedData.email);
+
+        if (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast || needProposerEmail || needEmail) {
+          const lastUserMsg = await prisma.message.findFirst({
+            where: { conversationId: conversationId!, role: 'user' },
+            orderBy: { createdAt: 'desc' },
+            select: { content: true },
+          });
+          const lastText = String(lastUserMsg?.content || '');
+
+          // Infer names
+          const inferred = inferFirstLastFromText(lastText);
+          const shouldRepairNames = Boolean(inferred.first && inferred.last)
+            && (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast);
+
+          if (shouldRepairNames) {
+            // If any name slot looks missing/invalid, repair BOTH first+last from the message.
+            // This fixes cases like last_name="נייד" or swapped partials.
+            const first = inferred.first!;
+            const last = inferred.last!;
+            if (needProposerFirst || isBadName(augmentedData.proposer_first_name)) augmentedData.proposer_first_name = first;
+            if (needProposerLast || isBadName(augmentedData.proposer_last_name)) augmentedData.proposer_last_name = last;
+            if (needFirst || isBadName(augmentedData.first_name)) augmentedData.first_name = first;
+            if (needLast || isBadName(augmentedData.last_name)) augmentedData.last_name = last;
+            if (needUserFirst || isBadName(augmentedData.user_first_name)) augmentedData.user_first_name = first;
+            if (needUserLast || isBadName(augmentedData.user_last_name)) augmentedData.user_last_name = last;
+          } else {
+            // Partial inference: fill only missing/bad slots.
+            if (inferred.first) {
+              if (needProposerFirst) augmentedData.proposer_first_name = inferred.first;
+              if (needFirst) augmentedData.first_name = inferred.first;
+              if (needUserFirst) augmentedData.user_first_name = inferred.first;
+            }
+            if (inferred.last) {
+              if (needProposerLast) augmentedData.proposer_last_name = inferred.last;
+              if (needLast) augmentedData.last_name = inferred.last;
+              if (needUserLast) augmentedData.user_last_name = inferred.last;
+            } else {
+              // If extractor put full name into proposer_first_name, split it conservatively.
+              const pf = String(augmentedData.proposer_first_name ?? '').replace(/\s+/g, ' ').trim();
+              if (pf && needProposerLast && pf.split(' ').length >= 2) {
+                const parts = pf.split(' ');
+                augmentedData.proposer_first_name = parts[0];
+                augmentedData.proposer_last_name = parts.slice(1).join(' ');
+              }
+            }
+          }
+
+          // Infer email if missing/invalid
+          if (needProposerEmail || needEmail) {
+            const m = lastText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+            const inferredEmail = m?.[0]?.trim();
+            if (inferredEmail && isValidEmail(inferredEmail)) {
+              if (needProposerEmail) augmentedData.proposer_email = inferredEmail;
+              if (needEmail) augmentedData.email = inferredEmail;
+            }
+          }
+        }
+      } catch {
+        // Ignore inference errors; extraction remains the primary path.
+      }
+    }
+
+    // === Deterministic segment enrichment (catalog-only) ===
+    // Goal: if the user already provided their business/segment in the first message,
+    // we should immediately enrich it (segment_id/site_type) so the assistant won't re-ask basics.
+    try {
+      const intentKeys = [
+        'business_segment',
+        'segment_description',
+        'industry',
+        'activity_description',
+        'business_used_for',
+        'business_activity_and_products',
+        'business_occupation',
+      ];
+      const hasNewIntent = intentKeys.some((k) => k in augmentedData && String((augmentedData as any)[k] || '').trim());
+      if (hasNewIntent) {
+        const current = await this.getUserData(userId, flowId);
+        const merged = { ...current, ...augmentedData } as Record<string, unknown>;
+        const isEmpty = (v: unknown): boolean => {
+          if (v === null || v === undefined) return true;
+          const s = String(v).trim();
+          if (!s) return true;
+          // Treat common placeholder strings as missing (some older flows stored these).
+          const lowered = s.toLowerCase();
+          if (['/', '//', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined'].includes(lowered)) return true;
+          return false;
+        };
+
+        const existingSegmentId = String((merged as any).segment_id || '').trim();
+        const existingGroupId = String((merged as any).segment_group_id || '').trim();
+
+        const needsSegment = isEmpty(existingSegmentId) && isEmpty(existingGroupId);
+        const needsSiteType = isEmpty((merged as any).business_site_type);
+        const needsSegmentLabelFix = (() => {
+          const v = String((merged as any).business_segment || '').trim();
+          if (!v) return true;
+          // Very short / partial values observed in production (e.g., "דין", "דיו")
+          if (v.length <= 4) return true;
+          return false;
+        })();
+
+        // If we already have a segment id but the label is partial, we can enrich from catalog without re-resolving.
+        if (!needsSegment && existingSegmentId && needsSegmentLabelFix) {
+          const { getSegmentsCatalogProd } = await import('../insurance/segments/loadSegmentsCatalog');
+          const { buildQuestionnaireDefaultsFromResolution } = await import('../insurance/segments/buildQuestionnaireDefaults');
+
+          const catalog = getSegmentsCatalogProd();
+          const seg = catalog.segments.find((s: any) => s.segment_id === existingSegmentId);
+          const segName = String(seg?.segment_name_he || '').trim();
+          if (segName) {
+            const compact = segName.replace(/^משרד\s+/, '').trim();
+            augmentedData.business_segment = compact || segName;
+          }
+
+          // If site type is missing/placeholder, fill it from the defaults builder.
+          const defaults = buildQuestionnaireDefaultsFromResolution({
+            segment_id: existingSegmentId,
+            segment_group_id: existingGroupId || undefined,
+            source: 'catalog',
+            match_confidence: 1,
+          } as any);
+          const st = (defaults.prefill as any)?.business_site_type;
+          if (needsSiteType && Array.isArray(st) && st.length > 0) {
+            augmentedData.business_site_type = String(st[0] || '').trim();
+          }
+        }
+
+        if (needsSegment || needsSiteType || (!existingSegmentId && needsSegmentLabelFix)) {
+          const combinedText = [
+            merged.business_segment,
+            merged.segment_description,
+            merged.industry,
+            merged.activity_description,
+            merged.business_used_for,
+            merged.business_activity_and_products,
+            merged.business_occupation,
+          ]
+            .map((x) => String(x || '').trim())
+            .filter(Boolean)
+            .join(' | ');
+
+          if (combinedText) {
+            const { resolveSegmentFromText } = await import('../insurance/segments/resolveSegmentFromText');
+            const { buildQuestionnaireDefaultsFromResolution } = await import('../insurance/segments/buildQuestionnaireDefaults');
+
+            // IMPORTANT: do NOT pass conversationId to keep this deterministic (no extra LLM calls).
+            const resolved = await resolveSegmentFromText(combinedText);
+            const defaults = buildQuestionnaireDefaultsFromResolution(resolved);
+
+            // Apply non-destructively (only if missing).
+            for (const [k, v] of Object.entries(defaults.userData || {})) {
+              if (k === 'segment_resolution_source' || k === 'segment_resolution_confidence') {
+                if (!(k in augmentedData)) augmentedData[k] = v;
+                continue;
+              }
+              if (isEmpty((merged as any)[k]) && v !== undefined) augmentedData[k] = v;
+            }
+            for (const [k, v] of Object.entries(defaults.prefill || {})) {
+              if (isEmpty((merged as any)[k]) && v !== undefined) {
+                if (k === 'business_site_type' && Array.isArray(v)) {
+                  augmentedData[k] = String(v[0] || '').trim();
+                } else {
+                  augmentedData[k] = v;
+                }
+              }
+            }
+
+            // Upgrade business_segment label to the canonical catalog name (e.g., "משרד עורכי דין").
+            const segName = String((defaults.userData as any)?.segment_name_he || '').trim();
+            const grpName = String((defaults.userData as any)?.segment_group_name_he || '').trim();
+            const desiredLabel = segName || grpName;
+            if (desiredLabel) {
+              const compact = desiredLabel.replace(/^משרד\s+/, '').trim();
+              // Prefer compact label for the business_segment field (occupation vs site).
+              augmentedData.business_segment = compact || desiredLabel;
+            }
+          }
+        }
+      }
+    } catch {
+      // Best-effort; never block saving userData
+    }
+
+    // If the user answered "insured_relation_to_business" but the extractor mistakenly put it into a name field,
+    // remap it to prevent overwriting first_name/last_name.
+    try {
+      const relationWords = new Set<string>([
+        'בעלים',
+        'מנהל',
+        'מנהלת',
+        'שותף',
+        'שותפה',
+        'אחר',
+        'owner',
+        'manager',
+      ]);
+      const norm = (v: unknown) => String(v || '').trim().toLowerCase();
+      const current = await this.getUserData(userId, flowId);
+      const existingRel = String((current as any).insured_relation_to_business || '').trim();
+      const hasRelAlready = existingRel.length > 0;
+      const hasRelIncoming = 'insured_relation_to_business' in augmentedData && String((augmentedData as any).insured_relation_to_business || '').trim();
+
+      if (!hasRelAlready && !hasRelIncoming) {
+        const nameKeys = ['first_name', 'proposer_first_name', 'user_first_name'];
+        for (const k of nameKeys) {
+          const raw = String((augmentedData as any)[k] || '').trim();
+          if (!raw) continue;
+          if (relationWords.has(norm(raw))) {
+            (augmentedData as any).insured_relation_to_business = raw;
+            delete (augmentedData as any)[k];
+            break;
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // === Deterministic inference: has_physical_premises from business_site_type ===
+    // Goal: If we already know the site type (e.g., "משרד"), we should NOT re-ask
+    // whether the business has physical premises. This is used early in Flow 02 gating.
+    try {
+      const current = await this.getUserData(userId, flowId);
+      const merged = { ...current, ...augmentedData } as Record<string, unknown>;
+      const isEmpty = (v: unknown): boolean => v === null || v === undefined || String(v).trim() === '';
+
+      const existing = (merged as any).has_physical_premises;
+      const needs = isEmpty(existing);
+      if (needs) {
+        const stRaw = (merged as any).business_site_type;
+        const stList = Array.isArray(stRaw) ? stRaw : [stRaw];
+        const st = stList
+          .map((x) => String(x ?? '').trim())
+          .filter(Boolean)
+          .join(' | ');
+
+        const stLower = st.toLowerCase();
+        const isOnlineOnly = /אונליין|online|וירטואלי|ללא\s+מקום\s+פיזי|אין\s+מקום\s+פיזי/.test(stLower);
+        const isPhysicalType = /משרד|חנות|קליניקה|מחסן|מפעל|בית\s*מלאכה|ביח["״׳']?ר|בית/.test(st);
+
+        if (isPhysicalType && !isOnlineOnly) {
+          augmentedData.has_physical_premises = true;
+        } else if (isOnlineOnly && !isPhysicalType) {
+          augmentedData.has_physical_premises = false;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    for (const entry of Object.entries(augmentedData)) {
       const [key, rawValue] = entry;
 
       // Skip empty strings, null, and undefined - only save fields that have actual values
-      if (rawValue === null || rawValue === undefined || rawValue === '') {
+      if (rawValue === null || rawValue === undefined) {
+        continue;
+      }
+      if (rawValue === '' && !allowEmptyStringKeys.has(key)) {
         continue;
       }
 
       let value = rawValue;
 
       // Normalize phone numbers
-      if (key === 'phone' && rawValue) {
+      const isPhoneKey = key === 'phone'
+        || key === 'mobile_phone'
+        || key === 'proposer_mobile_phone'
+        || key === 'proposer_phone'
+        || key === 'user_phone'
+        || key === 'user_mobile_phone';
+      if (isPhoneKey && rawValue) {
         const rawPhoneInput = String(rawValue).trim();
 
         if (rawPhoneInput) {
@@ -328,6 +766,15 @@ class FlowHelpers {
         value = this.normalizePhoneNumber(rawPhoneInput, conversationContext);
         // After normalization, check if phone is still valid (not empty)
         if (!value || value === '') {
+          continue;
+        }
+      }
+
+      // Validate emails (skip invalid so we don't persist partials like "@domain.com")
+      const isEmailKey = key === 'email' || key.endsWith('_email');
+      if (isEmailKey) {
+        const s = String(value ?? '').trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s)) {
           continue;
         }
       }
@@ -610,8 +1057,19 @@ class FlowHelpers {
         }
       }
 
+      // Persist arrays/objects as JSON so we don't lose structure
+      // (e.g., completed_processes, multi_select values).
       const type = typeof value;
-      const stringValue = String(value);
+      let stringValue = '';
+      if (value !== null && typeof value === 'object') {
+        try {
+          stringValue = JSON.stringify(value);
+        } catch {
+          stringValue = String(value);
+        }
+      } else {
+        stringValue = String(value);
+      }
 
       await prisma.userData.upsert({
         where: { key_userId_flowId: { userId, flowId, key } },
@@ -619,11 +1077,52 @@ class FlowHelpers {
         update: { value: stringValue },
       });
 
+      // Canonical aliases (keep internal topic-split keys, but also write canonical keys).
+      // This improves UX: avoids re-asking in other flows, and enables UI titles to show full name.
+      const aliasKeys: string[] = [];
+      // Legacy proposer_* keys
+      if (key === 'proposer_first_name') aliasKeys.push('first_name', 'user_first_name');
+      if (key === 'proposer_last_name') aliasKeys.push('last_name', 'user_last_name');
+      if (key === 'proposer_mobile_phone') aliasKeys.push('phone', 'user_phone');
+      if (key === 'proposer_email') aliasKeys.push('email', 'user_email');
+
+      // Mobile phone (common slug) → also write canonical + preferred + legacy
+      if (key === 'mobile_phone') aliasKeys.push('phone', 'user_phone', 'proposer_mobile_phone');
+
+      // Preferred user_* keys (also write legacy + canonical keys for compatibility)
+      if (key === 'user_first_name') aliasKeys.push('first_name', 'proposer_first_name');
+      if (key === 'user_last_name') aliasKeys.push('last_name', 'proposer_last_name');
+      if (key === 'user_phone' || key === 'user_mobile_phone') aliasKeys.push('phone', 'proposer_mobile_phone');
+      if (key === 'user_email') aliasKeys.push('email', 'proposer_email');
+
+      // Canonical keys (also write preferred + legacy keys so all flows can reuse data)
+      if (key === 'first_name') aliasKeys.push('user_first_name', 'proposer_first_name');
+      if (key === 'last_name') aliasKeys.push('user_last_name', 'proposer_last_name');
+      if (key === 'phone') aliasKeys.push('user_phone', 'proposer_mobile_phone');
+      if (key === 'email') aliasKeys.push('user_email', 'proposer_email');
+
+      for (const aliasKey of aliasKeys) {
+        if (!aliasKey || aliasKey === key) continue;
+        await prisma.userData.upsert({
+          where: { key_userId_flowId: { userId, flowId, key: aliasKey } },
+          create: { userId, flowId, key: aliasKey, value: stringValue, type },
+          update: { value: stringValue },
+        });
+      }
+
       switch (key) {
         case 'first_name': userUpdateData.firstName = stringValue; break;
         case 'last_name': userUpdateData.lastName = stringValue; break;
         case 'email': userUpdateData.email = stringValue; break;
         case 'role': userUpdateData.role = stringValue; break;
+        // Topic-split questionnaire proposer keys → also update User row.
+        case 'proposer_first_name': userUpdateData.firstName = stringValue; break;
+        case 'proposer_last_name': userUpdateData.lastName = stringValue; break;
+        case 'proposer_email': userUpdateData.email = stringValue; break;
+        // Preferred user keys → also update User row.
+        case 'user_first_name': userUpdateData.firstName = stringValue; break;
+        case 'user_last_name': userUpdateData.lastName = stringValue; break;
+        case 'user_email': userUpdateData.email = stringValue; break;
       }
     }
 
@@ -664,7 +1163,35 @@ class FlowHelpers {
         case 'string': value = row.value; break;
         case 'number': value = Number(row.value); break;
         case 'boolean': value = row.value === 'true'; break;
+        case 'object':
+          try {
+            if (!row.value) value = row.value;
+            else value = JSON.parse(row.value);
+          } catch {
+            value = row.value;
+          }
+          break;
         default: value = row.value;
+      }
+
+      // Heuristic JSON parsing for known keys stored as strings.
+      // (Some records predate richer type handling, but store JSON in the value string.)
+      try {
+        if (typeof value === 'string') {
+          const s = value.trim();
+          const k = String(row.key || '').trim();
+          const shouldParse = k.endsWith('_json')
+            || k.endsWith('_jsonb')
+            || k === 'completed_processes'
+            || k === 'business_site_type'
+            || k.endsWith('_selected') // sometimes stored as arrays/objects
+            || k.endsWith('_ids');
+          if (shouldParse && s && (s.startsWith('[') || s.startsWith('{'))) {
+            value = JSON.parse(s);
+          }
+        }
+      } catch {
+        // ignore
       }
 
       if (flowId && row.flowId === flowId) {
@@ -679,7 +1206,69 @@ class FlowHelpers {
     // 3. Merge: Other flows (Base) + Current Flow (Overlay)
     // This ensures that if I just answered "email" in *this* flow, it wins.
     // But if "email" was set in a previous flow and not here, I still see it.
-    return { ...otherFlowsData, ...currentFlowData };
+    const merged = { ...otherFlowsData, ...currentFlowData } as Record<string, unknown>;
+
+    // Back-compat aliases (read-time) for common contact keys.
+    // Some flows use `mobile_phone`; we want the UI + other flows to see canonical `user_phone`/`phone`.
+    const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+    const mobile = pickNonEmpty(merged.user_phone, merged.phone, (merged as any).mobile_phone, merged.proposer_mobile_phone, (merged as any).proposer_phone);
+    if (merged.user_phone == null && mobile != null) merged.user_phone = mobile;
+    if (merged.phone == null && mobile != null) merged.phone = mobile;
+    if ((merged as any).proposer_mobile_phone == null && mobile != null) (merged as any).proposer_mobile_phone = mobile;
+
+    // Read-time repair:
+    // 1) If first_name accidentally contains a relation word (e.g., "בעלים"), move it to insured_relation_to_business.
+    try {
+      const relationWords = new Set(['בעלים', 'מנהל', 'מנהלת', 'שותף', 'שותפה', 'אחר']);
+      const first = String((merged as any).first_name || (merged as any).user_first_name || '').trim();
+      const rel = String((merged as any).insured_relation_to_business || '').trim();
+      if (!rel && first && relationWords.has(first)) {
+        (merged as any).insured_relation_to_business = first;
+        delete (merged as any).first_name;
+        delete (merged as any).user_first_name;
+        delete (merged as any).proposer_first_name;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2) If we have a catalog segment id but business_segment is partial, normalize it to the catalog label.
+    try {
+      const segId = String((merged as any).segment_id || '').trim();
+      const bs = String((merged as any).business_segment || '').trim();
+      if (segId && (!bs || bs.length <= 4)) {
+        const { getSegmentsCatalogProd } = await import('../insurance/segments/loadSegmentsCatalog');
+        const catalog = getSegmentsCatalogProd();
+        const seg = catalog.segments.find((s: any) => s.segment_id === segId);
+        const segName = String(seg?.segment_name_he || '').trim();
+        if (segName) {
+          const compact = segName.replace(/^משרד\s+/, '').trim();
+          (merged as any).business_segment = compact || segName;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3) If first/last name accidentally contain customer-status tokens ("לקוח חדש/קיים"),
+    // treat them as invalid names (they are answers to is_new_customer).
+    try {
+      const first = String((merged as any).first_name || (merged as any).user_first_name || '').trim();
+      const last = String((merged as any).last_name || (merged as any).user_last_name || '').trim();
+      const isStatusName = first === 'לקוח' && (last === 'חדש' || last === 'קיים' || last === 'ותיק');
+      if (isStatusName) {
+        delete (merged as any).first_name;
+        delete (merged as any).last_name;
+        delete (merged as any).user_first_name;
+        delete (merged as any).user_last_name;
+        delete (merged as any).proposer_first_name;
+        delete (merged as any).proposer_last_name;
+      }
+    } catch {
+      // ignore
+    }
+
+    return merged;
   }
 
   /**

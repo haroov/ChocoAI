@@ -1,0 +1,241 @@
+{
+  "module_key": "core_contact",
+  "questions": [
+    {
+      "q_id": "Q001",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "שם משפחה",
+      "prompt_he": "נא לציין שם משפחה.",
+      "field_key_en": "proposer_last_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.last_name",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם משפחה.",
+        "whatsapp": "נא לציין שם משפחה."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q002",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "שם פרטי",
+      "prompt_he": "נא לציין שם פרטי.",
+      "field_key_en": "proposer_first_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.first_name",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם פרטי.",
+        "whatsapp": "נא לציין שם פרטי."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q003",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מספר זהות",
+      "prompt_he": "נא לציין מספר זהות.",
+      "field_key_en": "proposer_national_id",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.national_id",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מספר זהות.",
+        "whatsapp": "נא לציין מספר זהות."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q004",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "זיקת המציע לבית העסק",
+      "prompt_he": "נא לבחור זיקת המציע לבית העסק: (אפשרויות: בעלים, מורשה חתימה, מנהל, אחר)",
+      "field_key_en": "proposer_relation_to_business",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "בעלים, מורשה חתימה, מנהל, אחר",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.relationship_to_business",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור זיקת המציע לבית העסק: (אפשרויות: בעלים, מורשה חתימה, מנהל, אחר)",
+        "whatsapp": "נא לבחור זיקת המציע לבית העסק: (אפשרויות: בעלים, מורשה חתימה, מנהל, אחר)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בעלים"
+          },
+          {
+            "n": 2,
+            "label_he": "מורשה חתימה"
+          },
+          {
+            "n": 3,
+            "label_he": "מנהל"
+          },
+          {
+            "n": 4,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q005",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מס' טלפון נייד",
+      "prompt_he": "נא לציין מס' טלפון נייד.",
+      "field_key_en": "proposer_mobile_phone",
+      "data_type": "string",
+      "input_type": "phone",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.contact.mobile",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' טלפון נייד.",
+        "whatsapp": "נא לציין מס' טלפון נייד."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q006",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מס' טלפון",
+      "prompt_he": "נא לציין מס' טלפון.",
+      "field_key_en": "proposer_phone",
+      "data_type": "string",
+      "input_type": "phone",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.contact.phone",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' טלפון.",
+        "whatsapp": "נא לציין מס' טלפון."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q007",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מס' פקס",
+      "prompt_he": "נא לציין מס' פקס.",
+      "field_key_en": "proposer_fax",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "applicant.contact.fax",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' פקס.",
+        "whatsapp": "נא לציין מס' פקס."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q008",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "דואר אלקטרוני",
+      "prompt_he": "מה כתובת האימייל שלך?",
+      "field_key_en": "proposer_email",
+      "data_type": "string",
+      "input_type": "email",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.contact.email",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מה כתובת האימייל שלך?",
+        "whatsapp": "מה כתובת האימייל שלך?"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

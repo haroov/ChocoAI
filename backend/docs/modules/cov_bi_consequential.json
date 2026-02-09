@@ -1,0 +1,264 @@
+{
+  "module_key": "cov_bi_consequential",
+  "questions": [
+    {
+      "q_id": "Q111",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "ביטוח אובדן תוצאתי",
+      "prompt_he": "האם ביטוח אובדן תוצאתי? (אפשרויות: לא, כן)",
+      "field_key_en": "ch3b_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "בחירה בפרק 3ב אינה מאפשרת רכישת פרק 3א",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.selected",
+      "module_key": "cov_bi_consequential",
+      "audience": "internal",
+      "collection_mode": "derived",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ביטוח אובדן תוצאתי? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ביטוח אובדן תוצאתי? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q112",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "סכום הביטוח (הרווח הגולמי השנתי כולל שכר עבודה)",
+      "prompt_he": "נא לציין סכום הביטוח (הרווח הגולמי השנתי כולל שכר עבודה) (מספר).",
+      "field_key_en": "ch3b_sum_insured_gross_profit_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.sum_insured_gross_profit_ils",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום הביטוח (הרווח הגולמי השנתי כולל שכר עבודה) (מספר).",
+        "whatsapp": "נא לציין סכום הביטוח (הרווח הגולמי השנתי כולל שכר עבודה) (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q113",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "תקופת השיפוי המכסימלית (חודשים)",
+      "prompt_he": "נא לבחור תקופת השיפוי המכסימלית (חודשים): (אפשרויות: 3,6,9,12,15,18)",
+      "field_key_en": "ch3b_indemnity_period_months",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "3,6,9,12,15,18",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.indemnity_period_months",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור תקופת השיפוי המכסימלית (חודשים): (אפשרויות: 3,6,9,12,15,18)",
+        "whatsapp": "נא לבחור תקופת השיפוי המכסימלית (חודשים): (אפשרויות: 3,6,9,12,15,18)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "3"
+          },
+          {
+            "n": 2,
+            "label_he": "6"
+          },
+          {
+            "n": 3,
+            "label_he": "9"
+          },
+          {
+            "n": 4,
+            "label_he": "12"
+          },
+          {
+            "n": 5,
+            "label_he": "15"
+          },
+          {
+            "n": 6,
+            "label_he": "18"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q114",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "סכום המחזור השנתי של בית העסק",
+      "prompt_he": "נא לציין סכום המחזור השנתי של בית העסק (מספר).",
+      "field_key_en": "ch3b_annual_turnover_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.annual_turnover_ils",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום המחזור השנתי של בית העסק (מספר).",
+        "whatsapp": "נא לציין סכום המחזור השנתי של בית העסק (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q115",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "סכום ההוצאות הקבועות מתוך המחזור השנתי",
+      "prompt_he": "נא לציין סכום ההוצאות הקבועות מתוך המחזור השנתי (מספר).",
+      "field_key_en": "ch3b_fixed_expenses_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.fixed_expenses_ils",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום ההוצאות הקבועות מתוך המחזור השנתי (מספר).",
+        "whatsapp": "נא לציין סכום ההוצאות הקבועות מתוך המחזור השנתי (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q116",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "סכום הרווח הנקי מתוך המחזור השנתי",
+      "prompt_he": "נא לציין סכום הרווח הנקי מתוך המחזור השנתי (מספר).",
+      "field_key_en": "ch3b_net_profit_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.net_profit_ils",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום הרווח הנקי מתוך המחזור השנתי (מספר).",
+        "whatsapp": "נא לציין סכום הרווח הנקי מתוך המחזור השנתי (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q117",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3b: Consequential loss",
+      "stage_title_he": "חלק ב — פרק 3ב: אובדן תוצאתי",
+      "chapter": "3b",
+      "question_he": "כיסוי להוצאות הכנת תביעה (מקסימום 200,000 ש\"ח) – האם נדרש?",
+      "prompt_he": "האם כיסוי להוצאות הכנת תביעה (מקסימום 200,000 ש\"ח) – האם נדרש?? (אפשרויות: לא, כן)",
+      "field_key_en": "ch3b_claim_prep_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3b_selected=true",
+      "notes_logic": "תקרה 200,000 ש\"ח לפי הטופס",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3b.claim_prep_expenses.selected",
+      "module_key": "cov_bi_consequential",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי להוצאות הכנת תביעה (מקסימום 200,000 ש\"ח) – האם נדרש?? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי להוצאות הכנת תביעה (מקסימום 200,000 ש\"ח) – האם נדרש?? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ]
+}

@@ -18,6 +18,7 @@ export const useConversations = (limit: number) => {
         messages: c.messages,
         updatedAt: new Date(c.updatedAt),
         user: c.user,
+        userData: c.userData,
       }));
     },
   });
@@ -37,6 +38,7 @@ export type ConversationListItem = {
   messages: [{ content: string }];
   updatedAt: Date;
   user?: User;
+  userData?: Record<string, unknown>;
 };
 
 export type User = {

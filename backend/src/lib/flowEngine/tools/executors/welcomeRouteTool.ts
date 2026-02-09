@@ -5,7 +5,7 @@ import { FlowDefinition } from '../../types';
 import { ToolExecutor, ToolResult } from '../types';
 
 /**
- * Welcome route tool - routes user to needsDiscovery (new quote) or login based on intent_type
+ * Welcome route tool - routes user to choco-smb-1-ident (new quote) or login based on intent_type
  */
 export const welcomeRouteTool: ToolExecutor = async (
   payload: Record<string, unknown>,
@@ -44,17 +44,14 @@ export const welcomeRouteTool: ToolExecutor = async (
     const intentType = currentUserData.intent_type as string;
     const alreadyRegistered = currentUserData.already_registered as boolean;
 
-    // Determine target flow
+    // Determine target flow (safe default: quote -> choco-smb-1-ident)
     let targetFlowSlug: string;
     if (intentType === 'login' || alreadyRegistered === true) {
       targetFlowSlug = 'login';
-    } else if (intentType === 'quote') {
-      targetFlowSlug = 'needsDiscovery';
     } else {
-      return {
-        success: false,
-        error: 'Invalid intent_type. Must be "quote" or "login".',
-      };
+      // Default assumption: new quote -> Router
+      // UPDATED: Start the modular flow chain at Flow 01
+      targetFlowSlug = 'flow_01_welcome_user';
     }
 
     // Find target flow
@@ -81,6 +78,8 @@ export const welcomeRouteTool: ToolExecutor = async (
       'last_name',
       'phone',
       'email',
+      // Segmentation / insured hints
+      'segment_description',
       // Telemetry / debug: preserve why the confirmation question was/wasn't asked
       'intent_confidence',
       'needs_account_confirmation',
@@ -91,6 +90,18 @@ export const welcomeRouteTool: ToolExecutor = async (
       if (fieldKey in currentUserData && currentUserData[fieldKey] !== undefined && currentUserData[fieldKey] !== null && currentUserData[fieldKey] !== '') {
         fieldsToPreserve[fieldKey] = currentUserData[fieldKey];
       }
+    }
+
+    // Map Welcome flow keys to chocoClalSmbTopicSplit keys
+    if (currentUserData.first_name) fieldsToPreserve['proposer_first_name'] = currentUserData.first_name;
+    if (currentUserData.last_name) fieldsToPreserve['proposer_last_name'] = currentUserData.last_name;
+    if (currentUserData.email) {
+      fieldsToPreserve['proposer_email'] = currentUserData.email;
+      fieldsToPreserve['business_email'] = currentUserData.email; // Assume business email matches for now
+    }
+    if (currentUserData.phone) {
+      fieldsToPreserve['proposer_mobile_phone'] = currentUserData.phone;
+      fieldsToPreserve['business_phone'] = currentUserData.phone;
     }
 
     // Save preserved fields to target flow

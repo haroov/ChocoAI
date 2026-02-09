@@ -1,0 +1,113 @@
+{
+  "module_key": "internal_agent_details",
+  "questions": [
+    {
+      "q_id": "Q047",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "Agent details (internal)",
+      "stage_title_he": "חלק א — פרטי סוכן (פנימי)",
+      "question_he": "מרחב",
+      "prompt_he": "נא לציין מרחב.",
+      "field_key_en": "agent_region",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "agent.region",
+      "module_key": "internal_agent_details",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מרחב.",
+        "whatsapp": "נא לציין מרחב."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q048",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "Agent details (internal)",
+      "stage_title_he": "חלק א — פרטי סוכן (פנימי)",
+      "question_he": "שם הסוכן",
+      "prompt_he": "נא לציין שם הסוכן.",
+      "field_key_en": "agent_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "agent.agent_name",
+      "module_key": "internal_agent_details",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם הסוכן.",
+        "whatsapp": "נא לציין שם הסוכן."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q049",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "Agent details (internal)",
+      "stage_title_he": "חלק א — פרטי סוכן (פנימי)",
+      "question_he": "צוות",
+      "prompt_he": "נא לציין צוות.",
+      "field_key_en": "agent_team",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "agent.agent_team",
+      "module_key": "internal_agent_details",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין צוות.",
+        "whatsapp": "נא לציין צוות."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q050",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "Agent details (internal)",
+      "stage_title_he": "חלק א — פרטי סוכן (פנימי)",
+      "question_he": "מספר הסוכן",
+      "prompt_he": "נא לציין מספר הסוכן.",
+      "field_key_en": "agent_number",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "agent.agent_number",
+      "module_key": "internal_agent_details",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מספר הסוכן.",
+        "whatsapp": "נא לציין מספר הסוכן."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

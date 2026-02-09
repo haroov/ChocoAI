@@ -1,0 +1,48 @@
+{
+  "module_key": "core_billing_method",
+  "questions": [
+    {
+      "q_id": "Q032",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "D. Collection method",
+      "stage_title_he": "חלק א — אופן גבייה מועדף",
+      "question_he": "אופן הגבייה",
+      "prompt_he": "נא לבחור אופן הגבייה: (אפשרויות: רגילה, הוראת קבע, כרטיס אשראי)",
+      "field_key_en": "collection_method",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "רגילה, הוראת קבע, כרטיס אשראי",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "billing.collection_method",
+      "module_key": "core_billing_method",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור אופן הגבייה: (אפשרויות: רגילה, הוראת קבע, כרטיס אשראי)",
+        "whatsapp": "נא לבחור אופן הגבייה: (אפשרויות: רגילה, הוראת קבע, כרטיס אשראי)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "רגילה"
+          },
+          {
+            "n": 2,
+            "label_he": "הוראת קבע"
+          },
+          {
+            "n": 3,
+            "label_he": "כרטיס אשראי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ]
+}

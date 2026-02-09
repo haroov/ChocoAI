@@ -1,0 +1,128 @@
+{
+  "module_key": "cov_electronic_extra_expenses",
+  "questions": [
+    {
+      "q_id": "Q196",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "הוצאות תפעול נוספות – האם נדרש כיסוי?",
+      "prompt_he": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)",
+      "field_key_en": "ch10_extra_expenses_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_electronic_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.selected",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_electronic_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הוצאות תפעול נוספות – האם נדרש כיסוי?? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q197",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "הוצאות תפעול נוספות – סכום ביטוח",
+      "prompt_he": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר).",
+      "field_key_en": "ch10_extra_expenses_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_extra_expenses_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.sum_insured_ils",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_extra_expenses_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר).",
+        "whatsapp": "נא לציין הוצאות תפעול נוספות – סכום ביטוח (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q198",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 10 (Part C): Extra operating expenses",
+      "stage_title_he": "חלק ב — פרק 10 (חלק ג): הוצאות תפעול נוספות",
+      "chapter": "10",
+      "question_he": "תקופת השיפוי המבוקשת (ימים)",
+      "prompt_he": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)",
+      "field_key_en": "ch10_extra_expenses_indemnity_days",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "30,90,180,270,360",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch10_extra_expenses_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_10_electronic_equipment.extra_expenses.indemnity_days",
+      "module_key": "cov_electronic_extra_expenses",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch10_extra_expenses_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)",
+        "whatsapp": "נא לבחור תקופת השיפוי המבוקשת (ימים): (אפשרויות: 30,90,180,270,360)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "30"
+          },
+          {
+            "n": 2,
+            "label_he": "90"
+          },
+          {
+            "n": 3,
+            "label_he": "180"
+          },
+          {
+            "n": 4,
+            "label_he": "270"
+          },
+          {
+            "n": 5,
+            "label_he": "360"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ]
+}

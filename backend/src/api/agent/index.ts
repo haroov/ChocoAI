@@ -1,6 +1,92 @@
 import { flowEngine } from '../../lib/flowEngine/flowEngine';
 import { registerRoute } from '../../utils/routesRegistry';
 import { logger } from '../../utils/logger';
+import { prisma } from '../../core';
+import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
+
+function parseUserAgent(uaRaw: string) {
+  const ua = uaRaw || '';
+  const isMobile = /(Mobi|Android|iPhone|iPad|iPod)/i.test(ua);
+  const device = isMobile ? 'mobile' : 'desktop';
+
+  let browser = 'unknown';
+  let browserVersion = '';
+  const edge = /Edg\/([\d.]+)/.exec(ua);
+  const chrome = /Chrome\/([\d.]+)/.exec(ua);
+  const firefox = /Firefox\/([\d.]+)/.exec(ua);
+  const safari = /Version\/([\d.]+).*Safari\//.exec(ua);
+  const opr = /OPR\/([\d.]+)/.exec(ua);
+
+  if (edge) {
+    browser = 'edge';
+    browserVersion = edge[1];
+  } else if (opr) {
+    browser = 'opera';
+    browserVersion = opr[1];
+  } else if (firefox) {
+    browser = 'firefox';
+    browserVersion = firefox[1];
+  } else if (chrome && !/Chromium/i.test(ua) && !/Edg\//.test(ua) && !/OPR\//.test(ua)) {
+    browser = 'chrome';
+    browserVersion = chrome[1];
+  } else if (safari && !/Chrome\//.test(ua) && !/Chromium/i.test(ua)) {
+    browser = 'safari';
+    browserVersion = safari[1];
+  }
+
+  let os = 'unknown';
+  let osVersion = '';
+  const win = /Windows NT ([\d.]+)/.exec(ua);
+  const mac = /Mac OS X ([\d_]+)/.exec(ua);
+  const ios = /OS ([\d_]+) like Mac OS X/.exec(ua);
+  const android = /Android ([\d.]+)/.exec(ua);
+
+  if (ios) {
+    os = 'ios';
+    osVersion = ios[1].replace(/_/g, '.');
+  } else if (android) {
+    os = 'android';
+    osVersion = android[1];
+  } else if (mac) {
+    os = 'macos';
+    osVersion = mac[1].replace(/_/g, '.');
+  } else if (win) {
+    os = 'windows';
+    osVersion = win[1];
+  }
+
+  return { device, browser, browserVersion, os, osVersion };
+}
+
+async function persistClientTelemetry(conversationId: string, userAgentHeader: string | undefined) {
+  try {
+    const ua = String(userAgentHeader || '').trim();
+    if (!ua) return;
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { userId: true },
+    });
+    if (!conversation?.userId) return;
+
+    const userFlow = await prisma.userFlow.findUnique({ where: { userId: conversation.userId } });
+    const flowId = userFlow?.flowId;
+    if (!flowId) return;
+
+    const parsed = parseUserAgent(ua);
+    await flowHelpers.setUserData(conversation.userId, flowId, {
+      client_user_agent: ua,
+      client_device: parsed.device,
+      client_browser: parsed.browser,
+      client_browser_version: parsed.browserVersion,
+      client_os: parsed.os,
+      client_os_version: parsed.osVersion,
+    }, conversationId);
+  } catch (e) {
+    // Best-effort; should never break chat UX
+    logger.warn('Failed to persist client telemetry', { error: (e as any)?.message });
+  }
+}
 
 registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
   const message = req.query.message as string | undefined;
@@ -65,6 +151,7 @@ registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
             // Final result
             conversationIdResult = chunk.conversationId;
             finalTextResult = chunk.finalText;
+            await persistClientTelemetry(chunk.conversationId, req.headers['user-agent'] as string | undefined);
             sendEvent('done', {
               conversationId: chunk.conversationId,
               finalText: chunk.finalText,
@@ -104,6 +191,12 @@ registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
   } catch (error: any) {
     logger.error('Streaming chat error:', error);
     if (!closed && !res.writableEnded) {
+      // DEBUG: Send error as text to UI
+      try {
+        sendEvent('token', { textChunk: `\n\nDEBUG ERROR: ${error?.message}\nSTACK: ${error?.stack}` });
+        sendEvent('done', { conversationId: conversationId || '', finalText: error?.message });
+      } catch (e) { /* ignore */ }
+
       try {
         sendEvent('error', {
           message: error?.message || 'Streaming failed',
@@ -153,6 +246,7 @@ registerRoute('post', '/api/v1/agent/message', async (req, res) => {
         } else {
           conversationIdResult = chunk.conversationId;
           finalTextResult = chunk.finalText;
+          await persistClientTelemetry(chunk.conversationId, req.headers['user-agent'] as string | undefined);
           break;
         }
       }

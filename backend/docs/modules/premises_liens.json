@@ -1,0 +1,269 @@
+{
+  "module_key": "premises_liens",
+  "questions": [
+    {
+      "q_id": "Q057",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "האם נדרש שיעבוד בפוליסה לרכוש המבוטח?",
+      "prompt_he": "האם נדרש שיעבוד בפוליסה לרכוש המבוטח? (אפשרויות: לא, כן)",
+      "field_key_en": "lien_required",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].liens.required",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם נדרש שיעבוד בפוליסה לרכוש המבוטח? (אפשרויות: לא, כן)",
+        "whatsapp": "האם נדרש שיעבוד בפוליסה לרכוש המבוטח? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q058",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק המבנה לטובת – סניף",
+      "prompt_he": "נא לציין שיעבוד פרק המבנה לטובת – סניף.",
+      "field_key_en": "lien_building_branch_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.building.branch_name",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק המבנה לטובת – סניף.",
+        "whatsapp": "נא לציין שיעבוד פרק המבנה לטובת – סניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q059",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק המבנה – מספר סניף",
+      "prompt_he": "נא לציין שיעבוד פרק המבנה – מספר סניף.",
+      "field_key_en": "lien_building_branch_number",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.building.branch_number",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק המבנה – מספר סניף.",
+        "whatsapp": "נא לציין שיעבוד פרק המבנה – מספר סניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q060",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק המבנה – כתובת הסניף",
+      "prompt_he": "נא לציין שיעבוד פרק המבנה – כתובת הסניף.",
+      "field_key_en": "lien_building_branch_address",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.building.branch_address",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק המבנה – כתובת הסניף.",
+        "whatsapp": "נא לציין שיעבוד פרק המבנה – כתובת הסניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q061",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק המבנה – על סך",
+      "prompt_he": "נא לציין שיעבוד פרק המבנה – על סך (מספר).",
+      "field_key_en": "lien_building_amount_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.building.amount_ils",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק המבנה – על סך (מספר).",
+        "whatsapp": "נא לציין שיעבוד פרק המבנה – על סך (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q062",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק התכולה לטובת – סניף",
+      "prompt_he": "נא לציין שיעבוד פרק התכולה לטובת – סניף.",
+      "field_key_en": "lien_contents_branch_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.contents.branch_name",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק התכולה לטובת – סניף.",
+        "whatsapp": "נא לציין שיעבוד פרק התכולה לטובת – סניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q063",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק התכולה – מספר סניף",
+      "prompt_he": "נא לציין שיעבוד פרק התכולה – מספר סניף.",
+      "field_key_en": "lien_contents_branch_number",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.contents.branch_number",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק התכולה – מספר סניף.",
+        "whatsapp": "נא לציין שיעבוד פרק התכולה – מספר סניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q064",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק התכולה – כתובת הסניף",
+      "prompt_he": "נא לציין שיעבוד פרק התכולה – כתובת הסניף.",
+      "field_key_en": "lien_contents_branch_address",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.contents.branch_address",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק התכולה – כתובת הסניף.",
+        "whatsapp": "נא לציין שיעבוד פרק התכולה – כתובת הסניף."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q065",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "H. Liens / endorsements",
+      "stage_title_he": "חלק א — שיעבודים / מוטבים",
+      "question_he": "שיעבוד פרק התכולה – על סך",
+      "prompt_he": "נא לציין שיעבוד פרק התכולה – על סך (מספר).",
+      "field_key_en": "lien_contents_amount_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "lien_required = true",
+      "json_path": "locations[0].liens.contents.amount_ils",
+      "module_key": "premises_liens",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "lien_required = true",
+      "prompt_variants": {
+        "web_chat": "נא לציין שיעבוד פרק התכולה – על סך (מספר).",
+        "whatsapp": "נא לציין שיעבוד פרק התכולה – על סך (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

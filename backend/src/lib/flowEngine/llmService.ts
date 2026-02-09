@@ -65,7 +65,12 @@ type GenerateResponseOptions = {
 
 const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
-  'gpt-5.2': { input: 2.50, output: 10.00 }, // Estimated pricing placeholder
+  'o4-mini': { input: 0.15, output: 0.6 }, // Estimated pricing
+  'gpt-5.2-mini': { input: 0.15, output: 0.6 }, // Estimated pricing
+  'gpt-5.2': { input: 0.15, output: 0.6 }, // Estimated pricing
+  'gpt-5-nano': { input: 0.05, output: 0.4 },
+  // NOTE: Keep this list minimal. Unknown models default to 0 pricing.
+  // Add models here only when pricing is confirmed.
 };
 
 /**
@@ -97,15 +102,42 @@ Your goal: enable a conversation that feels personalized, emotionally attuned, a
 class LlmService {
   private openaiClient?: OpenAI;
 
+  /**
+   * Normalize model names coming from DB defaults / configs.
+   * This prevents runtime failures when an invalid/obsolete model name is stored.
+   */
+  private normalizeModelName(model: string | null | undefined): string {
+    const raw = String(model || '').trim();
+    if (!raw) return 'gpt-4o-mini';
+
+    return raw;
+  }
+
   async extractFieldsData(options: ExtractFieldsOptions) {
     if (Object.keys(options.context.fieldsDescription).length === 0) return {};
 
-    const config = { model: 'gpt-5.2', temperature: 0.2 };
+    const baseConfig = await this.getConfig();
+    const model = this.normalizeModelName(baseConfig.model);
+    const config = { model, temperature: model === 'gpt-5-nano' ? 1 : 0.2 };
+    // IMPORTANT:
+    // For field extraction, we include only USER messages as context.
+    // Including assistant messages often causes the model to "extract" example values that the assistant suggested,
+    // polluting userData with hallucinated/templated content (e.g., saving "phone" as the email).
+    //
+    // However: to avoid mis-tagging (e.g. VAT/registration numbers saved as phones), we provide the
+    // *most recent assistant question* as a SYSTEM hint (not as chat history) and explicitly instruct
+    // the model to never extract values from it.
     const conversationHistory = await prisma.message.findMany({
-      where: { conversationId: options.conversationId, role: { in: ['user', 'assistant'] } },
+      where: { conversationId: options.conversationId, role: 'user' },
       orderBy: { createdAt: 'asc' },
       take: 20,
     });
+    const lastAssistant = await prisma.message.findFirst({
+      where: { conversationId: options.conversationId, role: 'assistant' },
+      orderBy: { createdAt: 'desc' },
+      select: { content: true },
+    });
+    const lastAssistantQuestion = String(lastAssistant?.content || '').trim();
 
     const client = await this.getClient();
     const prompt: ChatCompletionMessageParam[] = [
@@ -120,15 +152,18 @@ Guidelines:
 - If a field is not provided or cannot be inferred with high confidence, set it to null.
 - If a string field is missing or cannot be inferred, set it to null (not "/", "-", "", or any placeholder).
 - NEVER return empty strings (""). Always use null for missing or unknown values.
-- Boolean fields should be false if not explicitly true.
+- Boolean fields should be null unless the user explicitly provided a clear true/false answer.
 - Do not invent any values.
 - Be careful: greetings, small talk, or vague replies should not produce any meaningful field values.
 - However, if the user explicitly says something that counts as real information and should be extracted.
+- Output ONLY fields that are newly provided or corrected in the CURRENT user message. Do not repeat older values unless the user is correcting them now.
+- Use the most recent assistant question (below) ONLY to understand what the user is replying to. NEVER extract values from the assistant text itself.
+
+Most recent assistant question (context only, do NOT extract from it):
+"""${lastAssistantQuestion}"""
 
 Fields description:
-${Object.entries(options.context.fieldsDescription)
-    .map(([slug, description], index) => `${index + 1}. ${slug} – ${description}`)
-    .join('\n')}
+${Object.entries(options.context.fieldsDescription).map(([slug, description], index) => `${index + 1}. ${slug} – ${description}`).join('\n')}
 
 Current stage description:
 ${options.context.stageDescription}
@@ -137,7 +172,7 @@ Example of empty fields:
 {
   "string_field": null,
   "number_field": null,
-  "boolean_field": false,
+  "boolean_field": null,
 }
 `,
       },
@@ -172,7 +207,10 @@ Example of empty fields:
 
       // Check for common placeholders in string values
       if (typeof value === 'string') {
-        const cleanValue = value.trim();
+        let cleanValue = value.trim();
+        // Strip leading punctuation that models sometimes prepend (e.g. ".עורך דין")
+        cleanValue = cleanValue.replace(/^[\\s.\\-–—,;:]+/g, '').trim();
+        json[key] = cleanValue;
         // Treat common placeholder strings as missing values.
         // IMPORTANT: do NOT keep "null"/"none"/"undefined" as literal strings in userData.
         if (['/', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined'].includes(cleanValue.toLowerCase())) {
@@ -186,6 +224,213 @@ Example of empty fields:
         }
       }
     });
+
+    // Domain guardrail (Israel SMB):
+    // If the last assistant question asked for a business registration ID (VAT/Company ID),
+    // and the model put the numeric answer into business_phone, remap it.
+    try {
+      const lastQ = lastAssistantQuestion;
+      const askedForRegId = /ח[\"״׳']?פ|ע[\"״׳']?מ|מספר\\s*רישום|ח\\.פ|ע\\.מ/i.test(lastQ);
+      const phoneVal = typeof json.business_phone === 'string' ? json.business_phone.trim() : '';
+      const hasRegId = json.business_registration_id !== undefined && json.business_registration_id !== null && String(json.business_registration_id).trim() !== '';
+      if (askedForRegId && phoneVal && !hasRegId) {
+        const digits = phoneVal.replace(/\\D/g, '');
+        const looksLikeVat = digits.length >= 8 && digits.length <= 10 && !phoneVal.startsWith('0') && !phoneVal.startsWith('+');
+        if (looksLikeVat) {
+          json.business_registration_id = phoneVal;
+          delete json.business_phone;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Guardrail (Israel SMB):
+    // Constrain extraction to the field(s) the assistant just asked about.
+    // This prevents cross-field pollution (e.g., ID number being saved as zip/house_number,
+    // or business name being saved as city/street) which can incorrectly complete stages.
+    try {
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      const availableKeys = new Set<string>(Object.keys(fields || {}));
+      const msgRaw = String(options.message || '').trim();
+      const msgDigits = msgRaw.replace(/\D/g, '');
+      const msgIsMostlyDigits = msgDigits.length >= 6 && msgDigits.length === msgRaw.replace(/\s+/g, '').length;
+      const lastQ = lastAssistantQuestion;
+
+      const expected = new Set<string>();
+      const addIfExists = (...keys: string[]) => {
+        keys.forEach((k) => {
+          if (k && availableKeys.has(k)) expected.add(k);
+        });
+      };
+
+      // Common "single answer" questions in the SMB flows
+      if (/מספר\s*הזהות|ת[\"״׳']?ז|תעודת\s*זהות/i.test(lastQ)) addIfExists('user_id', 'legal_id');
+      if (/שם\s*(בית\s*)?העסק|מה\s*שם\s*העסק/i.test(lastQ)) addIfExists('business_name');
+      if (/ח[\"״׳']?פ|ע[\"״׳']?מ|מספר\s*(?:רישום|ח\\.פ|ע\\.מ)/i.test(lastQ)) addIfExists('business_registration_id', 'entity_tax_id', 'regNum');
+      if (/מקום\s*פיזי|פעילות\s*מתבצעת|הכל\s*אונליין|משרד\/חנות\/קליניקה/i.test(lastQ)) addIfExists('has_physical_premises');
+      if (/עובדים\s*שכירים|יש\s*לעסק\s*עובדים|מעסיק/i.test(lastQ)) addIfExists('has_employees');
+      if (/מייצר|מייבא|משווק|מפיץ|מוצרים\s*פיזיים/i.test(lastQ)) addIfExists('has_products_activity');
+      if (/הפסקת\s*פעילות|אובדן\s*הכנסה|אובדן\s*תוצאתי/i.test(lastQ)) addIfExists('business_interruption_type');
+      if (/יישוב|עיר/i.test(lastQ)) addIfExists('business_city');
+      if (/רחוב/i.test(lastQ)) addIfExists('business_street');
+      if (/מס['\"״׳']?\s*בית|מספר\s*בית/i.test(lastQ)) addIfExists('business_house_number');
+      if (/מיקוד/i.test(lastQ)) addIfExists('business_zip');
+      if (/ת\\.ד|תא\s*דואר/i.test(lastQ)) addIfExists('business_po_box');
+      if (/דואר\s*אלקטרוני|אימייל|מייל|email/i.test(lastQ)) addIfExists('business_email', 'email', 'user_email');
+      if (/טלפון/i.test(lastQ)) addIfExists('business_phone', 'phone', 'user_phone', 'mobile_phone');
+      if (/התפקיד\s*שלך\s*בעסק|זיקת\s*המציע/i.test(lastQ)) addIfExists('insured_relation_to_business');
+      if (/לקוח\s*חדש|לקוח\s*(קיים|ותיק)|האם\s+אתה\s+לקוח/i.test(lastQ)) addIfExists('is_new_customer');
+
+      // If we know what we asked, prune aggressively for short / single-answer replies.
+      const looksLikeSingleAnswer = msgIsMostlyDigits || (msgRaw.length <= 80 && !msgRaw.includes('\n'));
+      if (expected.size > 0 && looksLikeSingleAnswer) {
+        for (const k of Object.keys(json)) {
+          if (!expected.has(k)) delete (json as any)[k];
+        }
+      }
+
+      // Deterministic overrides for critical single-field questions:
+      // - business_name: store the full message (avoid partial extraction)
+      if (expected.has('business_name') && hasField('business_name')) {
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || /ח[\"״׳']?פ|ע[\"״׳']?מ/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|יישוב|עיר|מיקוד|ת\\.ד/i.test(msgRaw);
+        if (!multiField && msgRaw) {
+          json.business_name = msgRaw;
+          // When asked for business name, never set address fields from the same answer.
+          for (const k of ['business_city', 'business_street', 'business_house_number', 'business_zip', 'business_po_box', 'business_registration_id']) {
+            delete (json as any)[k];
+          }
+        }
+      }
+
+      // - user_id: if the assistant asked for ID and the reply is a plain digit string, keep ONLY user_id.
+      if ((expected.has('user_id') || expected.has('legal_id')) && msgIsMostlyDigits && msgDigits.length >= 8 && msgDigits.length <= 9) {
+        if (hasField('user_id')) json.user_id = msgDigits;
+        if (hasField('legal_id') && !hasField('user_id')) json.legal_id = msgDigits;
+        for (const k of Object.keys(json)) {
+          if (!['user_id', 'legal_id'].includes(k)) delete (json as any)[k];
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Guardrail: never default customer status (Flow 01 Q000).
+    // Some models tend to emit `false` for boolean fields even when the user did not answer.
+    // For `is_new_customer`, only accept explicit status answers; otherwise, do not set the field.
+    try {
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      if (hasField('is_new_customer') && Object.prototype.hasOwnProperty.call(json, 'is_new_customer')) {
+        const msgRaw = String(options.message || '').trim();
+        const s = msgRaw.toLowerCase();
+        const lastQ = String(lastAssistantQuestion || '').toLowerCase();
+
+        const looksLikeStatusQuestion = /לקוח\s*חדש|לקוח\s*(?:קיים|ותיק)|האם\s+אתה\s+לקוח/.test(lastQ);
+        const isShortAnswer = msgRaw.length <= 30 && !msgRaw.includes('\n');
+
+        // Avoid confusing "הצעה חדשה" with "לקוח חדש"
+        const isNewQuoteIntent = /הצעה\s*חדשה|\bnew\s+quote\b|\bquote\b/.test(s);
+
+        const explicitNew = !isNewQuoteIntent && (
+          /לקוח\s*חדש/.test(s)
+          || /פעם\s*ראשונה/.test(s)
+          || /עוד\s*לא\s*לקוח/.test(s)
+          || /לא\s*מבוטח\s*אצלכם/.test(s)
+        );
+        const explicitExisting = (
+          /לקוח\s*(?:קיים|ותיק)/.test(s)
+          || /כבר\s*לקוח/.test(s)
+          || /מבוטח\s*אצלכם/.test(s)
+          || /יש\s*לי\s*כבר\s*פוליסה/.test(s)
+        );
+
+        // Short replies allowed only if we *just* asked the customer-status question.
+        const replyNew = looksLikeStatusQuestion && isShortAnswer && (
+          /^\s*1\s*$/.test(s)
+          || /^חדש$/.test(s)
+          || /^כן$/.test(s)
+        );
+        const replyExisting = looksLikeStatusQuestion && isShortAnswer && (
+          /^\s*2\s*$/.test(s)
+          || /^קיים$/.test(s)
+          || /^ותיק$/.test(s)
+          || /^לא$/.test(s)
+        );
+
+        const isNew = explicitNew || replyNew;
+        const isExisting = explicitExisting || replyExisting;
+
+        if ((isNew || isExisting) && !(isNew && isExisting)) {
+          json.is_new_customer = Boolean(isNew && !isExisting);
+        } else {
+          delete (json as any).is_new_customer;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Guardrail: If the user message is an "intent only" reply (e.g., "הצעה חדשה"/"quote"),
+    // do NOT let that string or default numbers like 0 pollute unrelated fields.
+    const msg = String(options.message || '').trim();
+    const msgLower = msg.toLowerCase();
+    const msgHasDigits = /\d/.test(msg);
+    const isIntentOnly = msg.length <= 20 && (
+      /הצעה\s*חדשה|רק\s*הצעה|הצעה/.test(msg) ||
+      /\bquote\b|\bnew\s+quote\b|\bstart\s+quote\b/.test(msgLower)
+    );
+    if (isIntentOnly) {
+      const allowSameAsMessage = new Set<string>([
+        // Only intent-like fields may legitimately match an intent-only message
+        'intent_type',
+        'product_line',
+      ]);
+      Object.keys(json).forEach((key) => {
+        const value = json[key];
+        if (allowSameAsMessage.has(key)) return;
+        if (typeof value === 'string' && value.trim() === msg) {
+          delete json[key];
+        }
+        if (typeof value === 'number' && value === 0 && !msgHasDigits) {
+          delete json[key];
+        }
+      });
+    }
+
+    // Guardrail: Customer status replies (Flow 01 Q000).
+    // If user says "לקוח חדש/קיים" (or close variants), force is_new_customer boolean
+    // and prevent overwriting name fields with those tokens.
+    let isCustomerStatusReply = false;
+    try {
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      const s = msg.trim().toLowerCase();
+      const isNew = /לקוח\s*חדש|חדש\b|new\s*customer/i.test(s);
+      const isExisting = /לקוח\s*(קיים|ותיק)|קיים\b|existing\s*customer/i.test(s);
+      if (hasField('is_new_customer') && (isNew || isExisting)) {
+        isCustomerStatusReply = true;
+        json.is_new_customer = Boolean(isNew && !isExisting);
+
+        const badTokens = new Set(['לקוח', 'חדש', 'קיים', 'ותיק', 'customer', 'new', 'existing']);
+        for (const k of ['first_name', 'last_name', 'proposer_first_name', 'proposer_last_name', 'user_first_name', 'user_last_name']) {
+          if (!(k in json)) continue;
+          const v = String((json as any)[k] ?? '').trim().toLowerCase();
+          if (!v) continue;
+          // If the value is one of the status tokens (or exactly matches the whole message), drop it.
+          if (badTokens.has(v) || v === s) {
+            delete (json as any)[k];
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
 
     // Field-level safety filters (prevents accidental cross-field pollution, e.g. OTP codes saved as reg numbers)
     Object.keys(json).forEach((key) => {
@@ -203,6 +448,81 @@ Example of empty fields:
         }
       }
     });
+
+    // Deterministic domain enrichments (no extra LLM calls):
+    // - Normalize business segment names (e.g. "דין" -> "עורכי דין")
+    // - Infer business_site_type from the segments catalog (e.g. lawyer office -> "משרד")
+    // - Best-effort extract Hebrew names from long first messages
+    try {
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      const hasHebrew = /[\u0590-\u05FF]/.test(msg);
+
+      if (hasHebrew && (hasField('business_segment') || hasField('business_site_type'))) {
+        const currentSeg = String(json.business_segment || '').trim();
+        const shouldTrySegment = !currentSeg || currentSeg.length <= 5 || /דין/.test(currentSeg);
+        if (shouldTrySegment) {
+          const { resolveSegmentFromText } = await import('../insurance/segments/resolveSegmentFromText');
+          const { buildQuestionnaireDefaultsFromResolution } = await import('../insurance/segments/buildQuestionnaireDefaults');
+
+          const resolved = await resolveSegmentFromText(msg);
+          if (resolved?.source !== 'none' && Number(resolved.match_confidence || 0) >= 0.45) {
+            const defaults = buildQuestionnaireDefaultsFromResolution(resolved);
+            const segName = String((defaults.userData as any)?.segment_name_he || '').trim();
+            if (hasField('business_segment') && segName) {
+              // Prefer a compact label for the segment field (without "משרד " prefix).
+              const compact = segName.replace(/^משרד\s+/, '').trim();
+              json.business_segment = compact || segName;
+            }
+            if (hasField('business_site_type')) {
+              const st = (defaults.prefill as any)?.business_site_type;
+              if (Array.isArray(st) && st.length > 0) {
+                // Flow field types may treat this as string; keep a simple value.
+                json.business_site_type = String(st[0] || '').trim();
+              }
+            }
+          }
+        }
+      }
+
+      // Hebrew name extraction (works when user provides name+phone in first message).
+      // IMPORTANT: do NOT attempt to infer names from customer-status replies like "לקוח חדש".
+      if (!isCustomerStatusReply && hasHebrew && (hasField('first_name') || hasField('last_name')) && !(json.first_name || json.last_name)) {
+        const head = msg.split(/(?:נייד|טלפון|phone|email|אימייל|מייל|@|\d)/i)[0] || msg;
+        const chunks = head.split(/[,;\n]+/).map((c) => c.trim()).filter(Boolean);
+        const stop = new Set([
+          'אני', 'צריך', 'רוצה', 'מבקש', 'הצעת', 'הצעה', 'ביטוח', 'לעסק', 'לעסקי',
+          'משרד', 'עורך', 'עורכי', 'דין',
+          // customer status tokens
+          'לקוח', 'חדש', 'קיים', 'ותיק',
+          // greetings
+          'הי', 'היי', 'שלום', 'אהלן', 'הלו',
+        ]);
+        const heToken = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
+        const pick = (chunk: string) => chunk
+          .replace(/[“”"׳״']/g, '')
+          .replace(/^(שמי|שם|קוראים לי|אני)\s*[:\-–—]?\s*/i, '')
+          .trim()
+          .split(/\s+/)
+          .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
+          .filter(Boolean)
+          .filter((t) => heToken(t) && !stop.has(t));
+        for (let i = chunks.length - 1; i >= 0; i -= 1) {
+          const he = pick(chunks[i]);
+          if (he.length >= 2) {
+            if (hasField('first_name')) json.first_name = he[he.length - 2];
+            if (hasField('last_name')) json.last_name = he[he.length - 1];
+            break;
+          }
+          if (he.length === 1) {
+            if (hasField('first_name')) json.first_name = he[0];
+            break;
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
 
     await this.logUsage({
       conversationId: options.conversationId,
@@ -355,12 +675,27 @@ Your goal is to provide helpful, consistent, and contextually aligned answers wi
         ...(options.stream && { stream_options: { include_usage: true } }),
       });
     } catch (apiError: any) {
+      const errorLatency = Date.now() - tStart;
       logger.error('OpenAI API call failed', {
         conversationId: options.conversationId,
         error: apiError.message,
         errorCode: apiError.code,
         status: apiError.status,
       });
+
+      // Log the failed call so it appears in the UI
+      await this.logUsage({
+        conversationId: options.conversationId,
+        inReplyTo: options.messageId,
+        provider: AIProvider.OpenAI,
+        model: config.model,
+        operationType: AIOperationType.GenerateResponse,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: errorLatency,
+        response: { error: apiError.message || 'Unknown API error' },
+      });
+
       throw apiError;
     }
 
@@ -463,9 +798,10 @@ Your goal is to provide helpful, consistent, and contextually aligned answers wi
 
   private async getConfig() {
     const projectConfig = await prisma.projectConfig.findFirst();
+    const model = this.normalizeModelName(projectConfig?.llmModel || 'gpt-4o-mini');
     return {
-      model: projectConfig?.llmModel || 'gpt-5.2',
-      temperature: 0.2,
+      model,
+      temperature: model.includes('gpt-5') ? 1 : 0.2,
     };
   }
 
@@ -480,57 +816,69 @@ Your goal is to provide helpful, consistent, and contextually aligned answers wi
   }
 
   private async logUsage(usageInfo: AIUsageInfo) {
-    let inputTokenPrice = 0;
-    let outputTokenPrice = 0;
+    try {
+      let inputTokenPrice = 0;
+      let outputTokenPrice = 0;
 
-    switch (usageInfo.provider) {
-      case AIProvider.OpenAI:
-        inputTokenPrice = usageInfo.model in OPENAI_PRICING
-          ? OPENAI_PRICING[usageInfo.model].input * usageInfo.inputTokens / 1_000_000
-          : 0;
-        outputTokenPrice = usageInfo.model in OPENAI_PRICING
-          ? OPENAI_PRICING[usageInfo.model].output * usageInfo.outputTokens / 1_000_000
-          : 0;
-        break;
+      switch (usageInfo.provider) {
+        case AIProvider.OpenAI:
+          inputTokenPrice = usageInfo.model in OPENAI_PRICING
+            ? OPENAI_PRICING[usageInfo.model].input * usageInfo.inputTokens / 1_000_000
+            : 0;
+          outputTokenPrice = usageInfo.model in OPENAI_PRICING
+            ? OPENAI_PRICING[usageInfo.model].output * usageInfo.outputTokens / 1_000_000
+            : 0;
+          break;
 
-      default:
-        switchCaseGuard(usageInfo.provider);
-    }
+        default:
+          switchCaseGuard(usageInfo.provider);
+      }
 
-    // Log API call with actual response data
-    logApiCall({
-      conversationId: usageInfo.conversationId,
-      provider: usageInfo.provider,
-      operation: usageInfo.operationType,
-      request: {
-        operationType: usageInfo.operationType,
-        inReplyTo: usageInfo.inReplyTo,
-        model: usageInfo.model,
-        inputTokens: usageInfo.inputTokens,
-        outputTokens: usageInfo.outputTokens,
-      },
-      response: usageInfo.response,
-      status: 'ok',
-      latencyMs: usageInfo.latencyMs,
-      tokensIn: usageInfo.inputTokens,
-      tokensOut: usageInfo.outputTokens,
-      model: usageInfo.model,
-    }).catch((err) => logger.error('Error logging API call', err));
-
-    // Log AI usage for cost tracking
-    await prisma.aIUsage.create({
-      data: {
+      // Log API call with actual response data (best effort)
+      logApiCall({
         conversationId: usageInfo.conversationId,
-        inReplyTo: usageInfo.inReplyTo,
-        operationType: usageInfo.operationType,
+        provider: usageInfo.provider,
+        operation: usageInfo.operationType,
+        request: {
+          operationType: usageInfo.operationType,
+          inReplyTo: usageInfo.inReplyTo,
+          model: usageInfo.model,
+          inputTokens: usageInfo.inputTokens,
+          outputTokens: usageInfo.outputTokens,
+        },
+        response: usageInfo.response,
+        status: 'ok',
+        latencyMs: usageInfo.latencyMs,
+        tokensIn: usageInfo.inputTokens,
+        tokensOut: usageInfo.outputTokens,
+        model: usageInfo.model,
+      }).catch((err) => logger.error('Error logging API call', err));
+
+      // Log AI usage for cost tracking (best effort).
+      // IMPORTANT: Some internal operations (e.g., Flow Agent) use virtual conversation/message IDs
+      // that do not exist in the DB; logging must never break product UX.
+      await prisma.aIUsage.create({
+        data: {
+          conversationId: usageInfo.conversationId,
+          inReplyTo: usageInfo.inReplyTo,
+          operationType: usageInfo.operationType,
+          provider: usageInfo.provider,
+          model: usageInfo.model,
+          inputTokens: usageInfo.inputTokens,
+          outputTokens: usageInfo.outputTokens,
+          latencyMs: usageInfo.latencyMs,
+          cost: inputTokenPrice + outputTokenPrice,
+        },
+      });
+    } catch (e: any) {
+      logger.warn('AI usage logging failed (ignored)', {
+        error: e?.message,
         provider: usageInfo.provider,
         model: usageInfo.model,
-        inputTokens: usageInfo.inputTokens,
-        outputTokens: usageInfo.outputTokens,
-        latencyMs: usageInfo.latencyMs,
-        cost: inputTokenPrice + outputTokenPrice,
-      },
-    });
+        operationType: usageInfo.operationType,
+        conversationId: usageInfo.conversationId,
+      });
+    }
   }
 
   private safeParseJson(text: string): Record<string, unknown> {

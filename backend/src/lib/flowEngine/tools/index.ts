@@ -1,221 +1,164 @@
-import { prisma } from '../../../core/prisma';
-import { logger } from '../../../utils/logger';
-// Memory imports removed
-import {
-  sendVerificationCodeTool,
-  sendGatewayIntroEmailTool,
-  sendDonorSupportEmailTool,
-} from '../../notifications/notificationTools';
-import { ToolExecutionContext, ToolResult, ToolExecutor } from './types';
-import { signupTool } from './executors/signupTool';
-import { setupOrgTool } from './executors/setupOrgTool';
-import { nonprofitLookupTool } from './executors/nonprofitLookupTool';
-import { verifyCodeTool } from './executors/verifyCodeTool';
-import { chocoLoginOTPTool } from './executors/sendPhoneOTPTool';
-import { chocoLoginCompleteTool } from './executors/chocoLoginCompleteTool';
-import { createOrgTool } from './executors/createOrgTool';
-import { addCampaignTool } from './executors/addCampaignTool';
-import { addEntityTool } from './executors/addEntityTool';
-import { addPaymentGatewayTool } from './executors/addPaymentGatewayTool';
-import { handoffToLoginTool } from './executors/handoffToLoginTool';
-import {
-  buildEntityTool,
-  pushEntityTool,
-  buildGatewayConfigTool,
-  addGatewayTool,
-  verifyGatewaysTool,
-  completeKycTool,
-  checkOrgSetupTool,
-  matchOrgAndSelectEntityTool,
-  handleGatewayDiscoveryTool,
-} from './executors/kycTools';
-import { flowHandoffTool } from './executors/flowHandoffTool';
-import { welcomeRouteTool } from './executors/welcomeRouteTool';
-import { welcomeIntentGateTool } from './executors/welcomeIntentGateTool';
-import { signUpTransitionToLoginTool } from './executors/signUpTransitionToLoginTool';
-import { loginTransitionToSignUpTool } from './executors/loginTransitionToSignUpTool';
-import { loginLinkUserDataTool } from './executors/loginLinkUserDataTool';
-import { checkAccountContextTool } from './executors/checkAccountContextTool';
-import { loadOrgEntitiesTool } from './executors/loadOrgEntitiesTool';
-import { resolveEntitySelectionTool } from './executors/resolveEntitySelectionTool';
-import { kycEnrichEntityTool } from './executors/kycEnrichEntityTool';
-import { loginRouteAfterLoginTool } from './executors/loginRouteAfterLoginTool';
-import { loginAutoFillIdentifierTool } from './executors/loginAutoFillIdentifierTool';
-import { finalizeGatewayUpdateTool } from './executors/finalizeGatewayUpdateTool';
-import { resetCampaignIntentTool } from './executors/resetCampaignIntentTool';
-import { resetKeysTool } from './executors/resetKeysTool';
-import { detectCampaignManagementIntentTool } from './executors/detectCampaignManagementIntentTool';
-import { loadCampaignsContextTool } from './executors/loadCampaignsContextTool';
-import { resolveCampaignSelectionTool } from './executors/resolveCampaignSelectionTool';
-import { getCampaignWithContentTool } from './executors/getCampaignWithContentTool';
-import { executeDynamicTool } from './dynamicToolExecutor';
-import { insuranceEnsureCaseTool } from './executors/insuranceEnsureCaseTool';
-import { insuranceSaveIntakeTool } from './executors/insuranceSaveIntakeTool';
-import { insuranceGeneratePdfsTool } from './executors/insuranceGeneratePdfsTool';
+import type { ToolExecutionContext, ToolExecutor, ToolResult } from './types';
 
-const registry = new Map<string, ToolExecutor>();
-// ... (omitted)
+type ToolMeta = {
+  name: string;
+  description?: string;
+  builtIn?: boolean;
+  metadata?: any;
+};
+
+type RegisteredTool = {
+  executor: ToolExecutor;
+  meta: ToolMeta;
+};
 
 /**
- * Register a tool executor for use in flows
+ * In-memory tool registry.
  *
- * Tools must be registered before they can be used in flow stage actions.
- * Register tools at module load time in this file.
- *
- * @param name - Tool name (format: 'scope.tool-name', e.g., 'choco.signup', 'nonprofit.lookup')
- * @param executor - Tool executor function
- *
- * @example
- * ```typescript
- * import { signupTool } from './executors/signupTool';
- * registerTool('choco.signup', signupTool);
- * ```
+ * - Built-in tools are loaded lazily (on first execution) to avoid heavy imports on startup.
+ * - Dynamic tools are registered at runtime via the Tools API.
  */
-function registerTool(name: string, executor: ToolExecutor) {
-  registry.set(name, executor);
+const dynamicTools = new Map<string, RegisteredTool>();
+const builtInCache = new Map<string, RegisteredTool>();
+
+type BuiltInLoader = () => Promise<RegisteredTool>;
+
+const builtInLoaders: Record<string, BuiltInLoader> = {
+  // Welcome
+  'welcome.intentGate': async () => {
+    const m = await import('./executors/welcomeIntentGateTool');
+    return { executor: m.welcomeIntentGateTool, meta: { name: 'welcome.intentGate', description: 'Welcome intent gate', builtIn: true } };
+  },
+  'welcome.route': async () => {
+    const m = await import('./executors/welcomeRouteTool');
+    return { executor: m.welcomeRouteTool, meta: { name: 'welcome.route', description: 'Welcome router', builtIn: true } };
+  },
+
+  // Choco / onboarding
+  'choco.signup': async () => {
+    const m = await import('./executors/signupTool');
+    return { executor: m.signupTool, meta: { name: 'choco.signup', description: 'Choco signup', builtIn: true } };
+  },
+  // Back-compat name used in admin list
+  'choco.setup-organisation': async () => {
+    const m = await import('./executors/createOrgTool');
+    return { executor: m.createOrgTool, meta: { name: 'choco.setup-organisation', description: 'Create organisation', builtIn: true } };
+  },
+
+  // Nonprofit
+  'nonprofit.lookup': async () => {
+    const m = await import('./executors/nonprofitLookupTool');
+    return { executor: m.nonprofitLookupTool, meta: { name: 'nonprofit.lookup', description: 'Nonprofit lookup', builtIn: true } };
+  },
+
+  // Insurance (Clal SMB topic split)
+  'insurance.resolveSegment': async () => {
+    const m = await import('./executors/insuranceResolveSegmentTool');
+    return { executor: m.insuranceResolveSegmentTool, meta: { name: 'insurance.resolveSegment', description: 'Resolve segment from text', builtIn: true } };
+  },
+  'insurance.markProcessComplete': async () => {
+    const m = await import('./executors/insuranceMarkProcessCompleteTool');
+    return { executor: m.insuranceMarkProcessCompleteTool, meta: { name: 'insurance.markProcessComplete', description: 'Mark modular process complete and route', builtIn: true } };
+  },
+
+  // Legacy / compatibility tools referenced by old flows
+  'insurance.questionnaire.init': async () => {
+    const m = await import('./executors/insuranceQuestionnaireInitTool');
+    return { executor: m.insuranceQuestionnaireInitTool, meta: { name: 'insurance.questionnaire.init', description: 'Legacy questionnaire init', builtIn: true } };
+  },
+  'insurance.questionnaire.answer': async () => {
+    const m = await import('./executors/insuranceQuestionnaireAnswerTool');
+    return { executor: m.insuranceQuestionnaireAnswerTool, meta: { name: 'insurance.questionnaire.answer', description: 'Legacy questionnaire answer', builtIn: true } };
+  },
+  'insurance.ensureCase': async () => {
+    const m = await import('./executors/insuranceEnsureCaseTool');
+    return { executor: m.insuranceEnsureCaseTool, meta: { name: 'insurance.ensureCase', description: 'Ensure insurance case exists', builtIn: true } };
+  },
+  'insurance.saveIntake': async () => {
+    const m = await import('./executors/insuranceSaveIntakeTool');
+    return { executor: m.insuranceSaveIntakeTool, meta: { name: 'insurance.saveIntake', description: 'Save insurance intake', builtIn: true } };
+  },
+  'insurance.generatePdfs': async () => {
+    const m = await import('./executors/insuranceGeneratePdfsTool');
+    return { executor: m.insuranceGeneratePdfsTool, meta: { name: 'insurance.generatePdfs', description: 'Generate insurance PDFs', builtIn: true } };
+  },
+  'insurance.enrichBusiness': async () => {
+    const m = await import('./executors/insuranceEnrichBusinessTool');
+    return { executor: m.insuranceEnrichBusinessTool, meta: { name: 'insurance.enrichBusiness', description: 'Enrich business data', builtIn: true } };
+  },
+  'insurance.setDefaultProductLine': async () => {
+    const m = await import('./executors/insuranceSetDefaultProductLineTool');
+    return { executor: m.insuranceSetDefaultProductLineTool, meta: { name: 'insurance.setDefaultProductLine', description: 'Set default product line', builtIn: true } };
+  },
+  'insurance.handoffToProposalForm': async () => {
+    const m = await import('./executors/insuranceHandoffToProposalFormTool');
+    return { executor: m.insuranceHandoffToProposalFormTool, meta: { name: 'insurance.handoffToProposalForm', description: 'Handoff to proposal form', builtIn: true } };
+  },
+};
+
+async function resolveTool(name: string): Promise<RegisteredTool | null> {
+  const n = String(name || '').trim();
+  if (!n) return null;
+
+  const dyn = dynamicTools.get(n);
+  if (dyn) return dyn;
+
+  const cached = builtInCache.get(n);
+  if (cached) return cached;
+
+  const loader = builtInLoaders[n];
+  if (!loader) return null;
+
+  const reg = await loader();
+  builtInCache.set(n, reg);
+  return reg;
 }
 
-export async function registerDynamicTool(name: string, executor: ToolExecutor, metadata?: any) {
-  registry.set(name, executor);
-  // Optionally store in database for persistence
-  if (metadata) {
-    await prisma.tool.upsert({
-      where: { name },
-      update: {
-        description: metadata.description || '',
-        code: metadata.code || '',
-        metadata: metadata as any,
-      },
-      create: {
-        name,
-        description: metadata.description || '',
-        code: metadata.code || '',
-        metadata: metadata as any,
-      },
-    });
-  }
-}
-
-export async function loadDynamicTools() {
-  const tools = await prisma.tool.findMany();
-  for (const tool of tools) {
-    try {
-      // Register dynamic tool - in production, would need to compile/execute code
-      // For now, we'll use executeDynamicTool at runtime
-      registry.set(tool.name, async (payload, context) => executeDynamicTool(tool.code, payload, context));
-    } catch (error) {
-      logger.error(`Failed to load dynamic tool ${tool.name}:`, error);
-    }
-  }
-}
-
-export function getRegisteredTools(): Array<{ id: string; label: string }> {
-  // For now, label equals id. In future, executors can export metadata with human-friendly labels.
-  return Array.from(registry.keys()).map((id) => ({ id, label: id }));
-}
-
-/**
- * Execute a registered tool
- *
- * Looks up the tool by name and executes it with the provided input and context.
- * If the tool is not found in the registry, attempts to load it from the database
- * (for dynamic tools).
- *
- * @template TInput - Type of input payload
- * @template TResult - Type of result data
- * @param name - Tool name (e.g., 'choco.signup')
- * @param input - Input payload (typically userData)
- * @param context - Execution context with conversationId
- * @returns Promise resolving to tool result
- *
- * @example
- * ```typescript
- * const result = await executeTool('choco.signup', userData, { conversationId });
- * if (result.success) {
- *   console.log(result.data);
- * } else {
- *   console.error(result.error);
- * }
- * ```
- */
-export async function executeTool<TInput, TResult = any>(
+export async function executeTool(
   name: string,
-  input: TInput,
+  payload: any,
   context: ToolExecutionContext,
-): Promise<ToolResult<TResult>> {
-  const executor = registry.get(name);
-  if (!executor) {
-    // Try to load from database if not in registry
-    const tool = await prisma.tool.findUnique({ where: { name } });
-    if (tool) {
-      return executeDynamicTool(tool.code, input, context);
-    }
-    return { success: false, error: `Tool ${name} is not registered` };
+): Promise<ToolResult<any>> {
+  const tool = await resolveTool(name);
+  if (!tool) {
+    return { success: false, error: `Tool not found: ${String(name || '').trim()}`, errorCode: 'TOOL_NOT_FOUND' };
   }
-
-  return executor(input, context) as Promise<ToolResult<TResult>>;
+  return tool.executor(payload, context);
 }
 
-registerTool('choco.signup', signupTool);
-registerTool('choco.verify-code', verifyCodeTool);
-registerTool('choco.login-otp', chocoLoginOTPTool);
-registerTool('choco.login-complete', chocoLoginCompleteTool);
-registerTool('choco.handoff-to-login', handoffToLoginTool);
-registerTool('choco.create-org', createOrgTool);
-registerTool('choco.add-campaign', addCampaignTool);
-registerTool('choco.add-entity', addEntityTool);
-registerTool('choco.add-payment-gateway', addPaymentGatewayTool);
-registerTool('choco.setup-organisation', setupOrgTool);
+export async function registerDynamicTool(
+  name: string,
+  executor: ToolExecutor,
+  metadata?: any,
+): Promise<void> {
+  const n = String(name || '').trim();
+  if (!n) throw new Error('Tool name is required');
+  dynamicTools.set(n, {
+    executor,
+    meta: {
+      name: n,
+      builtIn: false,
+      description: String(metadata?.description || ''),
+      metadata,
+    },
+  });
+}
 
-registerTool('nonprofit.lookup', nonprofitLookupTool);
+export function getRegisteredTools(): ToolMeta[] {
+  const res: ToolMeta[] = [];
 
-// KYC tools
-import {
-  validateGatewayProviderTool,
-  saveGatewayCredentialsTool,
-} from './executors/kycGatewayTools';
+  // Built-ins (from loaders) + those already cached
+  for (const name of Object.keys(builtInLoaders)) {
+    const cached = builtInCache.get(name);
+    res.push(cached?.meta || { name, builtIn: true });
+  }
 
-// KYC tools
-registerTool('kyc.checkOrgSetup', checkOrgSetupTool);
-registerTool('kyc.matchOrgAndSelectEntity', matchOrgAndSelectEntityTool);
-registerTool('kyc.buildEntity', buildEntityTool);
-registerTool('kyc.pushEntity', pushEntityTool);
-registerTool('kyc.buildGatewayConfig', buildGatewayConfigTool);
-registerTool('kyc.addGateway', addGatewayTool);
-registerTool('kyc.verifyGateways', verifyGatewaysTool);
-registerTool('kyc.completeKyc', completeKycTool);
-registerTool('kyc.loadOrgEntities', loadOrgEntitiesTool);
-registerTool('kyc.resolveEntitySelection', resolveEntitySelectionTool);
-registerTool('kyc.enrichEntity', kycEnrichEntityTool);
-registerTool('kyc.handleGatewayDiscovery', handleGatewayDiscoveryTool);
-registerTool('kyc.validateGatewayProvider', validateGatewayProviderTool);
-registerTool('kyc.saveGatewayCredentials', saveGatewayCredentialsTool);
+  // Dynamic
+  for (const t of dynamicTools.values()) {
+    res.push(t.meta);
+  }
 
-// Memory tools removed (dead code)
+  return res;
+}
 
-// Notification tools
-registerTool('notifications.sendVerificationCode', sendVerificationCodeTool);
-registerTool('notifications.sendGatewayIntroEmail', sendGatewayIntroEmailTool);
-registerTool('notifications.sendDonorSupportEmail', sendDonorSupportEmailTool);
-
-// Flow orchestration tools
-registerTool('flow.handoff', flowHandoffTool);
-registerTool('welcome.route', welcomeRouteTool);
-registerTool('welcome.intentGate', welcomeIntentGateTool);
-registerTool('signUp.transitionToLogin', signUpTransitionToLoginTool);
-registerTool('login.transitionToSignUp', loginTransitionToSignUpTool);
-registerTool('login.linkUserData', loginLinkUserDataTool);
-registerTool('login.checkAccountContext', checkAccountContextTool);
-registerTool('login.routeAfterLogin', loginRouteAfterLoginTool);
-registerTool('login.autoFillIdentifier', loginAutoFillIdentifierTool);
-registerTool('flow.reset-campaign-intent', resetCampaignIntentTool);
-registerTool('flow.resetKeys', resetKeysTool);
-registerTool('flow.detectCampaignManagementIntent', detectCampaignManagementIntentTool);
-registerTool('flow.loadCampaignsContext', loadCampaignsContextTool);
-registerTool('flow.resolveCampaignSelection', resolveCampaignSelectionTool);
-registerTool('choco.getCampaignWithContent', getCampaignWithContentTool);
-
-// Insurance tools (MVP)
-registerTool('insurance.ensureCase', insuranceEnsureCaseTool);
-registerTool('insurance.saveIntake', insuranceSaveIntakeTool);
-registerTool('insurance.generatePdfs', insuranceGeneratePdfsTool);
+export type { ToolExecutionContext, ToolExecutor, ToolResult } from './types';

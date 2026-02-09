@@ -1,0 +1,657 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "19_cyber_annex",
+    "title_he": "נספח סייבר",
+    "description_he": "שאלות בסיסיות לסייבר (מחזור, בקרות אבטחה, היסטוריה).",
+    "ask_if": "cyber_selected = true",
+    "audience": "customer",
+    "included_module_keys": [
+      "cov_cyber_annex"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q200",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "מחזור הפעילות השנתי של בית העסק",
+      "prompt_he": "נא לציין מחזור הפעילות השנתי של בית העסק (מספר).",
+      "field_key_en": "cyber_annual_turnover_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "constraints": "<=50000000",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.annual_turnover_ils",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין מחזור הפעילות השנתי של בית העסק (מספר).",
+        "whatsapp": "נא לציין מחזור הפעילות השנתי של בית העסק (מספר)."
+      },
+      "priority": 2,
+      "validation": {
+        "max": 50000000
+      },
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q201",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם מותקנת חומת אש (Firewall)?",
+      "prompt_he": "האם מותקנת חומת אש (Firewall)? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_firewall_present",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.firewall",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם מותקנת חומת אש (Firewall)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם מותקנת חומת אש (Firewall)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q202",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם הדואר האלקטרוני מוגן באנטי-וירוס ואנטי-ספאם?",
+      "prompt_he": "האם הדואר האלקטרוני מוגן באנטי-וירוס ואנטי-ספאם? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_email_protection",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.email_protection",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הדואר האלקטרוני מוגן באנטי-וירוס ואנטי-ספאם? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הדואר האלקטרוני מוגן באנטי-וירוס ואנטי-ספאם? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q203",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם רשתות WiFi מוצפנות/מוגנות בסיסמה?",
+      "prompt_he": "האם רשתות WiFi מוצפנות/מוגנות בסיסמה? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_wifi_encrypted",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.wifi_encrypted",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם רשתות WiFi מוצפנות/מוגנות בסיסמה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם רשתות WiFi מוצפנות/מוגנות בסיסמה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q204",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם נעשה גיבוי של מידע/קבצים/תכניות?",
+      "prompt_he": "האם נעשה גיבוי של מידע/קבצים/תכניות? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_backups_made",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.backups_made",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם נעשה גיבוי של מידע/קבצים/תכניות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם נעשה גיבוי של מידע/קבצים/תכניות? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q205",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "כל כמה זמן נעשה הגיבוי?",
+      "prompt_he": "נא לבחור כל כמה זמן נעשה הגיבוי?: (אפשרויות: יומי, שבועי)",
+      "field_key_en": "cyber_backup_frequency",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "יומי, שבועי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_backups_made=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.backup_frequency",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_backups_made=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור כל כמה זמן נעשה הגיבוי?: (אפשרויות: יומי, שבועי)",
+        "whatsapp": "נא לבחור כל כמה זמן נעשה הגיבוי?: (אפשרויות: יומי, שבועי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "יומי"
+          },
+          {
+            "n": 2,
+            "label_he": "שבועי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q206",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם קיים לפחות גיבוי אחד המאוחסן מחוץ למערכות המחשוב של החברה?",
+      "prompt_he": "האם קיים לפחות גיבוי אחד המאוחסן מחוץ למערכות המחשוב של החברה? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_offsite_backup",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.controls.offsite_backup",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם קיים לפחות גיבוי אחד המאוחסן מחוץ למערכות המחשוב של החברה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם קיים לפחות גיבוי אחד המאוחסן מחוץ למערכות המחשוב של החברה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q207",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "כיסוי לאבדן תוצאתי – עד 10 ימים (מותנה ברכישת פרק 3ב)",
+      "prompt_he": "האם כיסוי לאבדן תוצאתי – עד 10 ימים (מותנה ברכישת פרק 3ב)? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_bi_loss_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true AND ch3b_selected=true",
+      "notes_logic": "אם אין פרק 3ב לא ניתן לבחור",
+      "json_path": "coverages.annexes.annex_a_cyber.business_interruption.selected",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true AND ch3b_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם כיסוי לאבדן תוצאתי – עד 10 ימים (מותנה ברכישת פרק 3ב)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם כיסוי לאבדן תוצאתי – עד 10 ימים (מותנה ברכישת פרק 3ב)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q208",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "ב-5 השנים האחרונות הוגשו תביעות/נסיבות לתביעות הקשורות לפעילות אינטרנט/מערכות מחשב/תוכן אתר/מיילים וכו׳?",
+      "prompt_he": "האם ב-5 השנים האחרונות הוגשו תביעות/נסיבות לתביעות הקשורות לפעילות אינטרנט/מערכות מחשב/תוכן אתר/מיילים וכו׳?? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_claims_last5y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.internet_related_claims.answer",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם ב-5 השנים האחרונות הוגשו תביעות/נסיבות לתביעות הקשורות לפעילות אינטרנט/מערכות מחשב/תוכן אתר/מיילים וכו׳?? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ב-5 השנים האחרונות הוגשו תביעות/נסיבות לתביעות הקשורות לפעילות אינטרנט/מערכות מחשב/תוכן אתר/מיילים וכו׳?? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q209",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "cyber_claims_last5y_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_claims_last5y=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.internet_related_claims.details",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_claims_last5y=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q210",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם נתגלתה פרצת אבטחה/חדירה לא חוקית/ניסיון לכך ב-5 השנים האחרונות?",
+      "prompt_he": "האם נתגלתה פרצת אבטחה/חדירה לא חוקית/ניסיון לכך ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_security_breach_last5y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.security_incidents.answer",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם נתגלתה פרצת אבטחה/חדירה לא חוקית/ניסיון לכך ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם נתגלתה פרצת אבטחה/חדירה לא חוקית/ניסיון לכך ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q211",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "cyber_security_breach_last5y_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_security_breach_last5y=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.security_incidents.details",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_security_breach_last5y=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q212",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "האם ב-5 השנים האחרונות סירבה חברת ביטוח לבטח/לחדש או התנתה תנאים מיוחדים?",
+      "prompt_he": "האם ב-5 השנים האחרונות סירבה חברת ביטוח לבטח/לחדש או התנתה תנאים מיוחדים? (אפשרויות: לא, כן)",
+      "field_key_en": "cyber_insurer_refusal_last5y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_selected=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.insurance_refusal.answer",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם ב-5 השנים האחרונות סירבה חברת ביטוח לבטח/לחדש או התנתה תנאים מיוחדים? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ב-5 השנים האחרונות סירבה חברת ביטוח לבטח/לחדש או התנתה תנאים מיוחדים? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q213",
+      "page": 5,
+      "section": "Annex A",
+      "subsection": "Cyber coverage",
+      "stage_title_he": "נספח א — כיסוי סייבר",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "cyber_insurer_refusal_last5y_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "cyber_insurer_refusal_last5y=true",
+      "json_path": "coverages.annexes.annex_a_cyber.history.insurance_refusal.details",
+      "module_key": "cov_cyber_annex",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "cyber_insurer_refusal_last5y=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ],
+  "validators": [
+    {
+      "name": "cyber_turnover_cap",
+      "field_key_en": "cyber_annual_turnover_ils",
+      "when": "cyber_selected = true",
+      "rule": {
+        "max": 50000000
+      },
+      "error_he": "כיסוי הסייבר מיועד לעסקים עם מחזור עד 50,000,000 ₪."
+    }
+  ],
+  "handoff_triggers": [
+    {
+      "trigger_key": "cyber_incident",
+      "when": "cyber_security_breach_last5y = true",
+      "reason_he": "אירועי סייבר ב-5 השנים האחרונות",
+      "action": "route_to_underwriter"
+    }
+  ],
+  "attachments_checklist": []
+}

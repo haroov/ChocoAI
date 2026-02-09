@@ -76,6 +76,14 @@ export function validateCanonicalIntakePayload(payload: any): ValidationResult {
       ajv.addSchema(clalBaseSchema, clalBaseSchema.$id);
     }
   }
+  // Ensure canonical wrapper is loaded as well (product schemas may $ref it directly).
+  const clalCanonicalPath = path.join(formsRoot, 'forms', 'schemas', 'canonical', 'clal_15943_2025-07.schema.json');
+  if (fs.existsSync(clalCanonicalPath)) {
+    const canonicalSchema = loadJsonFile(clalCanonicalPath);
+    if (canonicalSchema?.$id && !ajv.getSchema(canonicalSchema.$id)) {
+      ajv.addSchema(canonicalSchema, canonicalSchema.$id);
+    }
+  }
 
   const schemaPath = resolveSchemaPath(entry);
   const schema = loadJsonFile(schemaPath);

@@ -1,0 +1,204 @@
+{
+  "module_key": "declarations_signatures",
+  "questions": [
+    {
+      "q_id": "Q250",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)",
+      "prompt_he": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)",
+      "field_key_en": "applicant_declaration_ack",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "options_he": "מאשר/ת",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_declaration_ack",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)",
+        "whatsapp": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q251",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות",
+      "prompt_he": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)",
+      "field_key_en": "operational_mail_delivery",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "אם לא נבחר – ברירת מחדל דיגיטלי",
+      "json_path": "communications_consents.operational_mail_delivery",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)",
+        "whatsapp": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "אמצעי דיגיטלי (דוא\"ל/מסרון)"
+          },
+          {
+            "n": 2,
+            "label_he": "דואר רגיל"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q252",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "אישור שיווק – הסכמה לקבלת הצעות שיווקיות",
+      "prompt_he": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)",
+      "field_key_en": "marketing_consent",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "communications_consents.marketing_consent",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q253",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "תאריך חתימת המציע",
+      "prompt_he": "מהו תאריך חתימת המציע? (תאריך)",
+      "field_key_en": "proposer_signature_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_signed_date",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מהו תאריך חתימת המציע? (תאריך)",
+        "whatsapp": "מהו תאריך חתימת המציע? (תאריך)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q254",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "שם המציע (החותם)",
+      "prompt_he": "נא לציין שם המציע (החותם).",
+      "field_key_en": "proposer_signer_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_name",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם המציע (החותם).",
+        "whatsapp": "נא לציין שם המציע (החותם)."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q255",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "חתימת המציע",
+      "prompt_he": "נא לאשר/לחתום: חתימת המציע.",
+      "field_key_en": "proposer_signature",
+      "data_type": "string",
+      "input_type": "signature",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_signature_ref",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "collection_mode": "signature_end",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לאשר/לחתום: חתימת המציע.",
+        "whatsapp": "נא לאשר/לחתום: חתימת המציע."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "22_customer_declarations_and_signatures",
+    "title_he": "הצהרות, הסכמות וחתימות",
+    "description_he": "הצהרת המציע/ה, הסכמות דיוור/שיווק וחתימה דיגיטלית.",
+    "ask_if": null,
+    "audience": "customer",
+    "included_module_keys": [
+      "declarations_signatures",
+      "privacy_ack"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q250",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)",
+      "prompt_he": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)",
+      "field_key_en": "applicant_declaration_ack",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "options_he": "מאשר/ת",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_declaration_ack",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)",
+        "whatsapp": "האם הצהרת המציע בדבר נכונות המידע (אישור/הצהרה)? (אפשרויות: מאשר/ת)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q251",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות",
+      "prompt_he": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)",
+      "field_key_en": "operational_mail_delivery",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "אם לא נבחר – ברירת מחדל דיגיטלי",
+      "json_path": "communications_consents.operational_mail_delivery",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)",
+        "whatsapp": "נא לבחור אישור דיוור תפעולי – אמצעי שליחת מסמכים והודעות: (אפשרויות: אמצעי דיגיטלי (דוא\"ל/מסרון), דואר רגיל)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "אמצעי דיגיטלי (דוא\"ל/מסרון)"
+          },
+          {
+            "n": 2,
+            "label_he": "דואר רגיל"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q252",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "אישור שיווק – הסכמה לקבלת הצעות שיווקיות",
+      "prompt_he": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)",
+      "field_key_en": "marketing_consent",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "communications_consents.marketing_consent",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם אישור שיווק – הסכמה לקבלת הצעות שיווקיות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q253",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "תאריך חתימת המציע",
+      "prompt_he": "מהו תאריך חתימת המציע? (תאריך)",
+      "field_key_en": "proposer_signature_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_signed_date",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מהו תאריך חתימת המציע? (תאריך)",
+        "whatsapp": "מהו תאריך חתימת המציע? (תאריך)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q254",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "שם המציע (החותם)",
+      "prompt_he": "נא לציין שם המציע (החותם).",
+      "field_key_en": "proposer_signer_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_name",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם המציע (החותם).",
+        "whatsapp": "נא לציין שם המציע (החותם)."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q255",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Applicant declarations, consents & signatures",
+      "stage_title_he": "חלק ד — הצהרת המציע/ה והסכמות",
+      "question_he": "חתימת המציע",
+      "prompt_he": "נא לאשר/לחתום: חתימת המציע.",
+      "field_key_en": "proposer_signature",
+      "data_type": "string",
+      "input_type": "signature",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.proposer_signature_ref",
+      "module_key": "declarations_signatures",
+      "audience": "customer",
+      "collection_mode": "signature_end",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לאשר/לחתום: חתימת המציע.",
+        "whatsapp": "נא לאשר/לחתום: חתימת המציע."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q260",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Privacy & data use acknowledgements",
+      "stage_title_he": "חלק ד — פרטיות ושימוש במידע",
+      "question_he": "יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)",
+      "prompt_he": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)",
+      "field_key_en": "privacy_notice_ack",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "options_he": "מאשר/ת שקרא/ה",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "communications_consents.privacy_notice_ack",
+      "module_key": "privacy_ack",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)",
+        "whatsapp": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": []
+}

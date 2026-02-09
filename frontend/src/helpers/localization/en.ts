@@ -110,6 +110,8 @@ export const en = {
     defileFlowLevelFieldsMsg: 'Define flow-level fields used in stages.',
     noFieldsYetMsg: 'No fields yet. Add your first field.',
     addField: 'Add field',
+    searchFields: 'Search fields',
+    sortByPriority: 'Toggle sort by priority',
     type: 'Type',
     string: 'String',
     enum: 'Enum',
@@ -147,6 +149,7 @@ export const en = {
     patternRegex: 'Pattern (regex)',
     minLength: 'Min. length',
     maxLength: 'Max. length',
+    priority: 'Priority',
 
     validation: 'Validation',
     noIssues: 'No issues',
@@ -155,6 +158,13 @@ export const en = {
     initialStageNotExist: 'Initial stage points to a non-existent node',
     edgePointsToMissingStage: 'Edge points to missing stage: {stage}',
     unreachableStage: 'Unreachable stage: {stage}',
+
+    // Missing field references repair
+    missingFieldRefsMsg: 'This stage references fields that are missing from the flow definition. Remove them, or create definitions so the flow can be saved.',
+    createFieldDefinition: 'Create',
+    removeFieldRef: 'Remove',
+    createdFieldDefinition: 'Created field definition: {slug}',
+    autoCreatedMissingFieldsForSave: 'Auto-created {count} missing field definition(s) so the flow can be saved.',
   },
 
   Notification: {

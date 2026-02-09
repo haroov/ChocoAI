@@ -1,0 +1,752 @@
+{
+  "meta": {
+    "carrier": "Clal",
+    "product_he": "הצעה לביטוח בית עסק — פוליסה משולבת לבית העסק",
+    "form_code": "15943 07/2025",
+    "generated_at": "2026-02-04T10:07:44",
+    "language": "he-IL (field keys EN, content HE)",
+    "name": "Choco • Clal SMB • Dynamic Proposal Questionnaire (Production)",
+    "version": "2026-02-04.prod.1",
+    "channels_supported": [
+      "web_chat",
+      "whatsapp"
+    ],
+    "source_form": "Clal SMB proposal form (מק״ט 15943 07/2025)",
+    "notes": "Production-optimized: dynamic modules, WhatsApp-friendly copy, validations, attachments checklist, and handoff triggers."
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "modules_catalog": [
+    {
+      "module_key": "core_contact",
+      "title_he": "פרטי קשר",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "core_home_address",
+      "title_he": "כתובת מגורים",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "core_business_details",
+      "title_he": "פרטי בית העסק",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "core_business_address",
+      "title_he": "כתובת בית העסק",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "core_additional_locations",
+      "title_he": "סניפים נוספים",
+      "enable_if": "business_has_additional_locations = true"
+    },
+    {
+      "module_key": "core_policy_term",
+      "title_he": "תקופת ביטוח",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "core_billing_method",
+      "title_he": "אופן גבייה",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "needs_business_activity",
+      "title_he": "מהות הפעילות",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "needs_gating",
+      "title_he": "בירור צרכים ובחירת כיסויים",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "premises_building_characteristics",
+      "title_he": "פרטי מבנה",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "premises_surroundings",
+      "title_he": "סיכונים סמוכים",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "premises_liens",
+      "title_he": "שיעבודים/מוטבים",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "premises_legal_requirements",
+      "title_he": "רישיונות ואישורים",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "premises_risk_mitigation",
+      "title_he": "מיגון וכיבוי",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "premises_water_flood_risk",
+      "title_he": "סיכוני מים/שיטפון/טבע",
+      "enable_if": "has_physical_premises = true"
+    },
+    {
+      "module_key": "cov_property_contents",
+      "title_he": "תכולה ומלאי (פרק 1)",
+      "enable_if": "ch1_contents_selected = true"
+    },
+    {
+      "module_key": "cov_property_building",
+      "title_he": "מבנה (פרק 2)",
+      "enable_if": "ch2_building_selected = true"
+    },
+    {
+      "module_key": "cov_bi_daily",
+      "title_he": "אובדן הכנסה יומי (פרק 3א)",
+      "enable_if": "ch3a_selected = true"
+    },
+    {
+      "module_key": "cov_bi_consequential",
+      "title_he": "אובדן תוצאתי (פרק 3ב)",
+      "enable_if": "ch3b_selected = true"
+    },
+    {
+      "module_key": "cov_burglary",
+      "title_he": "פריצה ושוד (פרק 4)",
+      "enable_if": "ch4_burglary_selected = true"
+    },
+    {
+      "module_key": "cov_money",
+      "title_he": "כספים (פרק 5)",
+      "enable_if": "ch5_money_selected = true"
+    },
+    {
+      "module_key": "cov_transit",
+      "title_he": "רכוש בהעברה (פרק 6)",
+      "enable_if": "ch6_transit_selected = true"
+    },
+    {
+      "module_key": "cov_third_party",
+      "title_he": "צד ג׳ (פרק 7)",
+      "enable_if": "ch7_third_party_selected = true"
+    },
+    {
+      "module_key": "cov_employers",
+      "title_he": "חבות מעבידים (פרק 8)",
+      "enable_if": "ch8_employers_selected = true"
+    },
+    {
+      "module_key": "cov_product",
+      "title_he": "אחריות מוצר (פרק 9)",
+      "enable_if": "ch9_product_selected = true"
+    },
+    {
+      "module_key": "cov_product_extensions",
+      "title_he": "הרחבות אחריות מוצר (פרק 9 המשך)",
+      "enable_if": "ch9_product_selected = true"
+    },
+    {
+      "module_key": "cov_electronic_hardware",
+      "title_he": "ציוד אלקטרוני (חומרה) (פרק 10)",
+      "enable_if": "ch10_electronic_selected = true"
+    },
+    {
+      "module_key": "cov_electronic_data_restore",
+      "title_he": "שחזור נתונים ותוכנה (פרק 10ב)",
+      "enable_if": "ch10_data_restore_selected = true"
+    },
+    {
+      "module_key": "cov_electronic_extra_expenses",
+      "title_he": "הוצאות תפעול נוספות (פרק 10ג)",
+      "enable_if": "ch10_extra_expenses_selected = true"
+    },
+    {
+      "module_key": "cov_cyber_annex",
+      "title_he": "כיסוי סייבר (נספח א׳)",
+      "enable_if": "cyber_selected = true"
+    },
+    {
+      "module_key": "cov_terror_annex",
+      "title_he": "טרור מעל מס רכוש (נספח ב׳)",
+      "enable_if": "terror_selected = true"
+    },
+    {
+      "module_key": "history_disclosures",
+      "title_he": "עבר ביטוחי ופרטים נוספים",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "declarations_signatures",
+      "title_he": "הצהרות וחתימות",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "privacy_ack",
+      "title_he": "פרטיות ושימוש במידע",
+      "enable_if": "true"
+    },
+    {
+      "module_key": "internal_agent_details",
+      "title_he": "פרטי סוכן (פנימי)",
+      "enable_if": "true",
+      "audience": "internal"
+    },
+    {
+      "module_key": "internal_agent_declaration",
+      "title_he": "הצהרת סוכן (פנימי)",
+      "enable_if": "true",
+      "audience": "internal"
+    }
+  ],
+  "stages": [
+    {
+      "stage_key": "01_identification",
+      "title_he": "שלב 1 — זיהוי ראשוני ופרטי קשר",
+      "ask_if": null,
+      "intro_he": "כדי להתחיל בהכנת הצעה לביטוח עסק, אשמח לכמה פרטי קשר ופרטי בסיס על העסק. זה אמור לקחת 1–2 דקות.",
+      "intro_whatsapp_he": "כדי להתחיל הצעת ביטוח לעסק, אשמח לכמה פרטי קשר 🙂",
+      "question_ids": [
+        "Q001",
+        "Q002",
+        "Q005",
+        "Q008",
+        "Q015",
+        "Q016",
+        "Q018",
+        "Q022",
+        "Q023",
+        "Q024",
+        "Q030"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    },
+    {
+      "stage_key": "02_needs_discovery",
+      "title_he": "שלב 2 — בירור צרכים ובחירת כיסויים (דינאמי)",
+      "ask_if": null,
+      "intro_he": "מעולה. עכשיו נבין את הפעילות ונבחר אילו כיסויים באמת צריך. נשאל רק מה שרלוונטי.",
+      "intro_whatsapp_he": "מעולה. עכשיו נבין מה העסק צריך ונבחר כיסויים רלוונטיים.",
+      "question_ids": [
+        "Q033",
+        "Q034",
+        "Q035",
+        "Q036",
+        "G001",
+        "Q028",
+        "Q029",
+        "Q103",
+        "Q095",
+        "G004",
+        "Q119",
+        "Q122",
+        "Q125",
+        "Q130",
+        "G002",
+        "Q132",
+        "G003",
+        "Q136",
+        "Q180",
+        "Q199",
+        "Q214"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    },
+    {
+      "stage_key": "03_premises_and_risk",
+      "title_he": "שלב 3 — פרטי מבנה/סביבה/מיגון (לפי רלוונטיות)",
+      "ask_if": "has_physical_premises = true OR ch1_contents_selected = true OR ch2_building_selected = true OR ch4_burglary_selected = true OR ch5_money_selected = true OR ch10_electronic_selected = true",
+      "intro_he": "כיוון שיש מקום פיזי, נצטרך כמה פרטים על המבנה, סביבת העסק, רישיונות ומיגון.",
+      "intro_whatsapp_he": "מאחר ויש מקום פיזי — כמה שאלות קצרות על המבנה והמיגון.",
+      "question_ids": [
+        "Q037",
+        "Q038",
+        "Q039",
+        "Q040",
+        "Q041",
+        "Q042",
+        "Q043",
+        "Q044",
+        "Q045",
+        "Q046",
+        "Q051",
+        "Q052",
+        "Q053",
+        "Q054",
+        "Q055",
+        "Q056",
+        "Q057",
+        "Q058",
+        "Q059",
+        "Q060",
+        "Q061",
+        "Q062",
+        "Q063",
+        "Q064",
+        "Q065",
+        "Q066",
+        "Q067",
+        "Q068",
+        "Q069",
+        "Q070",
+        "Q071",
+        "Q072",
+        "Q073",
+        "Q074",
+        "Q075",
+        "Q076",
+        "Q077",
+        "Q078",
+        "Q079",
+        "Q080",
+        "Q081",
+        "Q082",
+        "Q083",
+        "Q084",
+        "Q085",
+        "Q086",
+        "Q087",
+        "Q088",
+        "Q089",
+        "Q090",
+        "Q091",
+        "Q092",
+        "Q093",
+        "Q094"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    },
+    {
+      "stage_key": "04_coverages_details",
+      "title_he": "שלב 4 — פירוט הכיסויים שנבחרו (לפי בחירה)",
+      "ask_if": null,
+      "intro_he": "עכשיו ניכנס לפרטים של הכיסויים שבחרת (סכומים, גבולות, מסמכים).",
+      "intro_whatsapp_he": "מעולה. עכשיו פרטים על הכיסויים שבחרת (סכומים/גבולות).",
+      "question_ids": [
+        "Q096",
+        "Q097",
+        "Q098",
+        "Q100",
+        "Q099",
+        "Q101",
+        "Q102",
+        "Q104",
+        "Q105",
+        "Q106",
+        "Q107",
+        "Q108",
+        "Q110",
+        "Q112",
+        "Q113",
+        "Q114",
+        "Q115",
+        "Q116",
+        "Q117",
+        "Q120",
+        "Q121",
+        "Q123",
+        "Q124",
+        "Q126",
+        "Q127",
+        "Q128",
+        "Q129",
+        "Q131",
+        "Q134",
+        "Q135",
+        "Q137",
+        "Q138",
+        "Q139",
+        "Q140",
+        "Q141",
+        "Q142",
+        "Q143",
+        "Q144",
+        "Q145",
+        "Q146",
+        "Q147",
+        "Q148",
+        "Q149",
+        "Q150",
+        "Q151",
+        "Q152",
+        "Q153",
+        "Q154",
+        "Q155",
+        "Q156",
+        "Q157",
+        "Q158",
+        "Q159",
+        "Q160",
+        "Q161",
+        "Q162",
+        "Q163",
+        "Q164",
+        "Q165",
+        "Q166",
+        "Q167",
+        "Q168",
+        "Q169",
+        "Q170",
+        "Q171",
+        "Q172",
+        "Q173",
+        "Q174",
+        "Q175",
+        "Q177",
+        "Q178",
+        "Q179",
+        "Q181",
+        "Q182",
+        "Q183",
+        "Q184",
+        "Q185",
+        "Q186",
+        "Q187",
+        "Q188",
+        "Q189",
+        "Q190",
+        "Q191",
+        "Q192",
+        "Q193",
+        "Q194",
+        "Q195",
+        "Q196",
+        "Q197",
+        "Q198",
+        "Q200",
+        "Q201",
+        "Q202",
+        "Q203",
+        "Q204",
+        "Q205",
+        "Q206",
+        "Q207",
+        "Q208",
+        "Q209",
+        "Q210",
+        "Q211",
+        "Q212",
+        "Q213",
+        "Q215",
+        "Q216",
+        "Q217",
+        "Q218"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    },
+    {
+      "stage_key": "05_history_disclosures",
+      "title_he": "שלב 5 — עבר ביטוחי וגילוי נאות",
+      "ask_if": null,
+      "intro_he": "כמעט סיימנו. עכשיו כמה שאלות על עבר ביטוחי ותביעות (5 שנים אחרונות).",
+      "intro_whatsapp_he": "כמעט סיימנו. כמה שאלות על עבר ביטוחי (5 השנים האחרונות).",
+      "question_ids": [
+        "Q221",
+        "Q222",
+        "Q223",
+        "Q224",
+        "Q225",
+        "Q226",
+        "Q227",
+        "Q228",
+        "Q229",
+        "Q230",
+        "Q231",
+        "Q232",
+        "Q233",
+        "Q234",
+        "Q235",
+        "Q236",
+        "Q237",
+        "Q238",
+        "Q239",
+        "Q240",
+        "Q241",
+        "Q242",
+        "Q243",
+        "Q244",
+        "Q245",
+        "Q246",
+        "Q247",
+        "Q248",
+        "Q249"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    },
+    {
+      "stage_key": "06_confirmations_signatures",
+      "title_he": "שלב 6 — אישורים, הסכמות וחתימה",
+      "ask_if": null,
+      "intro_he": "סיום: אישורים, הסכמות וחתימה דיגיטלית כדי שנוכל לשלוח את ההצעה לחברת הביטוח.",
+      "intro_whatsapp_he": "סיום: צריך כמה אישורים כדי שנוכל לשלוח את ההצעה 🙂",
+      "question_ids": [
+        "Q250",
+        "Q260",
+        "Q251",
+        "Q252",
+        "Q253",
+        "Q254",
+        "Q255"
+      ],
+      "stage_policies": {
+        "web_chat": {
+          "max_questions_per_turn": 2
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1
+        }
+      },
+      "completion_checkpoint": {
+        "send_summary": true,
+        "summary_template_he": "סיכום קצר עד כאן: {stage_summary}. אם משהו לא מדויק — כתוב/י לי ונעדכן."
+      }
+    }
+  ],
+  "validators": [
+    {
+      "name": "third_party_limit_steps",
+      "field_key_en": "ch7_limit_ils",
+      "when": "ch7_third_party_selected = true",
+      "rule": {
+        "min": 500000,
+        "max": 10000000,
+        "multipleOf": 500000
+      },
+      "error_he": "גבול אחריות צד ג׳ חייב להיות בין 500,000 ל-10,000,000 במדרגות של 500,000."
+    },
+    {
+      "name": "bi_daily_max",
+      "field_key_en": "ch3a_daily_comp_ils",
+      "when": "ch3a_selected = true",
+      "rule": {
+        "max": 5000
+      },
+      "error_he": "בפרק אובדן הכנסה יומי — סכום הפיצוי היומי המקסימלי הוא 5,000 ₪."
+    },
+    {
+      "name": "cyber_turnover_cap",
+      "field_key_en": "cyber_annual_turnover_ils",
+      "when": "cyber_selected = true",
+      "rule": {
+        "max": 50000000
+      },
+      "error_he": "כיסוי הסייבר מיועד לעסקים עם מחזור עד 50,000,000 ₪."
+    }
+  ],
+  "handoff_triggers": [
+    {
+      "trigger_key": "hazardous_goods_nearby",
+      "when": "hazardous_goods_nearby = true",
+      "reason_he": "סחורות מסוכנות/מתלקחות בסביבה סמוכה",
+      "action": "route_to_underwriter"
+    },
+    {
+      "trigger_key": "pal_kal",
+      "when": "pal_kal_construction = true",
+      "reason_he": "מבנה בשיטת פל-קל",
+      "action": "route_to_underwriter"
+    },
+    {
+      "trigger_key": "claims_last5y",
+      "when": "history_claims_or_losses = true",
+      "reason_he": "היסטוריית תביעות/נזקים ב-5 השנים האחרונות",
+      "action": "route_to_underwriter"
+    },
+    {
+      "trigger_key": "cyber_incident",
+      "when": "cyber_security_breach_last5y = true",
+      "reason_he": "אירועי סייבר ב-5 השנים האחרונות",
+      "action": "route_to_underwriter"
+    }
+  ],
+  "attachments_checklist": [
+    {
+      "q_id": "Q067",
+      "field_key_en": "business_license_attachment",
+      "title_he": "אם כן – לצרף צילום רישיון עסק",
+      "when": "business_license_valid = true",
+      "json_path": "attachments.business_license",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    },
+    {
+      "q_id": "Q070",
+      "field_key_en": "fire_dept_approval_attachment",
+      "title_he": "אם כן – צרף צילום אישור כבאות אש",
+      "when": "fire_dept_approval_valid = true",
+      "json_path": "attachments.fire_department_approval",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    },
+    {
+      "q_id": "Q142",
+      "field_key_en": "ch9_brochure_attachment",
+      "title_he": "צירוף עלון פרסומי (אם קיים)",
+      "when": null,
+      "json_path": "attachments.product_brochure",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    },
+    {
+      "q_id": "Q175",
+      "field_key_en": "ch9_vendor_list_attachment",
+      "title_he": "עבור מספר משווקים – לצרף רשימת משווקים",
+      "when": null,
+      "json_path": "attachments.vendors_list",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    },
+    {
+      "q_id": "Q181",
+      "field_key_en": "ch10_equipment_list_attachment",
+      "title_he": "רשימת ציוד אלקטרוני מפורטת (לצרף)",
+      "when": "ch10_electronic_selected=true",
+      "json_path": "attachments.electronic_equipment_list",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    }
+  ]
+}

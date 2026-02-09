@@ -159,6 +159,33 @@ export type CustomCompletionCheck = {
 };
 
 /**
+ * Per-stage question orchestration policy for the core prompt builder.
+ *
+ * This is intentionally generic (no flow-specific logic) and only affects
+ * how the core engine instructs the model about message/question batching.
+ */
+export type StageQuestionPolicy = {
+  /**
+   * Maximum number of distinct questions the assistant may ask per message,
+   * by channel. If not provided, defaults are applied by the engine.
+   */
+  maxQuestionsPerTurn?: {
+    web?: number;
+    whatsapp?: number;
+  };
+  /**
+   * Disable the core "bulk collection" instruction (asking for 3+ missing fields
+   * in a single turn). Useful for strict 1-question channels (e.g., WhatsApp).
+   */
+  disableBulkCollectionRule?: boolean;
+  /**
+   * Suppress the core missing-fields prompting section entirely.
+   * Intended for stages that embed their own question-bank orchestration in `stage.prompt`.
+   */
+  suppressCoreMissingFieldsSection?: boolean;
+};
+
+/**
  * Configuration for stage incomplete logging
  */
 export type StageIncompleteLogging = {
@@ -186,6 +213,8 @@ export type SystemPromptHook = {
 export type StageOrchestration = {
   /** Custom completion check function (evaluated after standard check) */
   customCompletionCheck?: CustomCompletionCheck;
+  /** Stage-level question orchestration policy for core prompting */
+  questionPolicy?: StageQuestionPolicy;
   /** Custom logging on stage incomplete */
   onStageIncomplete?: StageIncompleteLogging;
   /** Custom system prompt hooks */
@@ -308,6 +337,10 @@ export type FieldDefinition = {
 export type FlowSchemaConfig = {
   /** The initial stage slug where the flow begins */
   initialStage: string;
+  /** Admin UI preferences (non-engine) */
+  ui?: {
+    fieldsSort?: 'none' | 'priorityAsc';
+  };
   /** Whether this flow should be the default for new users (exactly one flow should have this set to true) */
   defaultForNewUsers?: boolean;
   /** Configuration for what happens when the flow completes */

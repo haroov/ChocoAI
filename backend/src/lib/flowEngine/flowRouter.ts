@@ -155,7 +155,13 @@ class FlowRouter {
     // Filter out empty strings and null values before saving - only save fields that were actually provided
     const cleanedCollectedData = Object.fromEntries(
       Object.entries(options.determinedFlow.collectedData).filter(([_, value]) =>
-        value !== null && value !== undefined && value !== '',
+        value !== null
+        && value !== undefined
+        && value !== ''
+        && !(
+          typeof value === 'string'
+          && ['null', ':null', 'undefined', ':undefined'].includes(value.trim().toLowerCase())
+        ),
       ),
     );
 
@@ -585,6 +591,10 @@ class FlowRouter {
 
               // Handle different behaviors
               if (errorHandlingResult.behavior === 'pause') {
+                // If this stage is collecting user fields, most failures are user-actionable (validation/parse).
+                // Mark them as non-technical so the engine re-asks the stage question instead of masking it.
+                const analyzedIsTechnical = errorHandler.analyzeError(res.error || 'Unknown error').isTechnical;
+                const isTechnical = stage.fieldsToCollect.length === 0 ? true : analyzedIsTechnical;
                 // Stay in current stage, show custom message
                 return {
                   nextStage: stageSlug,
@@ -593,7 +603,7 @@ class FlowRouter {
                     error: errorHandlingResult.userMessage,
                     stage: stageSlug,
                     stageDescription: stage.description,
-                    isTechnical: true,
+                    isTechnical,
                   },
                 };
               } else if (errorHandlingResult.behavior === 'newStage') {
@@ -1209,16 +1219,52 @@ class FlowRouter {
       const { condition, requiredFields } = stage.orchestration.customCompletionCheck;
       try {
         if (kseval.native) {
-          const customConditionResult = kseval.native.evaluate(condition, data);
-          if (Boolean(customConditionResult) && requiredFields) {
-            // Use requiredFields instead of fieldsToCollect when custom condition passes
-            const allRequiredFieldsCollected = requiredFields.every((fieldSlug) =>
-              fieldSlug in data &&
-              data[fieldSlug] !== undefined &&
-              data[fieldSlug] !== null &&
-              data[fieldSlug] !== '',
-            );
-            if (allRequiredFieldsCollected) {
+          const isPresentValue = (v: unknown): boolean => {
+            if (v === undefined || v === null) return false;
+            if (typeof v === 'string') {
+              const s = v.trim();
+              if (!s) return false;
+              // Treat common LLM placeholders as missing values.
+              // We've observed values like ":null" being extracted and persisted, which must NOT count as "present".
+              const lowered = s.toLowerCase();
+              if (lowered === 'null' || lowered === ':null' || lowered === 'undefined' || lowered === ':undefined') return false;
+              return true;
+            }
+            if (Array.isArray(v)) return v.length > 0;
+            // boolean false is a valid answer
+            return true;
+          };
+          const __present = isPresentValue;
+          const __includes = (container: unknown, needle: unknown): boolean => {
+            if (container === null || container === undefined) return false;
+            const n = String(needle ?? '');
+            if (!n) return false;
+            if (Array.isArray(container)) return container.map(String).includes(n);
+            if (typeof container === 'string') return container.includes(n);
+            return false;
+          };
+
+          // Prefer evaluating custom completion checks with an explicit userData scope so expressions
+          // can safely reference missing keys (e.g. userData.some_field) without ReferenceErrors.
+          let customConditionResult: unknown;
+          try {
+            customConditionResult = kseval.native.evaluate(condition, { userData: data, __present, __includes });
+          } catch {
+            // Backwards-compat: older expressions may assume direct access to fields.
+            customConditionResult = kseval.native.evaluate(condition, data);
+          }
+
+          if (customConditionResult) {
+            // Mode A: requiredFields gate (legacy behavior)
+            if (Array.isArray(requiredFields) && requiredFields.length > 0) {
+              const allRequiredFieldsCollected = requiredFields.every((fieldSlug) =>
+                isPresentValue((data as any)[fieldSlug]),
+              );
+              if (allRequiredFieldsCollected) {
+                return true;
+              }
+            } else {
+              // Mode B: condition-only completion (condition expression fully determines completion)
               return true;
             }
           }
@@ -1229,12 +1275,19 @@ class FlowRouter {
     }
 
     // Check that all required fields are collected
-    const allFieldsCollected = stage.fieldsToCollect.every((fieldSlug) => (
-      fieldSlug in data
-      && data[fieldSlug] !== undefined
-      && data[fieldSlug] !== null
-      && data[fieldSlug] !== ''
-    ));
+    const allFieldsCollected = stage.fieldsToCollect.every((fieldSlug) => {
+      if (!(fieldSlug in data)) return false;
+      const v = (data as any)[fieldSlug];
+      if (v === undefined || v === null) return false;
+      if (typeof v === 'string') {
+        const s = v.trim();
+        if (!s) return false;
+        const lowered = s.toLowerCase();
+        if (lowered === 'null' || lowered === ':null' || lowered === 'undefined' || lowered === ':undefined') return false;
+      }
+      if (Array.isArray(v)) return v.length > 0;
+      return true;
+    });
 
     // If completionCondition is defined and passes, still need all fields (unless customCompletionCheck handled it)
     if (completionConditionPassed && stage.completionCondition) {

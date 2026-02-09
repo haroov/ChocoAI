@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "16_employers_liability",
+    "title_he": "שאלון חבות מעבידים",
+    "description_he": "טבלת עובדים/שכר ובסיס תמחור.",
+    "ask_if": "ch8_employers_selected = true",
+    "audience": "customer",
+    "included_module_keys": [
+      "cov_employers"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q134",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 8: Employers liability",
+      "stage_title_he": "חלק ב — פרק 8: אחריות מעבידים",
+      "chapter": "8",
+      "question_he": "טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי)",
+      "prompt_he": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי).",
+      "field_key_en": "ch8_employees_table",
+      "data_type": "array",
+      "input_type": "table",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch8_employers_selected=true",
+      "notes_logic": "שורות עיסוק: עובדי משרד ופקידים; עובדי מסחר ושירותים; עובדים טכניים/פועלים (לא ייצור); פועלי ייצור עם ציוד/מכונות; מקצועות מסוכנים; מנהלים בעלי שליטה",
+      "json_path": "coverages.liability.chapter_8_employers_liability.employees[]",
+      "module_key": "cov_employers",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch8_employers_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי).",
+        "whatsapp": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "structured_text",
+        "hint_he": "אפשר לשלוח בהודעה אחת או בכמה הודעות. ננחה אותך לפי שורות."
+      }
+    },
+    {
+      "q_id": "Q135",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 8: Employers liability",
+      "stage_title_he": "חלק ב — פרק 8: אחריות מעבידים",
+      "chapter": "8",
+      "question_he": "הכיסוי המבוקש מחושב לפי",
+      "prompt_he": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)",
+      "field_key_en": "ch8_rating_basis",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "לפי מספר עובדים, לפי אומדן שכר עבודה שנתי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch8_employers_selected=true",
+      "json_path": "coverages.liability.chapter_8_employers_liability.rating_basis",
+      "module_key": "cov_employers",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch8_employers_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)",
+        "whatsapp": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "לפי מספר עובדים"
+          },
+          {
+            "n": 2,
+            "label_he": "לפי אומדן שכר עבודה שנתי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": []
+}

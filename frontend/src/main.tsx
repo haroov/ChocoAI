@@ -5,7 +5,7 @@ import { IntlProvider } from 'use-intl';
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { observer } from 'mobx-react-lite';
 import { ToastProvider } from '@heroui/react';
-import { Provider } from './provider.tsx';
+import { Provider } from './provider';
 import { en, he } from './helpers/localization';
 import ErrorBoundary from './layouts/ErrorBoundary';
 import './styles/globals.css';

@@ -1,0 +1,175 @@
+{
+  "module_key": "premises_water_flood_risk",
+  "questions": [
+    {
+      "q_id": "Q090",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע?",
+      "prompt_he": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
+      "field_key_en": "below_ground",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.below_ground_parts.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
+        "whatsapp": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q091",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)?",
+      "prompt_he": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
+      "field_key_en": "flood_source_nearby",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.nearby_flood_source.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q092",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "flood_source_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "flood_source_nearby = true",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.nearby_flood_source.details",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "flood_source_nearby = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q093",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה?",
+      "prompt_he": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
+      "field_key_en": "nature_damage_last_3y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.previous_flooding_events_last_3_years.answer",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q094",
+      "page": 2,
+      "section": "Part A",
+      "subsection": "J. Water/liquids/nature perils",
+      "stage_title_he": "חלק א — סיכוני מים / שיטפון / נזקי טבע",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "nature_damage_last_3y_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "nature_damage_last_3y = true",
+      "json_path": "locations[0].risk_and_security.water_flood_risk.previous_flooding_events_last_3_years.details",
+      "module_key": "premises_water_flood_risk",
+      "audience": "customer",
+      "stage_key": "03_premises_and_risk",
+      "ask_if": "nature_damage_last_3y = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

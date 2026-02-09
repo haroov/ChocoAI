@@ -1,0 +1,77 @@
+{
+  "module_key": "core_additional_locations",
+  "questions": [
+    {
+      "q_id": "Q028",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Additional business locations",
+      "stage_title_he": "חלק א — כתובות נוספות / סניפים",
+      "question_he": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות?",
+      "prompt_he": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות? (אפשרויות: לא, כן)",
+      "field_key_en": "business_has_additional_locations",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.has_additional_locations",
+      "module_key": "core_additional_locations",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q029",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Additional business locations",
+      "stage_title_he": "חלק א — כתובות נוספות / סניפים",
+      "question_he": "אם כן – מספר הכתובות הנוספות",
+      "prompt_he": "אם כן, – מספר הכתובות הנוספות?",
+      "field_key_en": "business_additional_locations_count",
+      "data_type": "number",
+      "input_type": "integer",
+      "constraints": ">=1",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "business_has_additional_locations = true",
+      "notes_logic": "עליך להשיב ולמלא פרטים לכל כתובת בנפרד",
+      "json_path": "business.additional_locations_count",
+      "module_key": "core_additional_locations",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "ask_if": "business_has_additional_locations = true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – מספר הכתובות הנוספות?",
+        "whatsapp": "אם כן, – מספר הכתובות הנוספות?"
+      },
+      "priority": 2,
+      "validation": {
+        "min": 1
+      },
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

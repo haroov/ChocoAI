@@ -1,0 +1,949 @@
+{
+  "module_key": "history_disclosures",
+  "questions": [
+    {
+      "q_id": "Q221",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם שם העסק השתנה ב-5 השנים האחרונות?",
+      "prompt_he": "האם שם העסק השתנה ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_business_name_changed",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.business_name_changed_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם שם העסק השתנה ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם שם העסק השתנה ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q222",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_business_name_changed_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_business_name_changed=true",
+      "json_path": "history_and_disclosures.business_name_changed_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_business_name_changed=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q223",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם היו שינויי בעלות בעסק או במציע ב-5 השנים האחרונות?",
+      "prompt_he": "האם היו שינויי בעלות בעסק או במציע ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_ownership_changed",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.ownership_changed_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם היו שינויי בעלות בעסק או במציע ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם היו שינויי בעלות בעסק או במציע ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q224",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_ownership_changed_details",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_ownership_changed=true",
+      "json_path": "history_and_disclosures.ownership_changed_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_ownership_changed=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q225",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם העסק היה מבוטח ב-5 השנים האחרונות בכלל/אחרת?",
+      "prompt_he": "האם העסק היה מבוטח ב-5 השנים האחרונות בכלל/אחרת? (אפשרויות: לא, כן)",
+      "field_key_en": "history_insured_last5y",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.insured_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם העסק היה מבוטח ב-5 השנים האחרונות בכלל/אחרת? (אפשרויות: לא, כן)",
+        "whatsapp": "האם העסק היה מבוטח ב-5 השנים האחרונות בכלל/אחרת? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q226",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – ציין שם החברה",
+      "prompt_he": "אם כן, – ציין שם החברה?",
+      "field_key_en": "history_prior_insurer_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_insured_last5y=true",
+      "json_path": "history_and_disclosures.insured_last5y.insurer_name",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_insured_last5y=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – ציין שם החברה?",
+        "whatsapp": "אם כן, – ציין שם החברה?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q227",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – מספר פוליסה",
+      "prompt_he": "אם כן, – מספר פוליסה?",
+      "field_key_en": "history_prior_policy_number",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_insured_last5y=true",
+      "json_path": "history_and_disclosures.insured_last5y.policy_number",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_insured_last5y=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – מספר פוליסה?",
+        "whatsapp": "אם כן, – מספר פוליסה?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q228",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "תקופת ביטוח (מ-)",
+      "prompt_he": "מהו תקופת ביטוח (מ-)? (תאריך)",
+      "field_key_en": "history_prior_policy_start_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_insured_last5y=true",
+      "json_path": "history_and_disclosures.insured_last5y.period.start_date",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_insured_last5y=true",
+      "prompt_variants": {
+        "web_chat": "מהו תקופת ביטוח (מ-)? (תאריך)",
+        "whatsapp": "מהו תקופת ביטוח (מ-)? (תאריך)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q229",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "תקופת ביטוח (עד-)",
+      "prompt_he": "מהו תקופת ביטוח (עד-)? (תאריך)",
+      "field_key_en": "history_prior_policy_end_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_insured_last5y=true",
+      "json_path": "history_and_disclosures.insured_last5y.period.end_date",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_insured_last5y=true",
+      "prompt_variants": {
+        "web_chat": "מהו תקופת ביטוח (עד-)? (תאריך)",
+        "whatsapp": "מהו תקופת ביטוח (עד-)? (תאריך)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q230",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם דחתה חברת ביטוח כלשהי את הצעתך לביטוח ב-5 השנים האחרונות?",
+      "prompt_he": "האם דחתה חברת ביטוח כלשהי את הצעתך לביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_declined",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.declined_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם דחתה חברת ביטוח כלשהי את הצעתך לביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם דחתה חברת ביטוח כלשהי את הצעתך לביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q231",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט את הסיבה",
+      "prompt_he": "אם כן, – פרט את הסיבה?",
+      "field_key_en": "history_declined_reason",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_declined=true",
+      "json_path": "history_and_disclosures.declined_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_declined=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט את הסיבה?",
+        "whatsapp": "אם כן, – פרט את הסיבה?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q232",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם סירבה חברת ביטוח לחדש את הביטוח ב-5 השנים האחרונות?",
+      "prompt_he": "האם סירבה חברת ביטוח לחדש את הביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_refused_renewal",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.refused_renewal_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם סירבה חברת ביטוח לחדש את הביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם סירבה חברת ביטוח לחדש את הביטוח ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q233",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט את הסיבה",
+      "prompt_he": "אם כן, – פרט את הסיבה?",
+      "field_key_en": "history_refused_renewal_reason",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_refused_renewal=true",
+      "json_path": "history_and_disclosures.refused_renewal_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_refused_renewal=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט את הסיבה?",
+        "whatsapp": "אם כן, – פרט את הסיבה?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q234",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם נדרשו תנאים מיוחדים/פרמיה מוגדלת בעת קבלת הביטוח או חידושו?",
+      "prompt_he": "האם נדרשו תנאים מיוחדים/פרמיה מוגדלת בעת קבלת הביטוח או חידושו? (אפשרויות: לא, כן)",
+      "field_key_en": "history_special_terms",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.special_terms_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם נדרשו תנאים מיוחדים/פרמיה מוגדלת בעת קבלת הביטוח או חידושו? (אפשרויות: לא, כן)",
+        "whatsapp": "האם נדרשו תנאים מיוחדים/פרמיה מוגדלת בעת קבלת הביטוח או חידושו? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q235",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_special_terms_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_special_terms=true",
+      "json_path": "history_and_disclosures.special_terms_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_special_terms=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q236",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם הגשת תביעה/ות או אירעו נזקים כתוצאה מהכיסויים המבוקשים?",
+      "prompt_he": "האם הגשת תביעה/ות או אירעו נזקים כתוצאה מהכיסויים המבוקשים? (אפשרויות: לא, כן)",
+      "field_key_en": "history_claims_or_losses",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.claims_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הגשת תביעה/ות או אירעו נזקים כתוצאה מהכיסויים המבוקשים? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הגשת תביעה/ות או אירעו נזקים כתוצאה מהכיסויים המבוקשים? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q237",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_claims_or_losses_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_claims_or_losses=true",
+      "json_path": "history_and_disclosures.claims_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_claims_or_losses=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q238",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם ידוע לך על אירוע העלול לשמש בסיס/עילה לתביעה נגדך?",
+      "prompt_he": "האם ידוע לך על אירוע העלול לשמש בסיס/עילה לתביעה נגדך? (אפשרויות: לא, כן)",
+      "field_key_en": "history_known_potential_claim",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.known_potential_claim_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ידוע לך על אירוע העלול לשמש בסיס/עילה לתביעה נגדך? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ידוע לך על אירוע העלול לשמש בסיס/עילה לתביעה נגדך? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q239",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_known_potential_claim_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_known_potential_claim=true",
+      "json_path": "history_and_disclosures.known_potential_claim_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_known_potential_claim=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q240",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם קיבלת איומים/ניסיונות לפגוע במכוון או פגיעה בזדון בפועל ב-5 השנים האחרונות?",
+      "prompt_he": "האם קיבלת איומים/ניסיונות לפגוע במכוון או פגיעה בזדון בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_threats_or_vandalism",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.vandalism_or_threats_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם קיבלת איומים/ניסיונות לפגוע במכוון או פגיעה בזדון בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם קיבלת איומים/ניסיונות לפגוע במכוון או פגיעה בזדון בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q241",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_threats_or_vandalism_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_threats_or_vandalism=true",
+      "json_path": "history_and_disclosures.vandalism_or_threats_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_threats_or_vandalism=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q242",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם אירעה פריצה לבית העסק או ניסיון לפרוץ אליו ב-5 השנים האחרונות?",
+      "prompt_he": "האם אירעה פריצה לבית העסק או ניסיון לפרוץ אליו ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_burglary_or_attempt",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.burglary_or_attempt_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם אירעה פריצה לבית העסק או ניסיון לפרוץ אליו ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם אירעה פריצה לבית העסק או ניסיון לפרוץ אליו ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q243",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_burglary_or_attempt_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_burglary_or_attempt=true",
+      "json_path": "history_and_disclosures.burglary_or_attempt_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_burglary_or_attempt=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q244",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם היו ניסיונות להצית את בית העסק או הצתה בפועל ב-5 השנים האחרונות?",
+      "prompt_he": "האם היו ניסיונות להצית את בית העסק או הצתה בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+      "field_key_en": "history_arson",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.arson_last5y.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם היו ניסיונות להצית את בית העסק או הצתה בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם היו ניסיונות להצית את בית העסק או הצתה בפועל ב-5 השנים האחרונות? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q245",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_arson_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_arson=true",
+      "json_path": "history_and_disclosures.arson_last5y.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_arson=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q246",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם בעקבות הנזקים הנ\"ל ננקטו אמצעים להקלת הסיכון?",
+      "prompt_he": "האם בעקבות הנזקים הנ\"ל ננקטו אמצעים להקלת הסיכון? (אפשרויות: לא, כן)",
+      "field_key_en": "history_risk_mitigation_taken",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.risk_mitigation_taken.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם בעקבות הנזקים הנ\"ל ננקטו אמצעים להקלת הסיכון? (אפשרויות: לא, כן)",
+        "whatsapp": "האם בעקבות הנזקים הנ\"ל ננקטו אמצעים להקלת הסיכון? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q247",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "history_risk_mitigation_taken_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_risk_mitigation_taken=true",
+      "json_path": "history_and_disclosures.risk_mitigation_taken.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_risk_mitigation_taken=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q248",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "האם הרכוש ו/או החבויות מבוטחים כיום גם בחברת ביטוח אחרת?",
+      "prompt_he": "האם הרכוש ו/או החבויות מבוטחים כיום גם בחברת ביטוח אחרת? (אפשרויות: לא, כן)",
+      "field_key_en": "history_insured_elsewhere",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "history_and_disclosures.insured_elsewhere.answer",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הרכוש ו/או החבויות מבוטחים כיום גם בחברת ביטוח אחרת? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הרכוש ו/או החבויות מבוטחים כיום גם בחברת ביטוח אחרת? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q249",
+      "page": 6,
+      "section": "Part C",
+      "subsection": "T. Insurance history & additional details",
+      "stage_title_he": "חלק ג — עבר ביטוחי ופרטים נוספים",
+      "question_he": "אם כן – ציין סוג הסיכון ושם החברה",
+      "prompt_he": "אם כן, – ציין סוג הסיכון ושם החברה?",
+      "field_key_en": "history_insured_elsewhere_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "history_insured_elsewhere=true",
+      "json_path": "history_and_disclosures.insured_elsewhere.details",
+      "module_key": "history_disclosures",
+      "audience": "customer",
+      "stage_key": "05_history_disclosures",
+      "ask_if": "history_insured_elsewhere=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – ציין סוג הסיכון ושם החברה?",
+        "whatsapp": "אם כן, – ציין סוג הסיכון ושם החברה?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

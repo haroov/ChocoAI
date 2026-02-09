@@ -1,205 +1,229 @@
 import { Request, Response } from 'express';
-import { FlowHistory, OrganisationInfo } from '@prisma/client';
 import { registerRoute } from '../../utils/routesRegistry';
-import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 import { prisma } from '../../core';
-import { FlowDefinition } from '../../lib/flowEngine';
-import { logger } from '../../utils/logger';
+import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 
-registerRoute('get', '/api/v1/conversations/:id', async (
-  req: Request,
-  res: Response,
-) => {
+type UiFlowStage = {
+  slug: string;
+  name?: string;
+  isCompleted: boolean;
+};
+
+type UiFlow = {
+  name: string;
+  slug: string;
+  isCompleted: boolean;
+  sessionId: string;
+  stages: UiFlowStage[];
+};
+
+const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowStage[] => {
+  const stagesObj = definition?.stages || {};
+  return Object.entries(stagesObj).map(([stageSlug, stageDef]: any) => ({
+    slug: stageSlug,
+    name: stageDef?.name,
+    isCompleted: completedStageSlugs.has(stageSlug),
+  }));
+};
+
+registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const idRaw = (req.params as any).id as unknown;
+    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
+
+    if (!id) {
+      res.status(400).json({
+        ok: false,
+        error: 'Missing conversation ID',
+      });
+      return;
+    }
+
     const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
+        user: true,
         messages: {
           orderBy: { createdAt: 'asc' },
+          select: { id: true, content: true, createdAt: true, role: true },
         },
       },
     });
 
     if (!conversation) {
-      res.status(404).json({ ok: false, error: 'Conversation not found' });
+      res.status(404).json({
+        ok: false,
+        error: 'Conversation not found',
+      });
       return;
     }
 
-    let userData: any = {};
-    let flowState: any = null;
-    let organisations: OrganisationInfo[] = [];
-    if (conversation.userId) {
-      const userFlow = await prisma.userFlow.findUnique({ where: { userId: conversation.userId } });
-      const flowId = userFlow?.flowId || '';
-      const flow = await prisma.flow.findUnique({ where: { id: flowId } });
+    const userId = conversation.userId || null;
 
-      if (flow) {
-        const flowDefinition = flow.definition as FlowDefinition;
-        userData = await flowHelpers.getUserData(conversation.userId, flowId);
-        userData = flowHelpers.sanitizeData(userData, flowDefinition.fields);
+    // ---- userData (prefer active flow overlay if known) ----
+    let userData: Record<string, unknown> = {};
+    let activeFlow: UiFlow | null = null;
+    const completedFlows: UiFlow[] = [];
 
-        flowState = { name: flow.name, stages: [] };
-        Object.entries((flow.definition as FlowDefinition).stages).forEach(([stageSlug, stage]) => {
-          flowState.stages.push({
-            stageSlug,
-            isComplete: stage.fieldsToCollect.every((fieldSlug) => (
-              fieldSlug in userData
-              && userData[fieldSlug] !== undefined
-              && userData[fieldSlug] !== null
-              && userData[fieldSlug] !== ''
-            )),
-          });
-        });
-      }
-    }
-
-    const sessions = new Map<string, FlowHistory[]>();
-    let activeFlow: FlowState | null = null;
-    const completedFlows: FlowState[] = [];
-    if (conversation.userId) {
-      const relatedOrganisations = await prisma.userOrganisation.findMany({ where: { userId: conversation.userId } });
-      if (relatedOrganisations.length) {
-        organisations = await prisma.organisationInfo.findMany({
-          where: { id: { in: relatedOrganisations.map((o) => o.organisationId) } },
-        });
-      }
-
-      const userFlow = await prisma.userFlow.findUnique({ where: { userId: conversation.userId } });
-      const flowId = userFlow?.flowId;
-
-      userData = await flowHelpers.getUserData(conversation.userId, flowId);
-
-      const flowHistory = await prisma.flowHistory.findMany({ where: { userId: conversation.userId } });
-      flowHistory.forEach((flowHistoryItem) => {
-        const sessionHistory = sessions.get(flowHistoryItem.sessionId) || [];
-        sessionHistory.push(flowHistoryItem);
-        sessions.set(flowHistoryItem.sessionId, sessionHistory);
+    if (userId) {
+      const activeUserFlow = await prisma.userFlow.findUnique({
+        where: { userId },
+        include: {
+          flow: { select: { id: true, name: true, slug: true, definition: true } },
+        },
       });
 
-      // Group flowHistory by flowId to find all flows the user has been through
-      const flowsByFlowId = new Map<string, { flowId: string; sessionId: string; stages: string[] }>();
+      // If no active flow, use last known flow from history for overlay precedence.
+      const overlayFlowId = activeUserFlow?.flow?.id
+        || (await prisma.flowHistory.findFirst({
+          where: { userId },
+          orderBy: { completedAt: 'desc' },
+          select: { flowId: true },
+        }))?.flowId;
 
-      for (const [sessionId, session] of [...sessions.entries()]) {
-        if (!session || session.length === 0) continue;
+      userData = await flowHelpers.getUserData(userId, overlayFlowId);
 
-        // Iterate through all history items to find all unique flowIds in this session
-        session.forEach((s) => {
-          const { flowId } = s;
-          if (!flowsByFlowId.has(flowId)) {
-            flowsByFlowId.set(flowId, {
-              flowId,
-              sessionId,
-              stages: [],
-            });
+      // Auto-repair: if the stored first name is a greeting (e.g., "הי"),
+      // infer the real name from the conversation's user messages and persist it.
+      try {
+        const bad = new Set(['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey']);
+        const first = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
+        const lowered = first.toLowerCase();
+        const needsRepair = first && (bad.has(lowered) || lowered === 'לקוח');
+        if (needsRepair) {
+          const texts = (conversation.messages || [])
+            .filter((m) => m.role === 'user')
+            .map((m) => String(m.content || ''))
+            .filter(Boolean);
+          const joined = texts.join(' | ');
+          // Best-effort: find "<first> <last>" near phone or comma segments.
+          const m = joined.match(/(?:^|[,\n|]\s*)([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})(?=\s*(?:[,\n|]|$))/);
+          const inferredFirst = m ? String(m[1] || '').trim() : '';
+          const inferredLast = m ? String(m[2] || '').trim() : '';
+          if (inferredFirst && inferredFirst !== first) {
+            await flowHelpers.setUserData(userId, overlayFlowId || activeUserFlow?.flow?.id || '', {
+              first_name: inferredFirst,
+              ...(inferredLast ? { last_name: inferredLast } : {}),
+            }, conversation.id);
+            // Refresh local snapshot for response
+            userData = await flowHelpers.getUserData(userId, overlayFlowId);
           }
-
-          const flowData = flowsByFlowId.get(flowId)!;
-          if (!flowData.stages.includes(s.stage)) {
-            flowData.stages.push(s.stage);
-          }
-        });
+        }
+      } catch {
+        // best-effort
       }
 
-      if (userFlow) {
-        const flow = (await prisma.flow.findUnique({ where: { id: userFlow.flowId } }))!;
-        const currentFlowStages = Object.entries((flow.definition as FlowDefinition).stages).map(([stageSlug, stage]) => ({
-          slug: stageSlug,
-          name: stage.name,
-          isCompleted: !!sessions.get(userFlow.id)?.some((s) => s.stage === stageSlug),
-        }));
-        const allStagesCompleted = currentFlowStages.every((s) => s.isCompleted);
+      // ---- active flow ----
+      if (activeUserFlow?.flow) {
+        const completedStageRows = await prisma.flowHistory.findMany({
+          where: {
+            userId,
+            flowId: activeUserFlow.flow.id,
+            sessionId: activeUserFlow.id,
+          },
+          select: { stage: true },
+        });
+        const completedStageSlugs = new Set(completedStageRows.map((r) => r.stage));
 
         activeFlow = {
-          name: flow.name,
-          slug: flow.slug,
-          stages: currentFlowStages,
-          sessionId: userFlow.id,
-          isCompleted: allStagesCompleted,
+          name: activeUserFlow.flow.name,
+          slug: activeUserFlow.flow.slug,
+          isCompleted: false,
+          sessionId: activeUserFlow.id,
+          stages: buildStages(activeUserFlow.flow.definition, completedStageSlugs),
         };
       }
 
-      // Process all flows the user has been through
-      for (const [flowId, flowData] of flowsByFlowId.entries()) {
-        const flow = await prisma.flow.findUnique({ where: { id: flowId } });
-        if (!flow) continue;
+      // ---- completed flows (history) ----
+      const historyRows = await prisma.flowHistory.findMany({
+        where: { userId },
+        include: {
+          flow: { select: { id: true, name: true, slug: true, definition: true } },
+        },
+        orderBy: { completedAt: 'desc' },
+      });
 
-        const flowDefinition = flow.definition as FlowDefinition;
-        const flowStages = Object.entries(flowDefinition.stages).map(([stageSlug, stage]) => ({
-          slug: stageSlug,
-          name: stage.name,
-          isCompleted: flowData.stages.includes(stageSlug),
-        }));
-
-        // Check if flow is completed by checking if ANY visited stage is a terminal stage (no nextStage)
-        // AND not explicitly a transition stage
-        const isCompleted = flowStages.some((s) => {
-          if (!s.isCompleted) return false;
-
-          const stageDef = flowDefinition.stages[s.slug];
-          if (!stageDef) return false;
-
-          // Check if terminal (no nextStage)
-          const isTerminal = !stageDef.nextStage;
-
-          // Check if explicit transition (slug contains 'transition')
-          // If it's a transition, it's NOT a "completion" in the happy path sense
-          const isExplicitTransition = s.slug.toLowerCase().includes('transition');
-
-          return isTerminal && !isExplicitTransition;
-        });
-
-        const allStagesCompleted = isCompleted; // Use the new logic
-        const isCurrentFlow = userFlow?.flowId === flowId;
-
-        // Add to completedFlows ONLY if it's NOT the current active flow
-        // (The current flow will be in activeFlow)
-        if (!isCurrentFlow) {
-          // Check if already added
-          const alreadyAdded = completedFlows.some((f) => f.slug === flow.slug && f.sessionId === flowData.sessionId);
-          if (!alreadyAdded) {
-            completedFlows.push({
-              name: flow.name,
-              slug: flow.slug,
-              stages: flowStages,
-              sessionId: flowData.sessionId,
-              isCompleted: allStagesCompleted,
-            });
-          }
+      // Group by sessionId + flowId (a "flow run")
+      const grouped = new Map<string, { flow: any; stages: Set<string> }>();
+      for (const row of historyRows) {
+        const key = `${row.sessionId}::${row.flowId}`;
+        const existing = grouped.get(key);
+        if (!existing) {
+          grouped.set(key, { flow: row.flow, stages: new Set([row.stage]) });
+        } else {
+          existing.stages.add(row.stage);
         }
+      }
+
+      for (const [key, group] of grouped.entries()) {
+        const [sessionId] = key.split('::');
+        const allStages = buildStages(group.flow?.definition, group.stages);
+        const totalStages = allStages.length;
+        const completedCount = allStages.filter((s) => s.isCompleted).length;
+
+        completedFlows.push({
+          name: group.flow?.name || group.flow?.slug || 'Flow',
+          slug: group.flow?.slug || 'flow',
+          isCompleted: totalStages > 0 ? completedCount === totalStages : false,
+          sessionId,
+          stages: allStages,
+        });
       }
     }
 
+    const logRows = await prisma.apiCall.findMany({
+      where: { conversationId: conversation.id },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: {
+        id: true,
+        provider: true,
+        request: true,
+        response: true,
+        latencyMs: true,
+        createdAt: true,
+      },
+    });
+
+    const organisations = userId
+      ? (await prisma.userOrganisation.findMany({
+        where: { userId },
+        include: { organisation: true },
+      })).map((row) => ({
+        id: row.organisation.id,
+        region: row.organisation.region,
+        einOrRegNum: row.organisation.einOrRegNum,
+        data: row.organisation.data as Record<string, unknown>,
+      }))
+      : [];
+
     res.json({
       ok: true,
-      conversation,
+      user: conversation.user || undefined,
+      conversation: {
+        id: conversation.id,
+        channel: conversation.channel,
+        updatedAt: conversation.updatedAt,
+        messages: conversation.messages,
+      },
       userData,
       activeFlow,
       completedFlows,
+      log: logRows.map((row) => ({
+        id: row.id,
+        provider: row.provider,
+        request: row.request,
+        response: row.response,
+        latencyMs: row.latencyMs || 0,
+        createdAt: row.createdAt.toISOString(),
+      })),
       organisations,
-      user: conversation.userId
-        ? await prisma.user.findUnique({ where: { id: conversation.userId } })
-        : null,
-      log: await prisma.apiCall.findMany({ where: { conversationId: conversation.id }, orderBy: { createdAt: 'desc' } }),
     });
   } catch (error: any) {
-    logger.error('Failed to get conversation:', error);
     res.status(500).json({
       ok: false,
-      error: 'Failed to get conversation',
-      message: error.message,
+      error: 'Failed to fetch conversation',
+      message: error?.message,
     });
   }
 }, { protected: true });
-
-type FlowState = {
-  name: string;
-  slug: string;
-  stages: Array<{
-    slug: string;
-    name?: string;
-    isCompleted: boolean;
-  }>;
-  sessionId: string;
-  isCompleted: boolean;
-}

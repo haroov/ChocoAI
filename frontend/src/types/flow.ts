@@ -72,6 +72,8 @@ export type FieldDefinition = {
   type: 'string' | 'boolean' | 'number';
   description: string;
   sensitive?: boolean;
+  /** Optional priority for ordering questions/fields (lower = earlier) */
+  priority?: number;
   minLength?: number;
   maxLength?: number;
   pattern?: string;
@@ -80,6 +82,10 @@ export type FieldDefinition = {
 
 export type FlowSchemaConfig = {
   initialStage: string;
+  ui?: {
+    /** How to sort fields in the admin UI */
+    fieldsSort?: 'none' | 'priorityAsc';
+  };
 }
 
 export type FlowGraphNode = {

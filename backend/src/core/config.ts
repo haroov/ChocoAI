@@ -46,6 +46,7 @@ const ConfigSchema = z.object({
 
 const rawConfig = {
   env: process.env.CHOCO_ENV,
+  port: process.env.PORT,
   rootUrl: process.env.ROOT_URL,
   auth: {
     jwtSecret: process.env.JWT_SECRET,

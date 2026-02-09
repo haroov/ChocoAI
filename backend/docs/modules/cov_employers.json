@@ -1,0 +1,117 @@
+{
+  "module_key": "cov_employers",
+  "questions": [
+    {
+      "q_id": "Q132",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 8: Employers liability",
+      "stage_title_he": "חלק ב — פרק 8: אחריות מעבידים",
+      "chapter": "8",
+      "question_he": "ביטוח אחריות מעבידים",
+      "prompt_he": "תרצה לכלול חבות מעבידים? (רלוונטי אם יש עובדים) (לא/כן)",
+      "field_key_en": "ch8_employers_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.liability.chapter_8_employers_liability.selected",
+      "module_key": "cov_employers",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "has_employees = true",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "תרצה לכלול חבות מעבידים? (רלוונטי אם יש עובדים) (לא/כן)",
+        "whatsapp": "תרצה לכלול חבות מעבידים? (רלוונטי אם יש עובדים) (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q134",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 8: Employers liability",
+      "stage_title_he": "חלק ב — פרק 8: אחריות מעבידים",
+      "chapter": "8",
+      "question_he": "טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי)",
+      "prompt_he": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי).",
+      "field_key_en": "ch8_employees_table",
+      "data_type": "array",
+      "input_type": "table",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch8_employers_selected=true",
+      "notes_logic": "שורות עיסוק: עובדי משרד ופקידים; עובדי מסחר ושירותים; עובדים טכניים/פועלים (לא ייצור); פועלי ייצור עם ציוד/מכונות; מקצועות מסוכנים; מנהלים בעלי שליטה",
+      "json_path": "coverages.liability.chapter_8_employers_liability.employees[]",
+      "module_key": "cov_employers",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch8_employers_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי).",
+        "whatsapp": "נא לציין טבלת עובדים לפי עיסוק ושכר שנתי (מס' עובדים + אומדן שכר שנתי)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "structured_text",
+        "hint_he": "אפשר לשלוח בהודעה אחת או בכמה הודעות. ננחה אותך לפי שורות."
+      }
+    },
+    {
+      "q_id": "Q135",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 8: Employers liability",
+      "stage_title_he": "חלק ב — פרק 8: אחריות מעבידים",
+      "chapter": "8",
+      "question_he": "הכיסוי המבוקש מחושב לפי",
+      "prompt_he": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)",
+      "field_key_en": "ch8_rating_basis",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "לפי מספר עובדים, לפי אומדן שכר עבודה שנתי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch8_employers_selected=true",
+      "json_path": "coverages.liability.chapter_8_employers_liability.rating_basis",
+      "module_key": "cov_employers",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch8_employers_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)",
+        "whatsapp": "נא לבחור הכיסוי המבוקש מחושב לפי: (אפשרויות: לפי מספר עובדים, לפי אומדן שכר עבודה שנתי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "לפי מספר עובדים"
+          },
+          {
+            "n": 2,
+            "label_he": "לפי אומדן שכר עבודה שנתי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ]
+}

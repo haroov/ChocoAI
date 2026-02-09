@@ -6,7 +6,12 @@ import globals from 'globals';
 import js from '@eslint/js';
 
 export default defineConfig([
-  globalIgnores(['src/__tests__/', 'src/static/**/*.js']),
+  globalIgnores([
+    'src/__tests__/',
+    'src/static/**/*.js',
+    // Deprecated flows kept for reference; not maintained to current lint rules.
+    'src/lib/flowEngine/builtInFlows/_old/**',
+  ]),
   {
     languageOptions: {
       parser: tsParser,
@@ -78,10 +83,10 @@ export default defineConfig([
         prev: 'import',
         next: '*',
       }, {
-        blankLine: 'never',
-        prev: 'import',
-        next: 'import',
-      }],
+          blankLine: 'never',
+          prev: 'import',
+          next: 'import',
+        }],
       'quote-props': ['error', 'as-needed'],
       quotes: ['error', 'single'],
       indent: ['error', 2, {
@@ -100,8 +105,8 @@ export default defineConfig([
           object: false,
         },
       }, {
-        enforceForRenamedProperties: false,
-      }],
+          enforceForRenamedProperties: false,
+        }],
       'arrow-parens': ['error', 'always'],
       'brace-style': ['error', '1tbs', {
         allowSingleLine: true,

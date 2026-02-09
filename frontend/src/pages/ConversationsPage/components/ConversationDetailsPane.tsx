@@ -101,7 +101,15 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
   const [expandedEntityInstances, setExpandedEntityInstances] = useState<Set<string>>(new Set());
   const [scrollToStageId, setScrollToStageId] = useState<string | null>(null);
-  const [maskedFields, setMaskedFields] = useState<Set<string>>(new Set(['phone', 'password', 'ssn', 'creditCard']));
+  const [maskedFields, setMaskedFields] = useState<Set<string>>(new Set([
+    'phone',
+    'mobile_phone',
+    'user_phone',
+    'user_id',
+    'password',
+    'ssn',
+    'creditcard',
+  ]));
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
 
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -111,8 +119,47 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     activeFlow,
     completedFlows,
     log = [],
-    organisations = [],
   } = conversationDetails;
+
+  // Canonicalize legacy keys for display.
+  // Internally we may still store proposer_* / first_name keys (TopicSplit + compatibility),
+  // but in the UI we prefer user_* for "User" contact details.
+  const canonicalizeUserDataForDisplay = (ud: Record<string, unknown>) => {
+    const out: Record<string, unknown> = { ...ud };
+    const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+
+    const userFirst = pickNonEmpty(ud.user_first_name, ud.first_name, ud.proposer_first_name);
+    const userLast = pickNonEmpty(ud.user_last_name, ud.last_name, ud.proposer_last_name);
+    const userPhone = pickNonEmpty(
+      ud.user_phone,
+      ud.phone,
+      (ud as any).mobile_phone,
+      ud.proposer_mobile_phone,
+      (ud as any).proposer_phone,
+    );
+    const userEmail = pickNonEmpty(ud.user_email, ud.email, ud.proposer_email);
+
+    if (out.user_first_name == null && userFirst != null) out.user_first_name = userFirst;
+    if (out.user_last_name == null && userLast != null) out.user_last_name = userLast;
+    if (out.user_phone == null && userPhone != null) out.user_phone = userPhone;
+    if (out.user_email == null && userEmail != null) out.user_email = userEmail;
+
+    // Hide legacy keys to avoid duplicate/confusing display.
+    delete out.proposer_first_name;
+    delete out.proposer_last_name;
+    delete out.proposer_mobile_phone;
+    delete (out as any).proposer_phone;
+    delete out.proposer_email;
+    delete (out as any).mobile_phone;
+    delete out.first_name;
+    delete out.last_name;
+    delete out.phone;
+    delete out.email;
+
+    return out;
+  };
+
+  const displayUserData = canonicalizeUserDataForDisplay(userData);
 
   const getDebugBundle = () => ({
     conversationId,
@@ -245,27 +292,93 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     )
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+  const pickNonEmptyKeys = (obj: Record<string, unknown>, keys: string[]) => Object.fromEntries(
+    keys
+      .filter((k) => k in obj)
+      .map((k) => [k, obj[k]])
+      .filter(([_, v]) => v !== null && v !== undefined && v !== ''),
+  );
+
+  const pickByPredicate = (obj: Record<string, unknown>, pred: (k: string, v: unknown) => boolean) => Object.fromEntries(
+    Object.entries(obj).filter(([k, v]) => pred(k, v) && v !== null && v !== undefined && v !== ''),
+  );
+
+  // Split collected data into: User (contact/device) vs Insured (business + insurance payload).
+  // This replaces the old "Organizations" bucket which was mainly for nonprofit/KYC.
+  const userDataKeys = [
+    'user_first_name',
+    'user_last_name',
+    'user_phone',
+    'user_email',
+    // onboarding / eligibility
+    'is_new_customer',
+    // identity
+    'user_id',
+    // client/device telemetry (when available)
+    'client_user_agent',
+    'client_device',
+    'client_browser',
+    'client_browser_version',
+    'client_os',
+    'client_os_version',
+  ];
+  const insuredExplicitKeys = [
+    // Identity of insured business
+    'business_name',
+    'legal_id_type',
+    'legal_id',
+    'business_legal_entity_type',
+    // Profile / needs
+    'segment_description',
+    'product_line',
+    'industry',
+    'activity_description',
+    'employees_count',
+    'annual_turnover_ils',
+    'coverages_needed',
+    'special_risks',
+    // Address / proposal form fields
+    'business_city',
+    'business_street',
+    'business_house_number',
+    // Underwriting numbers (if already collected)
+    'contents_sum_insured_ils',
+    'stock_sum_insured_ils',
+    'third_party_limit_ils',
+  ];
+
+  const userOnlyData = {
+    ...pickNonEmptyKeys(displayUserData, userDataKeys),
+    ...pickByPredicate(displayUserData, (k) => /(user_agent|browser|device|os)/i.test(k)),
+  };
+
+  const insuredData = {
+    ...pickNonEmptyKeys(displayUserData, insuredExplicitKeys),
+    ...pickByPredicate(displayUserData, (k) => (
+      /^(business_|legal_)/.test(k)
+      || /^(med_pi_|cyber_)/.test(k)
+      || /^(insured_)/.test(k)
+      || /(_sum_insured_|_limit_)/.test(k)
+    )),
+  };
+
   // Build collected entities
   const collectedEntities: CollectedEntityType[] = [
     {
       type: 'user',
       label: 'User',
-      instances: userData ? [{
+      instances: Object.keys(userOnlyData).length > 0 ? [{
         id: 'user-data',
-        data: userData,
+        data: userOnlyData,
       }] : [],
     },
     {
-      type: 'organization',
-      label: 'Organizations',
-      instances: organisations.map((org) => ({
-        id: org.id,
-        data: org.data,
-        metadata: {
-          region: org.region,
-          einOrRegNum: org.einOrRegNum,
-        },
-      })),
+      type: 'insured',
+      label: 'Insured',
+      instances: Object.keys(insuredData).length > 0 ? [{
+        id: 'insured-data',
+        data: insuredData,
+      }] : [],
     },
   ];
 
@@ -331,6 +444,41 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       newExpanded.add(instanceKey);
     }
     setExpandedEntityInstances(newExpanded);
+  };
+
+  const formatCollectedValue = (key: string, value: unknown) => {
+    if (key === 'legal_id_type') {
+      const v = String(value || '').trim();
+      if (v === 'AM') return 'עוסק מורשה';
+      if (v === 'HP') return 'מספר חברה';
+      if (v === 'TZ') return 'ת"ז';
+      return v;
+    }
+    if (key === 'is_new_customer') {
+      const v = typeof value === 'string' ? value.trim().toLowerCase() : value;
+      const asBool = v === true || v === 'true' || v === 1 || v === '1';
+      return asBool ? 'לקוח חדש' : 'לקוח קיים';
+    }
+    // Display arrays (like business_site_type) without JSON brackets.
+    if (Array.isArray(value)) {
+      return value.map((x) => String(x)).filter((x) => x.trim() !== '').join(', ');
+    }
+    // Sometimes arrays are stored as JSON strings (legacy). Pretty-print them.
+    if (typeof value === 'string') {
+      const s = value.trim();
+      if ((s.startsWith('[') && s.endsWith(']')) || (s.startsWith('{') && s.endsWith('}'))) {
+        try {
+          const parsed = JSON.parse(s);
+          if (Array.isArray(parsed)) {
+            return parsed.map((x) => String(x)).filter((x) => x.trim() !== '').join(', ');
+          }
+          return parsed;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return value;
   };
 
   const handleEventClick = (event: TechnicalEvent) => {
@@ -966,6 +1114,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                         <div className="border-t border-gray-200 px-3 py-2 space-y-2">
                           {Object.entries(instance.data).map(([key, value]) => {
                             const isMasked = maskedFields.has(key.toLowerCase());
+                            const formattedValue = formatCollectedValue(key, value);
                             return (
                               <div key={key} className="flex items-start gap-2 text-xs">
                                 <div className="flex-1">
@@ -987,8 +1136,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                                   </div>
                                   <div className="text-gray-800 break-words">
                                     {isMasked
-                                      ? maskValue(key, value)
-                                      : (typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value))}
+                                      ? maskValue(key, formattedValue)
+                                      : (typeof formattedValue === 'object' ? JSON.stringify(formattedValue, null, 2) : String(formattedValue))}
                                   </div>
                                 </div>
                               </div>

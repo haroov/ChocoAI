@@ -1,0 +1,38 @@
+flowchart TD
+  Start([Start]) --> P01["01 Welcome + פרטי קשר"]
+  P01 --> P02["02 בירור צרכים/סגמנט + בחירת כיסויים"]
+  subgraph Premises["Premises & Risk (רק אם יש מיקום/כיסויי רכוש)"]
+    P03["03 מבנה ומאפייני הנכס"] --> P04["04 סביבה + מים/שיטפון"] --> P05["05 מיגון אש/פריצה"] --> P06["06 רישיונות + שיעבודים"]
+  end
+  P02 -->|"if premises_needed"| P03
+  P07["07 תכולה"]
+  P08["08 מלאי"]
+  P09["09 ביטוח מבנה"]
+  P10["10 אובדן הכנסה/תוצאתי"]
+  P11["11 פריצה ושוד"]
+  P12["12 כל הסיכונים כספים"]
+  P13["13 רכוש בהעברה"]
+  P14["14 ציוד אלקטרוני/נתונים/הוצאות"]
+  P15["15 צד ג׳"]
+  P16["16 חבות מעבידים"]
+  P17["17 אחריות מוצר: פרופיל+מכירות"]
+  P18["18 אחריות מוצר: סיכונים+הרחבות"]
+  P19["19 נספח סייבר"]
+  P20["20 נספח טרור"]
+  P02 -->|"if ch1_contents_selected"| P07
+  P07 --> P08
+  P02 -->|"if ch2_building_selected"| P09
+  P02 -->|"if ch3a_selected or ch3b_selected"| P10
+  P02 -->|"if ch4_burglary_selected"| P11
+  P02 -->|"if ch5_money_selected"| P12
+  P02 -->|"if ch6_transit_selected"| P13
+  P02 -->|"if ch10_electronic_selected"| P14
+  P02 -->|"if ch7_third_party_selected"| P15
+  P02 -->|"if ch8_employers_selected"| P16
+  P02 -->|"if ch9_product_selected"| P17
+  P17 --> P18
+  P02 -->|"if cyber_selected"| P19
+  P02 -->|"if terror_selected"| P20
+  Note1{{"Orchestrator: מריץ את כל התהליכים הרלוונטיים (שמופעלים לפי התנאים) לפני מעבר לעבר ביטוחי"}}
+  P02 --> Note1
+  Note1 --> P21["21 עבר ביטוחי"] --> P22["22 הצהרות/חתימות"] --> P23["23 פנימי לסוכן"]

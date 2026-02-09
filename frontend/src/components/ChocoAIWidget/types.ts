@@ -1,41 +1,27 @@
-export interface WidgetMessage {
+export type WidgetRole = 'user' | 'assistant';
+
+export type WidgetMessage = {
   id: string;
   content: string;
-  role: 'user' | 'assistant';
+  role: WidgetRole;
   createdAt: Date;
-}
+};
 
-export interface WidgetConfig {
+export type WidgetConfig = {
   rootUrl: string;
-  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
-  noWidgetButton: boolean;
-}
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  noWidgetButton?: boolean;
+};
 
-export interface WidgetState {
-  isOpen: boolean;
-  isConnecting: boolean;
-  sessionId: string | null;
-  conversationId: string | null;
-  messages: WidgetMessage[];
-  messageCount: number;
-  lastActivity: number;
-  conversationTitle: string;
-}
+export type StreamTokenEvent = {
+  type: 'token';
+  textChunk?: string;
+};
 
-export interface StreamTokenEvent {
-  textChunk: string;
-}
-
-export interface StreamDoneEvent {
+export type StreamDoneEvent = {
+  type: 'done';
   conversationId?: string;
   finalText?: string;
-  fields?: Record<string, unknown>;
-  delta?: Record<string, unknown>;
-  flowState?: string;
-  metadata?: Record<string, unknown>;
-}
+};
 
-export interface StreamErrorEvent {
-  message: string;
-}
 

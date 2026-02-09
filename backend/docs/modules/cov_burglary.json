@@ -1,0 +1,116 @@
+{
+  "module_key": "cov_burglary",
+  "questions": [
+    {
+      "q_id": "Q119",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 4: Burglary & robbery",
+      "stage_title_he": "חלק ב — פרק 4: פריצה ושוד לתכולה",
+      "chapter": "4",
+      "question_he": "ביטוח פריצה ושוד לתכולה",
+      "prompt_he": "האם תרצה גם כיסוי פריצה/שוד לתכולה? (לא/כן)",
+      "field_key_en": "ch4_burglary_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.property.by_location[0].chapter_4_burglary.selected",
+      "module_key": "cov_burglary",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "has_physical_premises = true",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם תרצה גם כיסוי פריצה/שוד לתכולה? (לא/כן)",
+        "whatsapp": "האם תרצה גם כיסוי פריצה/שוד לתכולה? (לא/כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q120",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 4: Burglary & robbery",
+      "stage_title_he": "חלק ב — פרק 4: פריצה ושוד לתכולה",
+      "chapter": "4",
+      "question_he": "אפשרות ביטוח סיכון פריצה",
+      "prompt_he": "נא לבחור אפשרות ביטוח סיכון פריצה: (אפשרויות: פריצה במלוא סכום ביטוח התכולה, סכום ביטוח על בסיס נזק ראשון)",
+      "field_key_en": "ch4_burglary_basis",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "פריצה במלוא סכום ביטוח התכולה, סכום ביטוח על בסיס נזק ראשון",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch4_burglary_selected=true",
+      "json_path": "coverages.property.by_location[0].chapter_4_burglary.basis",
+      "module_key": "cov_burglary",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch4_burglary_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור אפשרות ביטוח סיכון פריצה: (אפשרויות: פריצה במלוא סכום ביטוח התכולה, סכום ביטוח על בסיס נזק ראשון)",
+        "whatsapp": "נא לבחור אפשרות ביטוח סיכון פריצה: (אפשרויות: פריצה במלוא סכום ביטוח התכולה, סכום ביטוח על בסיס נזק ראשון)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "פריצה במלוא סכום ביטוח התכולה"
+          },
+          {
+            "n": 2,
+            "label_he": "סכום ביטוח על בסיס נזק ראשון"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q121",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 4: Burglary & robbery",
+      "stage_title_he": "חלק ב — פרק 4: פריצה ושוד לתכולה",
+      "chapter": "4",
+      "question_he": "אם נזק ראשון – סכום ביטוח לפריצה",
+      "prompt_he": "נא לציין אם נזק ראשון – סכום ביטוח לפריצה (מספר).",
+      "field_key_en": "ch4_first_loss_sum_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch4_burglary_basis='נזק ראשון'",
+      "json_path": "coverages.property.by_location[0].chapter_4_burglary.first_loss_sum_ils",
+      "module_key": "cov_burglary",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch4_burglary_basis='נזק ראשון'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם נזק ראשון – סכום ביטוח לפריצה (מספר).",
+        "whatsapp": "נא לציין אם נזק ראשון – סכום ביטוח לפריצה (מספר)."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

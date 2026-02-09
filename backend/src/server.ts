@@ -9,6 +9,7 @@ import { adminAuthMiddleware } from './middleware/auth';
 import './api';
 import { seedData } from './core';
 import { logger } from './utils/logger';
+import { config } from './core/config';
 
 export const initServer = async (app: Express) => {
   await seedData();
@@ -43,7 +44,18 @@ export const initServer = async (app: Express) => {
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'static/web-widget'));
-  app.use('/', express.static(path.join(__dirname, 'static')));
+  // In local dev, avoid caching static assets so `/settings` refreshes reflect rebuilt bundles.
+  const isDev = config.env === 'development';
+  app.use('/', express.static(path.join(__dirname, 'static'), isDev ? {
+    etag: false,
+    lastModified: false,
+    setHeaders: (res, filePath) => {
+      // Disable caching on index.html and assets to reduce confusion while iterating.
+      if (filePath.endsWith('index.html') || filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'no-store');
+      }
+    },
+  } : undefined));
 
   getRouteEntries().forEach(([path, routeInfo]) => {
     const handlers = [routeInfo.handler];

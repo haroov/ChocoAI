@@ -1,0 +1,289 @@
+{
+  "module_key": "cov_product_extensions",
+  "questions": [
+    {
+      "q_id": "Q170",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "הרחבת משווקים (Vendors Endorsement)",
+      "prompt_he": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_vendors_endorsement_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.selected",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q171",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – סוג המוצר",
+      "prompt_he": "אם כן, – סוג המוצר?",
+      "field_key_en": "ch9_vendors_product_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.product_type",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סוג המוצר?",
+        "whatsapp": "אם כן, – סוג המוצר?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q172",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – שימושו",
+      "prompt_he": "אם כן, – שימושו?",
+      "field_key_en": "ch9_vendors_product_use",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.product_use",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – שימושו?",
+        "whatsapp": "אם כן, – שימושו?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q173",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – שם המשווק",
+      "prompt_he": "אם כן, – שם המשווק?",
+      "field_key_en": "ch9_vendor_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.vendor_name",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – שם המשווק?",
+        "whatsapp": "אם כן, – שם המשווק?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q174",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – כתובת המשווק",
+      "prompt_he": "אם כן, – כתובת המשווק?",
+      "field_key_en": "ch9_vendor_address",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.vendor_address",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – כתובת המשווק?",
+        "whatsapp": "אם כן, – כתובת המשווק?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q175",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "עבור מספר משווקים – לצרף רשימת משווקים",
+      "prompt_he": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים.",
+      "field_key_en": "ch9_vendor_list_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "attachments.vendors_list",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים.",
+        "whatsapp": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q177",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "עבודות שנמסרו",
+      "prompt_he": "האם עבודות שנמסרו? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_completed_works_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.selected",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם עבודות שנמסרו? (אפשרויות: לא, כן)",
+        "whatsapp": "האם עבודות שנמסרו? (אפשרויות: לא, כן)"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q178",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – סוג העבודות",
+      "prompt_he": "אם כן, – סוג העבודות?",
+      "field_key_en": "ch9_completed_works_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_completed_works_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.type",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_completed_works_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סוג העבודות?",
+        "whatsapp": "אם כן, – סוג העבודות?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q179",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – היקף העבודות שנמסרו (ש\"ח)",
+      "prompt_he": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?",
+      "field_key_en": "ch9_completed_works_scope_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_completed_works_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.scope_ils",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_completed_works_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?",
+        "whatsapp": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

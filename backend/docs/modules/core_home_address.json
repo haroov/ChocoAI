@@ -1,0 +1,167 @@
+{
+  "module_key": "core_home_address",
+  "questions": [
+    {
+      "q_id": "Q009",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "יישוב",
+      "prompt_he": "נא לציין יישוב.",
+      "field_key_en": "proposer_home_city",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.home_address.city",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין יישוב.",
+        "whatsapp": "נא לציין יישוב."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q010",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "רחוב",
+      "prompt_he": "נא לציין רחוב.",
+      "field_key_en": "proposer_home_street",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.home_address.street",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין רחוב.",
+        "whatsapp": "נא לציין רחוב."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q011",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "מס' בית",
+      "prompt_he": "נא לציין מס' בית.",
+      "field_key_en": "proposer_home_house_number",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.home_address.house_number",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' בית.",
+        "whatsapp": "נא לציין מס' בית."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q012",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "כניסה",
+      "prompt_he": "נא לציין כניסה.",
+      "field_key_en": "proposer_home_entrance",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "applicant.home_address.entrance",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין כניסה.",
+        "whatsapp": "נא לציין כניסה."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q013",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "מס' דירה",
+      "prompt_he": "נא לציין מס' דירה.",
+      "field_key_en": "proposer_home_apartment",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "applicant.home_address.apartment",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' דירה.",
+        "whatsapp": "נא לציין מס' דירה."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q014",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer home address",
+      "stage_title_he": "חלק א — כתובת מגורים של המציע/ה",
+      "question_he": "מיקוד",
+      "prompt_he": "נא לציין מיקוד.",
+      "field_key_en": "proposer_home_zip",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "applicant.home_address.zip_code",
+      "module_key": "core_home_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מיקוד.",
+        "whatsapp": "נא לציין מיקוד."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

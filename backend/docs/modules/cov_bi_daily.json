@@ -1,0 +1,82 @@
+{
+  "module_key": "cov_bi_daily",
+  "questions": [
+    {
+      "q_id": "Q109",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3a: Loss of income (daily)",
+      "stage_title_he": "חלק ב — פרק 3א: אובדן הכנסה (פיצוי יומי)",
+      "chapter": "3a",
+      "question_he": "ביטוח אובדן הכנסה",
+      "prompt_he": "האם ביטוח אובדן הכנסה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch3a_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "בחירה בפרק 3א אינה מאפשרת רכישת פרק 3ב",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3a.selected",
+      "module_key": "cov_bi_daily",
+      "audience": "internal",
+      "collection_mode": "derived",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם ביטוח אובדן הכנסה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם ביטוח אובדן הכנסה? (אפשרויות: לא, כן)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q110",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 3a: Loss of income (daily)",
+      "stage_title_he": "חלק ב — פרק 3א: אובדן הכנסה (פיצוי יומי)",
+      "chapter": "3a",
+      "question_he": "סכום הפיצוי היומי המבוקש (עד 100 ימים, מקסימום 5,000 ש\"ח)",
+      "prompt_he": "נא לציין סכום הפיצוי היומי המבוקש (עד 100 ימים, מקסימום 5,000 ש\"ח) (מספר).",
+      "field_key_en": "ch3a_daily_comp_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "constraints": "<=5000; max_days<=100",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch3a_selected=true",
+      "notes_logic": "מגבלת ימים וסכום מקסימלי מוגדרים בטופס",
+      "json_path": "coverages.property.by_location[0].business_interruption.chapter_3a.daily_max_compensation_ils",
+      "module_key": "cov_bi_daily",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch3a_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לציין סכום הפיצוי היומי המבוקש (עד 100 ימים, מקסימום 5,000 ש\"ח) (מספר).",
+        "whatsapp": "נא לציין סכום הפיצוי היומי המבוקש (עד 100 ימים, מקסימום 5,000 ש\"ח) (מספר)."
+      },
+      "priority": 2,
+      "validation": {
+        "max": 5000,
+        "max_days": 100
+      },
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ]
+}

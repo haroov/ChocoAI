@@ -1,0 +1,1100 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 2,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text",
+            "buttons",
+            "forms"
+          ]
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500,
+          "supports_quick_replies": false,
+          "supports_multi_select": "numbers_csv",
+          "supports_file_upload": true,
+          "preferred_answer_formats": [
+            "text"
+          ]
+        }
+      },
+      "defaults": {
+        "ch1_contents_selected": false,
+        "ch2_building_selected": false,
+        "ch3a_selected": false,
+        "ch3b_selected": false,
+        "ch4_burglary_selected": false,
+        "ch5_money_selected": false,
+        "ch6_transit_selected": false,
+        "ch7_third_party_selected": false,
+        "ch8_employers_selected": false,
+        "ch9_product_selected": false,
+        "ch10_electronic_selected": false,
+        "cyber_selected": false,
+        "terror_selected": false,
+        "has_physical_premises": null,
+        "has_employees": null,
+        "has_products_activity": null,
+        "business_interruption_type": null
+      },
+      "derived_rules": [
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type == 'אובדן הכנסה (פיצוי יומי)'",
+          "value": true,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type == 'אובדן תוצאתי (רווח גולמי)'",
+          "value": true,
+          "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch3a_selected",
+          "set_when": "business_interruption_type != 'אובדן הכנסה (פיצוי יומי)'",
+          "value": false,
+          "maps_to_q_id": "Q109"
+        },
+        {
+          "target_field": "ch3b_selected",
+          "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
+          "value": false,
+          "maps_to_q_id": "Q111"
+        }
+      ],
+      "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
+      "resume_strategy": {
+        "checkpoint_after_each_stage": true,
+        "resume_message_he": "היי! ממשיכים מאיפה שעצרנו 🙂"
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון. מסבירים כשצריך.",
+      "best_practice_rules": [
+        "שאלה אחת בכל הודעת וואטסאפ (או עד 2 ב-web).",
+        "הסבר קצר 'למה אני שואל' רק בשאלות שמבלבלות (סכומי ביטוח, אובדן הכנסה, טרור, סייבר).",
+        "לשמור על מומנטום: קודם 'בחירת כיסויים', אחר כך 'פרטים' ואז 'מסמכים'.",
+        "בכל סוף שלב — סיכום קצר + אפשרות לתקן.",
+        "אם לקוח לא יודע סכום: לאפשר אומדן זמני, לסמן 'to_verify' ולעבור הלאה."
+      ],
+      "safety_and_compliance": {
+        "credit_card_rule": "לא מבקשים פרטי כרטיס אשראי בצ׳אט. רק בלינק תשלום מאובטח/טופס ייעודי.",
+        "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
+        "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
+      }
+    }
+  },
+  "process": {
+    "process_key": "18_product_liability_risk_and_extensions",
+    "title_he": "אחריות מוצר — מאפייני סיכון, יבוא/שינוי, תקינה, תביעות והרחבות",
+    "description_he": "שאלות סיכון/תקינה/יבוא, הודעות על תביעה, והרחבות משווקים/עבודות שנמסרו.",
+    "ask_if": "ch9_product_selected = true",
+    "audience": "customer",
+    "included_module_keys": [
+      "cov_product_extensions"
+    ],
+    "notes_best_practice_he": [
+      "וודא/י שאתה/את שואל/ת רק מה שנדרש בשלב הזה. אל תדלג/י על שדות חובה.",
+      "בוואטסאפ: שאלה אחת בכל הודעה. ב-web chat: עד 2 שאלות בכל הודעה.",
+      "בכל סוף תהליך: סיכום קצר + אפשרות לתיקון."
+    ]
+  },
+  "questions": [
+    {
+      "q_id": "Q152",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר כולל הוראות שימוש/הפעלה?",
+      "prompt_he": "האם המוצר כולל הוראות שימוש/הפעלה? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_has_use_instructions",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.product_characteristics.use_instructions",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר כולל הוראות שימוש/הפעלה? (אפשרויות: לא, כן)",
+        "whatsapp": "האם המוצר כולל הוראות שימוש/הפעלה? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q153",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר כולל הוראות בטיחות?",
+      "prompt_he": "האם המוצר כולל הוראות בטיחות? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_has_safety_instructions",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.product_characteristics.safety_instructions",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר כולל הוראות בטיחות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם המוצר כולל הוראות בטיחות? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q154",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר בעל תכונות: נפיצות/דליקות/רעילות",
+      "prompt_he": "האם המוצר בעל תכונות: נפיצות/דליקות/רעילות? (אפשרויות: נפיצות, דליקות, רעילות)",
+      "field_key_en": "ch9_product_hazard_properties",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "נפיצות, דליקות, רעילות",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.product_characteristics.hazard_properties",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר בעל תכונות: נפיצות/דליקות/רעילות? (אפשרויות: נפיצות, דליקות, רעילות)",
+        "whatsapp": "האם המוצר בעל תכונות: נפיצות/דליקות/רעילות? (אפשרויות: נפיצות, דליקות, רעילות)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "נפיצות"
+          },
+          {
+            "n": 2,
+            "label_he": "דליקות"
+          },
+          {
+            "n": 3,
+            "label_he": "רעילות"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q155",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם הנך מייבא מוצרים ו/או רכיבים המהווים חלק ממוצר?",
+      "prompt_he": "האם הנך מייבא מוצרים ו/או רכיבים המהווים חלק ממוצר? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_imports_components",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.imports_components.answer",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הנך מייבא מוצרים ו/או רכיבים המהווים חלק ממוצר? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הנך מייבא מוצרים ו/או רכיבים המהווים חלק ממוצר? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q156",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – סוג המוצר/הרכיב",
+      "prompt_he": "אם כן, – סוג המוצר/הרכיב?",
+      "field_key_en": "ch9_component_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_imports_components=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.imports_components.component_type",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_imports_components=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סוג המוצר/הרכיב?",
+        "whatsapp": "אם כן, – סוג המוצר/הרכיב?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q157",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – שימושו",
+      "prompt_he": "אם כן, – שימושו?",
+      "field_key_en": "ch9_component_use",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_imports_components=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.imports_components.component_use",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_imports_components=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – שימושו?",
+        "whatsapp": "אם כן, – שימושו?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q158",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – היצרן",
+      "prompt_he": "אם כן, – היצרן?",
+      "field_key_en": "ch9_component_manufacturer",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_imports_components=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.imports_components.manufacturer",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_imports_components=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – היצרן?",
+        "whatsapp": "אם כן, – היצרן?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q159",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – ארץ היבוא",
+      "prompt_he": "אם כן, – ארץ היבוא?",
+      "field_key_en": "ch9_import_country",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_imports_components=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.imports_components.import_country",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_imports_components=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – ארץ היבוא?",
+        "whatsapp": "אם כן, – ארץ היבוא?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q160",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם הנך מבצע שינוי כלשהו במוצר המקורי או ברכיביו?",
+      "prompt_he": "האם הנך מבצע שינוי כלשהו במוצר המקורי או ברכיביו? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_modifies_original",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.modifies_original.answer",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הנך מבצע שינוי כלשהו במוצר המקורי או ברכיביו? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הנך מבצע שינוי כלשהו במוצר המקורי או ברכיביו? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q161",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "ch9_modifies_original_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_modifies_original=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.modifies_original.details",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_modifies_original=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q162",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר משמש כרכיב/מנגנון/חלק ממכלול של (רכב/שיט/טיס/מעליות/ציוד רפואי)?",
+      "prompt_he": "האם המוצר משמש כרכיב/מנגנון/חלק ממכלול של (רכב/שיט/טיס/מעליות/ציוד רפואי)? (אפשרויות: כלי רכב ממונע לרבות ציוד מכני הנדסי ורכבות, כלי שיט, כלי טיס, מעליות, ציוד ומכשור רפואי)",
+      "field_key_en": "ch9_component_of",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "כלי רכב ממונע לרבות ציוד מכני הנדסי ורכבות, כלי שיט, כלי טיס, מעליות, ציוד ומכשור רפואי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.component_of",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר משמש כרכיב/מנגנון/חלק ממכלול של (רכב/שיט/טיס/מעליות/ציוד רפואי)? (אפשרויות: כלי רכב ממונע לרבות ציוד מכני הנדסי ורכבות, כלי שיט, כלי טיס, מעליות, ציוד ומכשור רפואי)",
+        "whatsapp": "האם המוצר משמש כרכיב/מנגנון/חלק ממכלול של (רכב/שיט/טיס/מעליות/ציוד רפואי)? (אפשרויות: כלי רכב ממונע לרבות ציוד מכני הנדסי ורכבות, כלי שיט, כלי טיס, מעליות, ציוד ומכשור רפואי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "כלי רכב ממונע לרבות ציוד מכני הנדסי ורכבות"
+          },
+          {
+            "n": 2,
+            "label_he": "כלי שיט"
+          },
+          {
+            "n": 3,
+            "label_he": "כלי טיס"
+          },
+          {
+            "n": 4,
+            "label_he": "מעליות"
+          },
+          {
+            "n": 5,
+            "label_he": "ציוד ומכשור רפואי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q163",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר מיועד לשימוש בתחום: מזון/תרופות/הנדסה גנטית",
+      "prompt_he": "האם המוצר מיועד לשימוש בתחום: מזון/תרופות/הנדסה גנטית? (אפשרויות: מזון, תרופות/רוקחות, הנדסה גנטית)",
+      "field_key_en": "ch9_intended_fields",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "מזון, תרופות/רוקחות, הנדסה גנטית",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.intended_fields",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר מיועד לשימוש בתחום: מזון/תרופות/הנדסה גנטית? (אפשרויות: מזון, תרופות/רוקחות, הנדסה גנטית)",
+        "whatsapp": "האם המוצר מיועד לשימוש בתחום: מזון/תרופות/הנדסה גנטית? (אפשרויות: מזון, תרופות/רוקחות, הנדסה גנטית)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "מזון"
+          },
+          {
+            "n": 2,
+            "label_he": "תרופות/רוקחות"
+          },
+          {
+            "n": 3,
+            "label_he": "הנדסה גנטית"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q164",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם למוצר תקן: ישראלי/אירופאי/אמריקאי (אם אירופאי – ציין מדינה)",
+      "prompt_he": "האם למוצר תקן: ישראלי/אירופאי/אמריקאי (אם אירופאי – ציין מדינה)? (אפשרויות: ישראלי, אירופאי, אמריקאי)",
+      "field_key_en": "ch9_standards",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "ישראלי, אירופאי, אמריקאי",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.standards.types",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם למוצר תקן: ישראלי/אירופאי/אמריקאי (אם אירופאי – ציין מדינה)? (אפשרויות: ישראלי, אירופאי, אמריקאי)",
+        "whatsapp": "האם למוצר תקן: ישראלי/אירופאי/אמריקאי (אם אירופאי – ציין מדינה)? (אפשרויות: ישראלי, אירופאי, אמריקאי)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "ישראלי"
+          },
+          {
+            "n": 2,
+            "label_he": "אירופאי"
+          },
+          {
+            "n": 3,
+            "label_he": "אמריקאי"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q165",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם אירופאי – ציין מדינה",
+      "prompt_he": "נא לציין אם אירופאי – ציין מדינה.",
+      "field_key_en": "ch9_eu_standard_country",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_standards includes 'אירופאי'",
+      "json_path": "coverages.liability.chapter_9_product_liability.standards.eu_country",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_standards includes 'אירופאי'",
+      "prompt_variants": {
+        "web_chat": "נא לציין אם אירופאי – ציין מדינה.",
+        "whatsapp": "נא לציין אם אירופאי – ציין מדינה."
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q166",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם המוצר טעון את אישור משרד הבריאות?",
+      "prompt_he": "האם המוצר טעון את אישור משרד הבריאות? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_moh_approval",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.moh_approval_required",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם המוצר טעון את אישור משרד הבריאות? (אפשרויות: לא, כן)",
+        "whatsapp": "האם המוצר טעון את אישור משרד הבריאות? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q167",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "מנגנון בקרה לאיכות וטיב המוצר",
+      "prompt_he": "נא לבחור מנגנון בקרה לאיכות וטיב המוצר: (אפשרויות: לא, חיצוני לבית העסק, כן פנימי השייך לבית העסק)",
+      "field_key_en": "ch9_quality_control",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "לא, חיצוני לבית העסק, כן פנימי השייך לבית העסק",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.quality_control",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "נא לבחור מנגנון בקרה לאיכות וטיב המוצר: (אפשרויות: לא, חיצוני לבית העסק, כן פנימי השייך לבית העסק)",
+        "whatsapp": "נא לבחור מנגנון בקרה לאיכות וטיב המוצר: (אפשרויות: לא, חיצוני לבית העסק, כן פנימי השייך לבית העסק)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "לא"
+          },
+          {
+            "n": 2,
+            "label_he": "חיצוני לבית העסק"
+          },
+          {
+            "n": 3,
+            "label_he": "כן פנימי השייך לבית העסק"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q168",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "האם קיבלת הודעה על תביעה אפשרית/נסיבות לתביעה בגין המוצר?",
+      "prompt_he": "האם קיבלת הודעה על תביעה אפשרית/נסיבות לתביעה בגין המוצר? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_possible_claim_notice",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.possible_claim_notice.answer",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם קיבלת הודעה על תביעה אפשרית/נסיבות לתביעה בגין המוצר? (אפשרויות: לא, כן)",
+        "whatsapp": "האם קיבלת הודעה על תביעה אפשרית/נסיבות לתביעה בגין המוצר? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q169",
+      "page": 4,
+      "section": "Part B",
+      "subsection": "Chapter 9: Product liability",
+      "stage_title_he": "חלק ב — פרק 9: אחריות המוצר",
+      "chapter": "9",
+      "question_he": "אם כן – פרט",
+      "prompt_he": "אם כן, – פרט?",
+      "field_key_en": "ch9_possible_claim_notice_details",
+      "data_type": "string",
+      "input_type": "textarea",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_possible_claim_notice=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.possible_claim_notice.details",
+      "module_key": "cov_product",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_possible_claim_notice=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – פרט?",
+        "whatsapp": "אם כן, – פרט?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q170",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "הרחבת משווקים (Vendors Endorsement)",
+      "prompt_he": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_vendors_endorsement_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_product_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.selected",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_product_selected=true",
+      "prompt_variants": {
+        "web_chat": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)",
+        "whatsapp": "האם הרחבת משווקים (Vendors Endorsement)? (אפשרויות: לא, כן)"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q171",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – סוג המוצר",
+      "prompt_he": "אם כן, – סוג המוצר?",
+      "field_key_en": "ch9_vendors_product_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.product_type",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סוג המוצר?",
+        "whatsapp": "אם כן, – סוג המוצר?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q172",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – שימושו",
+      "prompt_he": "אם כן, – שימושו?",
+      "field_key_en": "ch9_vendors_product_use",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.product_use",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – שימושו?",
+        "whatsapp": "אם כן, – שימושו?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q173",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – שם המשווק",
+      "prompt_he": "אם כן, – שם המשווק?",
+      "field_key_en": "ch9_vendor_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.vendor_name",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – שם המשווק?",
+        "whatsapp": "אם כן, – שם המשווק?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q174",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – כתובת המשווק",
+      "prompt_he": "אם כן, – כתובת המשווק?",
+      "field_key_en": "ch9_vendor_address",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_vendors_endorsement_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.vendors_endorsement.vendor_address",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_vendors_endorsement_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – כתובת המשווק?",
+        "whatsapp": "אם כן, – כתובת המשווק?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q175",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "עבור מספר משווקים – לצרף רשימת משווקים",
+      "prompt_he": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים.",
+      "field_key_en": "ch9_vendor_list_attachment",
+      "data_type": "string",
+      "input_type": "file",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "attachments.vendors_list",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "collection_mode": "attachment_async",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים.",
+        "whatsapp": "נא לצרף/להעלות: עבור מספר משווקים – לצרף רשימת משווקים."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "file_upload",
+        "hint_he": "אפשר לצרף כאן קובץ/צילום. אם אין עכשיו — נבקש בסוף."
+      }
+    },
+    {
+      "q_id": "Q177",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "עבודות שנמסרו",
+      "prompt_he": "האם עבודות שנמסרו? (אפשרויות: לא, כן)",
+      "field_key_en": "ch9_completed_works_selected",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.selected",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם עבודות שנמסרו? (אפשרויות: לא, כן)",
+        "whatsapp": "האם עבודות שנמסרו? (אפשרויות: לא, כן)"
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q178",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – סוג העבודות",
+      "prompt_he": "אם כן, – סוג העבודות?",
+      "field_key_en": "ch9_completed_works_type",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_completed_works_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.type",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_completed_works_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – סוג העבודות?",
+        "whatsapp": "אם כן, – סוג העבודות?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q179",
+      "page": 5,
+      "section": "Part B",
+      "subsection": "Chapter 9 (cont.)",
+      "stage_title_he": "חלק ב — פרק 9 (המשך): הרחבות ותנאים",
+      "chapter": "9",
+      "question_he": "אם כן – היקף העבודות שנמסרו (ש\"ח)",
+      "prompt_he": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?",
+      "field_key_en": "ch9_completed_works_scope_ils",
+      "data_type": "number",
+      "input_type": "currency",
+      "required": "Conditional",
+      "required_mode": "conditional",
+      "required_if": "ch9_completed_works_selected=true",
+      "json_path": "coverages.liability.chapter_9_product_liability.completed_works.scope_ils",
+      "module_key": "cov_product_extensions",
+      "audience": "customer",
+      "stage_key": "04_coverages_details",
+      "ask_if": "ch9_completed_works_selected=true",
+      "prompt_variants": {
+        "web_chat": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?",
+        "whatsapp": "אם כן, – היקף העבודות שנמסרו (ש\"ח)?"
+      },
+      "priority": 2,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": [
+    {
+      "q_id": "Q175",
+      "field_key_en": "ch9_vendor_list_attachment",
+      "title_he": "עבור מספר משווקים – לצרף רשימת משווקים",
+      "when": null,
+      "json_path": "attachments.vendors_list",
+      "notes": "אפשר לאסוף בסוף אם לא דחוף."
+    }
+  ]
+}

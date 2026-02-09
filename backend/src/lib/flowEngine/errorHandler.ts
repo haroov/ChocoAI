@@ -1,5 +1,7 @@
 import { prisma } from '../../core/prisma';
 import { logger } from '../../utils/logger';
+import * as fs from 'fs';
+import * as path from 'path';
 import { sendTechSupportEmail, gatherErrorDetails } from '../../utils/emailService';
 import { llmService } from './llmService';
 import { ErrorHandlingConfig } from './types';
@@ -43,7 +45,16 @@ class ErrorHandler {
     rawError: string,
     context: ErrorContext,
   ): Promise<string> {
+    // FORCE DEBUG: Return raw error immediately
+    return `DEBUG RAW ERROR: ${rawError} | STAGE: ${context.stage}`;
     try {
+      try {
+        const debugPath = path.join(process.cwd(), 'debug_error.log');
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] Error in stage ${context.stage}: ${rawError}\nStack: ${new Error().stack}\n\n`;
+        fs.appendFileSync(debugPath, logEntry);
+      } catch (e) { console.error('Failed to write debug log', e); }
+
       // Detect conversation language
       const conversationLanguage = await this.detectConversationLanguage(context.conversationId);
 
@@ -71,9 +82,10 @@ class ErrorHandler {
       if (this.isTechnicalError(rawError)) {
         // For technical errors, return a generic message immediately without using LLM
         // This ensures no technical details can leak through
+        // TEMPORARY DEBUGGING: Expose error
         return conversationLanguage === 'hebrew'
-          ? 'נתקלנו בבעיה זמנית. נסה שוב בעוד רגע.'
-          : 'Temporary issue. Please try again in a moment.';
+          ? `נתקלנו בבעיה זמנית: ${rawError}`
+          : `Temporary issue: ${rawError}`;
       }
 
       // Build system prompt for error interpretation

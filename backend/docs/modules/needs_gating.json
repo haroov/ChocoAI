@@ -1,0 +1,166 @@
+{
+  "module_key": "needs_gating",
+  "questions": [
+    {
+      "q_id": "G001",
+      "page": 0,
+      "section": "Pre",
+      "subsection": "Needs gating",
+      "stage_title_he": "שלב 2 — בירור צרכים (שאלות שער)",
+      "question_he": "האם יש לעסק מקום פיזי שבו מתקיימת הפעילות או נמצא רכוש (משרד/חנות/קליניקה/מחסן/בית)?",
+      "prompt_he": "האם יש לעסק מקום פיזי שבו מתקיימת פעילות העסק או נמצא רכוש? (משרד/חנות/קליניקה/מחסן/בית)",
+      "field_key_en": "has_physical_premises",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "משמש להפעלת שאלות מבנה/מיגון/סביבה וכיסויי רכוש.",
+      "json_path": "triage.has_physical_premises",
+      "module_key": "needs_gating",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש לעסק מקום פיזי שבו מתקיימת פעילות העסק או נמצא רכוש? (משרד/חנות/קליניקה/מחסן/בית)",
+        "whatsapp": "האם יש לעסק מקום פיזי שבו מתקיימת פעילות העסק או נמצא רכוש? (משרד/חנות/קליניקה/מחסן/בית)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "G002",
+      "page": 0,
+      "section": "Pre",
+      "subsection": "Needs gating",
+      "stage_title_he": "שלב 2 — בירור צרכים (שאלות שער)",
+      "question_he": "האם יש לעסק עובדים שכירים?",
+      "prompt_he": "האם יש לעסק עובדים שכירים (כולל חלקית/זמנית)?",
+      "field_key_en": "has_employees",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "אם כן → מומלץ לכלול חבות מעבידים (פרק 8) ולהציג שאלון עובדים.",
+      "json_path": "triage.has_employees",
+      "module_key": "needs_gating",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש לעסק עובדים שכירים (כולל חלקית/זמנית)?",
+        "whatsapp": "האם יש לעסק עובדים שכירים (כולל חלקית/זמנית)?"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "G003",
+      "page": 0,
+      "section": "Pre",
+      "subsection": "Needs gating",
+      "stage_title_he": "שלב 2 — בירור צרכים (שאלות שער)",
+      "question_he": "האם אתה מייצר, מייבא או משווק/מפיץ מוצרים פיזיים?",
+      "prompt_he": "האם אתה מייצר / מייבא / משווק (מפיץ) מוצרים פיזיים?",
+      "field_key_en": "has_products_activity",
+      "data_type": "boolean",
+      "input_type": "yes_no",
+      "options_he": "לא, כן",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "אם כן → רלוונטי לשקול אחריות מוצר (פרק 9) ולהפעיל שאלון מוצר.",
+      "json_path": "triage.has_products_activity",
+      "module_key": "needs_gating",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם אתה מייצר / מייבא / משווק (מפיץ) מוצרים פיזיים?",
+        "whatsapp": "האם אתה מייצר / מייבא / משווק (מפיץ) מוצרים פיזיים?"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "G004",
+      "page": 0,
+      "section": "Pre",
+      "subsection": "Needs gating",
+      "stage_title_he": "שלב 2 — בירור צרכים (שאלות שער)",
+      "question_he": "האם תרצה כיסוי במקרה של הפסקת פעילות בעקבות נזק לרכוש (אובדן הכנסה/אובדן תוצאתי)?",
+      "prompt_he": "אם העסק ייאלץ להיסגר זמנית בגלל נזק (למשל אש/מים/פריצה) — תרצה כיסוי לאובדן הכנסה?",
+      "field_key_en": "business_interruption_type",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "לא, אובדן הכנסה (פיצוי יומי), אובדן תוצאתי (רווח גולמי)",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "בחירה אחת בלבד. ממפה לפרק 3א/3ב. לפי הטופס לא ניתן לבחור את שניהם יחד.",
+      "json_path": "triage.business_interruption_type",
+      "module_key": "needs_gating",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "אם העסק ייאלץ להיסגר זמנית בגלל נזק (למשל אש/מים/פריצה) — תרצה כיסוי לאובדן הכנסה?",
+        "whatsapp": "אם העסק ייאלץ להיסגר זמנית בגלל נזק (למשל אש/מים/פריצה) — תרצה כיסוי לאובדן הכנסה?"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "לא"
+          },
+          {
+            "n": 2,
+            "label_he": "אובדן הכנסה (פיצוי יומי)"
+          },
+          {
+            "n": 3,
+            "label_he": "אובדן תוצאתי (רווח גולמי)"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    }
+  ]
+}

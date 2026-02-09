@@ -1,0 +1,455 @@
+{
+  "meta": {
+    "name": "Choco • Clal SMB • Dynamic Smart Questionnaire (Topic Split)",
+    "version": "1.0.0-prod-topic-split",
+    "generated_at_utc": "2026-02-04T18:00:42Z",
+    "language": {
+      "field_names": "en",
+      "content": "he"
+    },
+    "source_questionnaire": "SMB_Dynamic_Smart_Questionnaire.PROD.json",
+    "carrier": "Clal Insurance",
+    "channel_supported": [
+      "web_chat",
+      "whatsapp"
+    ]
+  },
+  "runtime": {
+    "engine_contract": {
+      "condition_dsl": "simple",
+      "channel_profiles": {
+        "web_chat": {
+          "max_questions_per_turn": 4,
+          "max_chars_per_message": 1200,
+          "supports_quick_replies": true,
+          "supports_multi_select": true,
+          "supports_file_upload": true
+        },
+        "whatsapp": {
+          "max_questions_per_turn": 1,
+          "max_chars_per_message": 500
+        }
+      }
+    },
+    "conversation_policies": {
+      "tone_he": "מקצועי, קצר, בגובה העיניים. בלי ז׳רגון."
+    },
+    "ui": {
+      "fieldsSort": "priorityAsc"
+    }
+  },
+  "process": {
+    "process_key": "01_welcome_user",
+    "title_he": "ברוכים הבאים + פרטי קשר בסיסיים",
+    "description_he": "פתיחת שיחה, זיהוי המציע/ה ופרטי קשר בסיסיים בלבד (שם, נייד, אימייל, ת.ז).",
+    "ask_if": null,
+    "audience": "customer",
+    "included_module_keys": [
+      "core_contact",
+      "needs_business_activity"
+    ],
+    "notes_best_practice_he": [
+      "תעדוף: שאל קודם אם לקוח חדש או קיים (customer_status).",
+      "לאחר מכן: שם פרטי, שם משפחה וטלפון נייד.",
+      "לאחר מכן: מייל וסגמנט (מה העיסוק).",
+      "רק בסוף: ת.ז וזיקה לעסק.",
+      "בוואטסאפ: שאלה אחת בכל הודעה."
+    ],
+    "opening_message": "שלום! אני שוקו סוכן הביטוח הדיגיטלי שלך. אוכל להכין לך הצעת ביטוח מותאמת אישית לעסק שלך, או לתת שירות ומידע. האם אתה לקוח חדש? או קיים?"
+  },
+  "questions": [
+    {
+      "q_id": "Q000",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Customer Status",
+      "stage_title_he": "חלק א — סטטוס לקוח",
+      "question_he": "האם אתה לקוח חדש? או קיים?",
+      "prompt_he": "האם אתה לקוח חדש? או קיים?",
+      "field_key_en": "is_new_customer",
+      "data_type": "boolean",
+      "input_type": "select",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "meta.customer_status",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "חדש"
+          },
+          {
+            "n": 2,
+            "label_he": "קיים"
+          }
+        ],
+        "answer_format": "מספר אחד (select)"
+      }
+    },
+    {
+      "q_id": "Q002",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "שם פרטי",
+      "prompt_he": "ברשותך מה שמך המלא, אימייל וטלפון נייד?",
+      "field_key_en": "first_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.first_name",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 10,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q001",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "שם משפחה",
+      "prompt_he": "ושם משפחה",
+      "conversational": {
+        "alternatives_he": [
+          "מה שם המשפחה שלך?",
+          "שם משפחה?"
+        ],
+        "why_he": "כדי לזהות את המציע/ה בהצעה.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
+      "field_key_en": "last_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.last_name",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 10,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q005",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מס' טלפון נייד",
+      "prompt_he": "מה המספר הנייד שלך?",
+      "conversational": {
+        "alternatives_he": [
+          "מה הנייד שלך?",
+          "מספר טלפון נייד?"
+        ],
+        "why_he": "כדי שנוכל ליצור קשר ולעדכן לגבי ההצעה.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
+      "field_key_en": "mobile_phone",
+      "data_type": "string",
+      "input_type": "phone",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.contact.mobile",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 12,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q008",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "דואר אלקטרוני",
+      "prompt_he": "ומה כתובת המייל?",
+      "conversational": {
+        "alternatives_he": [
+          "מה המייל שלך?",
+          "לאיזה מייל לשלוח את ההצעה?"
+        ],
+        "why_he": "כדי לשלוח מסמכים/הצעה במידת הצורך.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
+      "field_key_en": "email",
+      "data_type": "string",
+      "input_type": "email",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.contact.email",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 12,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q040",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — פרטי העסק",
+      "question_he": "תודה! עכשיו, אשמח לדעת במה הנך עוסק?",
+      "prompt_he": "תודה! עכשיו, אשמח לדעת במה הנך עוסק? (לדוג׳: חנות בגדים, רופא שיניים...)",
+      "conversational": {
+        "alternatives_he": [
+          "מעולה—במה העסק עוסק?",
+          "מה הפעילות של העסק? (במשפט-שניים)"
+        ],
+        "why_he": "כדי להבין סיכון בסיסי ולהתאים את הכיסויים והשאלות.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
+      "field_key_en": "business_segment",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.occupation",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 20,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q033",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "E. Business type & use",
+      "stage_title_he": "חלק א — סוג העסק והפעילות",
+      "question_he": "סוג העסק (בחירה)",
+      "prompt_he": "נא לבחור את האפשרויות המתאימות עבור סוג העסק (בחירה): (אפשרויות: משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר)",
+      "conversational": {
+        "alternatives_he": [
+          "איזה סוג עסק זה הכי מתאים? (אפשר לבחור כמה)",
+          "מה סוג המקום? (משרד/חנות/מחסן/אחר)"
+        ],
+        "why_he": "כדי להתאים את שאלות הרכוש/מיגון והכיסויים.",
+        "defer_allowed": false,
+        "skip_allowed": false
+      },
+      "field_key_en": "business_site_type",
+      "data_type": "array",
+      "input_type": "multi_select",
+      "options_he": "משרד, חנות, בית מלאכה, מפעל/ביח\"ר, מחסן, אחר",
+      "required": "Y",
+      "required_mode": "required",
+      "notes_logic": "הטופס מציג תיבות סימון",
+      "json_path": "business.site_type",
+      "module_key": "needs_business_activity",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "במה אתה עוסק?",
+        "whatsapp": "במה אתה עוסק?"
+      },
+      "priority": 20,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "משרד"
+          },
+          {
+            "n": 2,
+            "label_he": "חנות"
+          },
+          {
+            "n": 3,
+            "label_he": "בית מלאכה"
+          },
+          {
+            "n": 4,
+            "label_he": "מפעל/ביח\"ר"
+          },
+          {
+            "n": 5,
+            "label_he": "מחסן"
+          },
+          {
+            "n": 6,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q003",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "מספר זהות",
+      "prompt_he": "אשמח לקבל את מספר הזהות שלך (לצורך זיהוי)",
+      "field_key_en": "user_id",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.person.national_id",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 35,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q004",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "זיקת המציע לבית העסק",
+      "prompt_he": "ומה התפקיד שלך בעסק?",
+      "field_key_en": "insured_relation_to_business",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "בעלים, מורשה חתימה, מנהל, אחר",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "applicant.relationship_to_business",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 30,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "בעלים"
+          },
+          {
+            "n": 2,
+            "label_he": "מורשה חתימה"
+          },
+          {
+            "n": 3,
+            "label_he": "מנהל"
+          },
+          {
+            "n": 4,
+            "label_he": "אחר"
+          }
+        ],
+        "answer_format": "מספר אחד (select)"
+      }
+    },
+    {
+      "q_id": "Q041",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "A. Proposer details & contact",
+      "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
+      "question_he": "איך הגעת אלינו?",
+      "prompt_he": "איך הגעת אלינו? (למשל: גוגל/המלצה/פייסבוק/סוכן)",
+      "field_key_en": "referral_source",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "required_if": null,
+      "ask_if": "is_new_customer = true",
+      "json_path": "meta.referral_source",
+      "module_key": "core_contact",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "priority": 40,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ],
+  "validators": [],
+  "handoff_triggers": [],
+  "attachments_checklist": [],
+  "field_schemas": {
+    "first_name": {
+      "type": "string",
+      "description": "שם פרטי",
+      "priority": 10
+    },
+    "last_name": {
+      "type": "string",
+      "description": "שם משפחה",
+      "priority": 10
+    },
+    "mobile_phone": {
+      "type": "string",
+      "description": "נייד",
+      "priority": 12
+    },
+    "email": {
+      "type": "string",
+      "description": "דוא״ל",
+      "priority": 12
+    },
+    "business_segment": {
+      "type": "string",
+      "description": "מקצוע / עיסוק",
+      "priority": 20
+    },
+    "business_site_type": {
+      "type": "string",
+      "description": "סיווג עסקי[משרד, קליניקה, חנות, מסעדה, בית מלאכה וכו׳ - בהתאם לסגמנט]",
+      "priority": 20
+    },
+    "business_site_type_other": {
+      "type": "string",
+      "description": "business_site_type_other",
+      "priority": 20
+    },
+    "user_id": {
+      "type": "string",
+      "description": "תעודת זהות",
+      "priority": 35
+    },
+    "insured_relation_to_business": {
+      "type": "string",
+      "description": "זיקת המציע לעסק [בעלים, שותף, עובד וכו׳]",
+      "priority": 30
+    },
+    "is_new_customer": {
+      "type": "boolean",
+      "description": "לקוח חדש",
+      "priority": 1
+    },
+    "referral_source": {
+      "type": "string",
+      "description": "איך הגעת אלינו",
+      "priority": 40
+    }
+  }
+}

@@ -144,4 +144,3 @@ export const insuranceEnsureCaseTool: ToolExecutor = async (
     return { success: false, error: e?.message || 'Failed to ensure insurance case' };
   }
 };
-

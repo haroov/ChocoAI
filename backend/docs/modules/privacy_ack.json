@@ -1,0 +1,43 @@
+{
+  "module_key": "privacy_ack",
+  "questions": [
+    {
+      "q_id": "Q260",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Privacy & data use acknowledgements",
+      "stage_title_he": "חלק ד — פרטיות ושימוש במידע",
+      "question_he": "יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)",
+      "prompt_he": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)",
+      "field_key_en": "privacy_notice_ack",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "options_he": "מאשר/ת שקרא/ה",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "communications_consents.privacy_notice_ack",
+      "module_key": "privacy_ack",
+      "audience": "customer",
+      "stage_key": "06_confirmations_signatures",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)",
+        "whatsapp": "האם יידוע בעניין שמירת המידע (אישור קבלת יידוע/קריאה)? (אפשרויות: מאשר/ת שקרא/ה)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    }
+  ]
+}

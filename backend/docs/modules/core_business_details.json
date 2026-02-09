@@ -1,0 +1,218 @@
+{
+  "module_key": "core_business_details",
+  "questions": [
+    {
+      "q_id": "Q015",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "שם בית העסק",
+      "prompt_he": "נא לציין שם בית העסק.",
+      "field_key_en": "business_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.name",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם בית העסק.",
+        "whatsapp": "נא לציין שם בית העסק."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q016",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "מספר ת.ז./ח.פ./ח.צ.",
+      "prompt_he": "נא לציין מספר ת.ז./ח.פ./ח.צ..",
+      "field_key_en": "business_registration_id",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.registration_id",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מספר ת.ז./ח.פ./ח.צ..",
+        "whatsapp": "נא לציין מספר ת.ז./ח.פ./ח.צ.."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q017",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "סוג העסק",
+      "prompt_he": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית)",
+      "field_key_en": "business_legal_entity_type",
+      "data_type": "enum",
+      "input_type": "select",
+      "options_he": "חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.legal_entity_type",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית)",
+        "whatsapp": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "numbered_options",
+        "options": [
+          {
+            "n": 1,
+            "label_he": "חברה פרטית"
+          },
+          {
+            "n": 2,
+            "label_he": "עוסק מורשה"
+          },
+          {
+            "n": 3,
+            "label_he": "עוסק זעיר"
+          },
+          {
+            "n": 4,
+            "label_he": "שותפות רשומה"
+          },
+          {
+            "n": 5,
+            "label_he": "חברה ציבורית"
+          }
+        ],
+        "answer_format": "מספר אחד (select) או רשימת מספרים מופרדים בפסיק (multi_select)"
+      }
+    },
+    {
+      "q_id": "Q018",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "דואר אלקטרוני של בית העסק",
+      "prompt_he": "נא לציין דואר אלקטרוני של בית העסק.",
+      "field_key_en": "business_email",
+      "data_type": "string",
+      "input_type": "email",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.contact.email",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין דואר אלקטרוני של בית העסק.",
+        "whatsapp": "נא לציין דואר אלקטרוני של בית העסק."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q019",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "מס' טלפון",
+      "prompt_he": "נא לציין מס' טלפון.",
+      "field_key_en": "business_phone",
+      "data_type": "string",
+      "input_type": "phone",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "business.contact.phone",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' טלפון.",
+        "whatsapp": "נא לציין מס' טלפון."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q020",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "מס' פקס",
+      "prompt_he": "נא לציין מס' פקס.",
+      "field_key_en": "business_fax",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "business.contact.fax",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' פקס.",
+        "whatsapp": "נא לציין מס' פקס."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q021",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business details",
+      "stage_title_he": "חלק א — פרטי בית העסק",
+      "question_he": "מס' טלפון נייד",
+      "prompt_he": "נא לציין מס' טלפון נייד.",
+      "field_key_en": "business_mobile",
+      "data_type": "string",
+      "input_type": "phone",
+      "required": "N",
+      "required_mode": "optional",
+      "json_path": "business.contact.mobile",
+      "module_key": "core_business_details",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין מס' טלפון נייד.",
+        "whatsapp": "נא לציין מס' טלפון נייד."
+      },
+      "priority": 3,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

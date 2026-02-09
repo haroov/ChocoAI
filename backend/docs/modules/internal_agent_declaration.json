@@ -1,0 +1,126 @@
+{
+  "module_key": "internal_agent_declaration",
+  "questions": [
+    {
+      "q_id": "Q256",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Agent declaration & signature",
+      "stage_title_he": "חלק ד — הצהרת סוכן הביטוח",
+      "question_he": "הצהרת סוכן הביטוח בדבר אימות פרטי ההצעה (אישור)",
+      "prompt_he": "האם הצהרת סוכן הביטוח בדבר אימות פרטי ההצעה (אישור)? (אפשרויות: מאשר/ת)",
+      "field_key_en": "agent_declaration_ack",
+      "data_type": "boolean",
+      "input_type": "checkbox",
+      "options_he": "מאשר/ת",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.agent_declaration_ack",
+      "module_key": "internal_agent_declaration",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם הצהרת סוכן הביטוח בדבר אימות פרטי ההצעה (אישור)? (אפשרויות: מאשר/ת)",
+        "whatsapp": "האם הצהרת סוכן הביטוח בדבר אימות פרטי ההצעה (אישור)? (אפשרויות: מאשר/ת)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q257",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Agent declaration & signature",
+      "stage_title_he": "חלק ד — הצהרת סוכן הביטוח",
+      "question_he": "תאריך חתימת סוכן הביטוח",
+      "prompt_he": "מהו תאריך חתימת סוכן הביטוח? (תאריך)",
+      "field_key_en": "agent_signature_date",
+      "data_type": "date",
+      "input_type": "date",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.agent_signed_date",
+      "module_key": "internal_agent_declaration",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "מהו תאריך חתימת סוכן הביטוח? (תאריך)",
+        "whatsapp": "מהו תאריך חתימת סוכן הביטוח? (תאריך)"
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text",
+        "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
+      }
+    },
+    {
+      "q_id": "Q258",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Agent declaration & signature",
+      "stage_title_he": "חלק ד — הצהרת סוכן הביטוח",
+      "question_he": "שם סוכן הביטוח",
+      "prompt_he": "נא לציין שם סוכן הביטוח.",
+      "field_key_en": "agent_signer_name",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.agent_name",
+      "module_key": "internal_agent_declaration",
+      "audience": "internal",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לציין שם סוכן הביטוח.",
+        "whatsapp": "נא לציין שם סוכן הביטוח."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
+      "q_id": "Q259",
+      "page": 7,
+      "section": "Part D",
+      "subsection": "Agent declaration & signature",
+      "stage_title_he": "חלק ד — הצהרת סוכן הביטוח",
+      "question_he": "חתימה וחותמת סוכן הביטוח",
+      "prompt_he": "נא לאשר/לחתום: חתימה וחותמת סוכן הביטוח.",
+      "field_key_en": "agent_signature",
+      "data_type": "string",
+      "input_type": "signature",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "signatures.agent_signature_ref",
+      "module_key": "internal_agent_declaration",
+      "audience": "internal",
+      "collection_mode": "signature_end",
+      "stage_key": "99_misc",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "נא לאשר/לחתום: חתימה וחותמת סוכן הביטוח.",
+        "whatsapp": "נא לאשר/לחתום: חתימה וחותמת סוכן הביטוח."
+      },
+      "priority": 1,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    }
+  ]
+}

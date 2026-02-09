@@ -18,9 +18,22 @@ registerRoute('get', '/api/v1/conversations', async (req: Request, res: Response
       },
     });
 
+    const conversationsWithData = await Promise.all(conversations.map(async (conv) => {
+      let userData: Record<string, unknown> = {};
+      if (conv.userId) {
+        // We don't have a specific flowId context here, so we get all user data
+        // Ideally we might want to prioritize the latest flow, but getUserData handles merging
+        // Note: this might be N+1, but for page size 50 it should be acceptable for now
+        // A better approach later would be to fetch all userData for all userIds in one query
+        const { flowHelpers } = await import('../../lib/flowEngine/flowHelpers');
+        userData = await flowHelpers.getUserData(conv.userId);
+      }
+      return { ...conv, userData };
+    }));
+
     res.json({
       ok: true,
-      conversations,
+      conversations: conversationsWithData,
     });
   } catch (error: any) {
     res.status(500).json({
