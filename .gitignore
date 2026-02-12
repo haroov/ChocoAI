@@ -40,3 +40,6 @@ node
 tsc
 chocoai@*
 chocoai-admin@*
+
+# Accidental files created under backend/ with leading comma
+backend/,*
