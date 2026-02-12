@@ -93,8 +93,17 @@ export const insuranceEnrichBusinessTool: ToolExecutor = async (
         saveResults.business_registry_source = 'data.gov.il:companies';
 
         if (c.statusHe) saveResults.business_registry_status_he = c.statusHe;
+        if (typeof c.statusCode === 'number') saveResults.il_companies_registry_status_code = c.statusCode;
+        if (typeof c.lastAnnualReportYear === 'number') saveResults.il_companies_registry_last_annual_report_year = c.lastAnnualReportYear;
         if (c.incorporationDate) saveResults.business_incorporation_date = c.incorporationDate;
         if (c.corporationTypeHe) saveResults.business_corporation_type_he = c.corporationTypeHe;
+        if (c.descriptionHe) saveResults.il_companies_registry_description_he = c.descriptionHe;
+        if (c.purposeHe) saveResults.il_companies_registry_purpose_he = c.purposeHe;
+        if (c.governmentCompanyHe) saveResults.il_companies_registry_government_company_he = c.governmentCompanyHe;
+        if (c.limitationsHe) saveResults.il_companies_registry_limitations_he = c.limitationsHe;
+        if (c.violatorHe) saveResults.il_companies_registry_violator_he = c.violatorHe;
+        if (typeof c.violatorCode === 'number') saveResults.il_companies_registry_violator_code = c.violatorCode;
+        if (c.subStatusHe) saveResults.il_companies_registry_sub_status_he = c.subStatusHe;
 
         // Prefer not overwriting user-provided display/trade name, but store legal name separately.
         if (c.nameHe) {
@@ -107,6 +116,11 @@ export const insuranceEnrichBusinessTool: ToolExecutor = async (
         if (c.street) saveResults.business_street = c.street;
         if (c.houseNumber) saveResults.business_house_number = c.houseNumber;
         if (c.zip) saveResults.business_zip = c.zip;
+        if (c.country) saveResults.business_country = c.country;
+        if (c.poBox) {
+          const digits = String(c.poBox).replace(/\D/g, '');
+          if (digits && digits.length <= 7) saveResults.business_po_box = digits;
+        }
 
         // Map corporation type → internal enum (if not already set)
         if (!currentLegalEntityType) {

@@ -328,7 +328,7 @@ export function validateFieldValue(fieldSlug: string, field: FieldDefinition | u
       || token === 'לא יודעת'
       || token === 'unknown'
       || token === 'dont know'
-      || token === "don't know";
+      || token === 'don\'t know';
     if (isUnknown) return { ok: true, normalizedValue: 'לא ידוע' };
 
     const digits = s.replace(/\D/g, '');

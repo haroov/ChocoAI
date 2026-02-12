@@ -121,7 +121,8 @@ export function getSegmentsCatalogProd(): SegmentsCatalogProd {
     const fileCatalog = loadSegmentsCatalogProdFromRepoFile();
     if (fileCatalog) {
       setSegmentsCatalogProdOverride(fileCatalog, { updatedAt: new Date(), meta: { notes: 'repo-file fallback' } });
-      return cachedProdOverride as SegmentsCatalogProd;
+      // setSegmentsCatalogProdOverride() sets cachedProdOverride synchronously, but TS cannot narrow across the call.
+      return cachedProdOverride!;
     }
   }
   throw new Error(

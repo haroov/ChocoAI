@@ -31,6 +31,7 @@ import {
   validateFieldValue,
 } from './fieldValidation';
 import { enrichBusinessAddressInPlace } from './businessAddressEnrichment';
+import { enrichIsraelCompaniesRegistryInPlace } from './israelCompaniesRegistryEnrichment';
 
 class FlowRouter {
   async determineFlowAndCollectData(conversation: Conversation, message: Message): Promise<DeterminedFlow | null> {
@@ -115,6 +116,12 @@ class FlowRouter {
         // Contact hints (often needed for setup/validation)
         'email',
         'phone',
+        // Israel SMB: initial user messages often contain mobile in the same sentence as name/intent.
+        // Keep this in the global allowlist so we can persist it even before the stage explicitly asks.
+        'mobile_phone',
+        'user_phone',
+        'proposer_mobile_phone',
+        'proposer_phone',
         'meshulam_phone_local',
       ]);
       const globalFields = Object.fromEntries(
@@ -129,6 +136,55 @@ class FlowRouter {
         flowId: res.flow.id,
         context: flowHelpers.generateExtractionContext(extractionFields, stage.description),
       });
+
+      // Deterministic fallback: PO box "אין/לא" should reliably persist as boolean false.
+      // We do this here (in addition to llmService heuristics) because a missing `business_po_box` can cause
+      // the assistant to re-ask later, even though the user already answered.
+      try {
+        const collected: any = res.collectedData || {};
+        const wantsPoBox = Object.prototype.hasOwnProperty.call(stageFields, 'business_po_box');
+        const hasPoBox = isPresentNonPlaceholder(collected.business_po_box);
+        if (wantsPoBox && !hasPoBox) {
+          const lastAssistant = await prisma.message.findFirst({
+            where: { conversationId: conversation.id, role: 'assistant', createdAt: { lt: message.createdAt } },
+            orderBy: { createdAt: 'desc' },
+            select: { content: true },
+          });
+          const lastQ = String(lastAssistant?.content || '').trim();
+          const askedForPoBox = /ת\\.?[\"״׳']?ד|תיבת\\s*דואר|תא\\s*דואר|po\\s*box/i.test(lastQ);
+          if (askedForPoBox) {
+            const msgRaw = String(message.content || '').trim();
+            const digits = msgRaw.replace(/\\D/g, '');
+            const token = msgRaw
+              .trim()
+              .toLowerCase()
+              .replace(/[“”"׳״']/g, '')
+              .replace(/\\s+/g, ' ')
+              .replace(/^[\\s\\-–—.,;:!?()\\[\\]{}]+/g, '')
+              .replace(/[\\s\\-–—.,;:!?()\\[\\]{}]+$/g, '')
+              .trim();
+            const looksLikeNo = !digits && (
+              token === 'אין'
+              || token === 'לא'
+              || token === 'ללא'
+              || token.startsWith('אין ')
+              || token.startsWith('אין לי')
+              || token.startsWith('אין לנו')
+              || token === 'none'
+              || token === 'no'
+            );
+            if (looksLikeNo) {
+              collected.business_po_box = false;
+              res.collectedData = collected;
+            } else if (digits && digits.length <= 7) {
+              collected.business_po_box = digits;
+              res.collectedData = collected;
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
 
       // Deterministic fallback: if the stage is asking for an Israeli ID and the user replies with digits,
       // accept it even if the LLM extraction missed it. This prevents stuck loops.
@@ -354,6 +410,11 @@ class FlowRouter {
       const flowId = options.determinedFlow.flow.id;
       const existing = await flowHelpers.getUserData(userId, flowId);
       await enrichBusinessAddressInPlace({
+        validatedCollectedData,
+        existingUserData: existing as any,
+        conversationId: conversation.id,
+      });
+      await enrichIsraelCompaniesRegistryInPlace({
         validatedCollectedData,
         existingUserData: existing as any,
         conversationId: conversation.id,

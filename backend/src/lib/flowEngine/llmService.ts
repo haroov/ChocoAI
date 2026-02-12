@@ -202,6 +202,26 @@ class LlmService {
           if (/משרד/.test(msgRaw)) out.business_site_type = 'משרד';
         }
 
+        // Mobile phone: capture Israeli mobile numbers from the first message (common contact block).
+        // Normalize to +9725XXXXXXXX to match existing storage style.
+        if (hasField('mobile_phone') || hasField('phone') || hasField('user_phone') || hasField('proposer_mobile_phone')) {
+          const digits = msgRaw.replace(/\D/g, '');
+          // Accept: 05XXXXXXXX, 5XXXXXXXX, +9725XXXXXXXX, 9725XXXXXXXX
+          const norm = (() => {
+            if (/^05\d{8}$/.test(digits)) return `+972${digits.slice(1)}`;
+            if (/^5\d{8}$/.test(digits)) return `+972${digits}`;
+            if (/^9725\d{8}$/.test(digits)) return `+${digits}`;
+            if (/^97205\d{8}$/.test(digits)) return `+9725${digits.slice(4)}`;
+            return null;
+          })();
+          if (norm) {
+            if (hasField('mobile_phone')) out.mobile_phone = norm;
+            if (hasField('phone')) out.phone = norm;
+            if (hasField('user_phone')) out.user_phone = norm;
+            if (hasField('proposer_mobile_phone')) out.proposer_mobile_phone = norm;
+          }
+        }
+
         if (Object.keys(out).length > 0) return out;
       }
     } catch {
@@ -953,7 +973,7 @@ Example of empty fields:
             || token === 'לא יודעת'
             || token === 'unknown'
             || token === 'dont know'
-            || token === "don't know";
+            || token === 'don\'t know';
           if (isUnknown) {
             json.business_zip = 'לא ידוע';
             for (const k of Object.keys(json)) {

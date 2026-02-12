@@ -104,6 +104,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   const [expandedApiCalls, setExpandedApiCalls] = useState<Set<string>>(new Set());
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
   const [expandedEntityInstances, setExpandedEntityInstances] = useState<Set<string>>(new Set());
+  const [fieldOrderByContainer, setFieldOrderByContainer] = useState<Record<string, string[]>>({});
   const [scrollToStageId, setScrollToStageId] = useState<string | null>(null);
   const [maskedFields, setMaskedFields] = useState<Set<string>>(new Set([
     'phone',
@@ -628,6 +629,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     ...pickNonEmptyKeys(displayUserData, insuredExplicitKeys),
     ...pickByPredicate(displayUserData, (k) => (
       /^(business_|legal_)/.test(k)
+      || /^il_/.test(k)
+      || /^il_companies_registry_/.test(k)
       || /^(med_pi_|cyber_)/.test(k)
       || /^(insured_)/.test(k)
       || /(_sum_insured_|_limit_)/.test(k)
@@ -1433,6 +1436,62 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
 
   }, [expandedEntities]);
 
+  // Stable ordering: keep existing order; append newly seen fields to the end.
+  useEffect(() => {
+    const containers: Array<{ id: string; keys: string[] }> = [];
+    collectedEntities.forEach((entityType) => {
+      const entityKey = entityType.type;
+      const isFlattened = entityType.instances.length === 1;
+      if (isFlattened) {
+        const instance = entityType.instances[0];
+        containers.push({
+          id: `${entityKey}::${instance.id}`,
+          keys: Object.keys(instance.data || {}),
+        });
+      } else {
+        entityType.instances.forEach((instance) => {
+          containers.push({
+            id: `${entityKey}::${instance.id}`,
+            keys: Object.keys(instance.data || {}),
+          });
+        });
+      }
+    });
+
+    setFieldOrderByContainer((prev) => {
+      let changed = false;
+      const next: Record<string, string[]> = { ...prev };
+      const active = new Set(containers.map((c) => c.id));
+
+      // cleanup removed containers
+      Object.keys(next).forEach((id) => {
+        if (!active.has(id)) {
+          delete next[id];
+          changed = true;
+        }
+      });
+
+      const arraysEqual = (a: string[], b: string[]) => (
+        a.length === b.length && a.every((v, i) => v === b[i])
+      );
+
+      containers.forEach(({ id, keys }) => {
+        const prevOrder = prev[id] || [];
+        const keySet = new Set(keys);
+        const kept = prevOrder.filter((k) => keySet.has(k));
+        const keptSet = new Set(kept);
+        const appended = keys.filter((k) => !keptSet.has(k));
+        const order = [...kept, ...appended];
+        if (!arraysEqual(prevOrder, order)) {
+          next[id] = order;
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [collectedEntities]);
+
   // Collected Data View Component
   const CollectedDataView = () => (
     <div className="space-y-4">
@@ -1485,29 +1544,22 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
               <div className="border-t border-gray-200 px-4 py-3 space-y-2 bg-gray-50">
                 {isFlattened ? (() => {
                   const instance = entityType.instances[0];
-                  const entries = Object.entries(instance.data || {});
-                  const rows = entries
-                    .map(([key, value]) => {
-                      const prov = provenanceForField(key);
-                      const tsMs = prov?.ts ? new Date(prov.ts).getTime() : Number.POSITIVE_INFINITY;
-                      return { key, value, prov, tsMs };
-                    })
-                    .sort((a, b) => {
-                      if (a.tsMs !== b.tsMs) return a.tsMs - b.tsMs; // oldest-first
-                      return String(a.key).localeCompare(String(b.key));
-                    });
+                  const containerId = `${entityKey}::${instance.id}`;
+                  const orderedKeys = fieldOrderByContainer[containerId] || Object.keys(instance.data || {});
 
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                       <div className="px-3 py-2">
-                        {rows.length === 0 ? (
+                        {orderedKeys.length === 0 ? (
                           <div className="text-xs text-gray-500 italic">No fields</div>
                         ) : (
                           <div className="space-y-2">
-                            {rows.map(({ key, value, prov }) => {
+                            {orderedKeys.map((key) => {
+                              const value = (instance.data || {})[key];
+                              const prov = provenanceForField(key);
                               const isMasked = maskedFields.has(String(key).toLowerCase());
                               const formattedValue = formatCollectedValue(key, value);
-                              const metaText = `${prov?.ts ? moment(prov.ts).format('M/D/YYYY, h:mm A') : '—'} · ${prov?.contributor || 'system'}`;
+                              const metaText = `${prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'} · ${prov?.contributor || 'system'}`;
                               const segmentId = (() => {
                                 if (key !== 'business_segment' || isMasked) return null;
                                 const direct = String((instance.data as any)?.segment_id ?? '').trim();
@@ -1614,20 +1666,15 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
 
                       {isInstanceExpanded && (
                         <div className="border-t border-gray-200 px-3 py-2 space-y-2">
-                          {Object.entries(instance.data)
-                            .map(([key, value]) => {
+                          {(() => {
+                            const containerId = `${entityKey}::${instance.id}`;
+                            const orderedKeys = fieldOrderByContainer[containerId] || Object.keys(instance.data || {});
+                            return orderedKeys.map((key) => {
+                              const value = (instance.data || {})[key];
                               const prov = provenanceForField(key);
-                              const tsMs = prov?.ts ? new Date(prov.ts).getTime() : Number.POSITIVE_INFINITY;
-                              return { key, value, prov, tsMs };
-                            })
-                            .sort((a, b) => {
-                              if (a.tsMs !== b.tsMs) return a.tsMs - b.tsMs; // oldest-first
-                              return String(a.key).localeCompare(String(b.key));
-                            })
-                            .map(({ key, value, prov }) => {
                               const isMasked = maskedFields.has(key.toLowerCase());
                               const formattedValue = formatCollectedValue(key, value);
-                              const metaText = `${prov?.ts ? moment(prov.ts).format('M/D/YYYY, h:mm A') : '—'} · ${prov?.contributor || 'system'}`;
+                              const metaText = `${prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'} · ${prov?.contributor || 'system'}`;
                               const segmentId = (() => {
                                 if (key !== 'business_segment' || isMasked) return null;
                                 // Prefer explicit resolved segment_id if present in this entity snapshot.
@@ -1682,7 +1729,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                                   </div>
                                 </div>
                               );
-                            })}
+                            });
+                          })()}
                           {instance.metadata && Object.keys(instance.metadata).length > 0 && (
                             <div className="pt-2 border-t border-gray-200">
                               <div className="text-xs font-semibold text-gray-700 mb-1">Metadata</div>

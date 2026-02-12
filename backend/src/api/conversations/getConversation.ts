@@ -557,7 +557,10 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
     try {
       const userMessages = (conversation.messages || [])
         .filter((m) => m.role === 'user')
-        .map((m) => ({ createdAt: new Date(m.createdAt).getTime() }))
+        .map((m) => ({
+          createdAt: new Date(m.createdAt).getTime(),
+          text: String(m.content || ''),
+        }))
         .filter((m) => Number.isFinite(m.createdAt))
         .sort((a, b) => a.createdAt - b.createdAt);
       const lastUserMessageAtIso = userMessages.length > 0
@@ -581,12 +584,31 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       const out: Record<string, UiFieldProvenance> = {};
       const userCollectedKeys = new Set<string>();
 
+      // Union of UI-visible "asked" keys (user stages only).
+      const userFieldKeys = new Set<string>();
+      try {
+        const flows: Array<UiFlow | null> = [activeFlow, ...completedFlows];
+        flows.forEach((flow) => {
+          flow?.stages?.forEach((s) => {
+            const fields = Array.isArray((s as any).fieldsToCollect) ? (s as any).fieldsToCollect : [];
+            fields.forEach((f: any) => {
+              const k = String(f || '').trim();
+              if (k) userFieldKeys.add(k);
+            });
+          });
+        });
+      } catch {
+        // ignore
+      }
+
       const isSystemDefaultKey = (key: string): boolean => {
         const k = String(key || '').trim();
         if (!k) return false;
 
         // Common computed/internal keys (not directly asked as user answers).
         if (/(^__|_code$|_source$|_confidence$|_reason$)/.test(k)) return true;
+        if (k.startsWith('client_')) return true;
+        if (/google|geo|place|registry|formattedaddress|plus_code/i.test(k)) return true;
 
         // Segment resolution + derived identifiers are system-generated.
         if (k.startsWith('segment_')) return true;
@@ -604,10 +626,62 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         return false;
       };
 
-      const classifyContributor = (key: string, inferredFromStage: UiFieldProvenance['contributor']): UiFieldProvenance['contributor'] => {
+      const classifyContributor = (
+        key: string,
+        inferredFromStage: UiFieldProvenance['contributor'],
+        ctx?: { userAnswerTs?: string | null; overrideUserTs?: string | null },
+      ): UiFieldProvenance['contributor'] => {
         if (isSystemDefaultKey(key)) return 'system';
-        if (userCollectedKeys.has(key)) return 'user';
-        return inferredFromStage;
+        if (ctx?.overrideUserTs) return 'user';
+        // If we have evidence of a user answer in this trace window, and this key is part of the asked fields,
+        // treat it as user-provided (even if processed through OpenAI).
+        if (ctx?.userAnswerTs && (userFieldKeys.has(key) || inferredFromStage === 'user')) return 'user';
+        // Otherwise, consider it system-derived (API/default/computed).
+        return 'system';
+      };
+
+      const digitsOnly = (v: unknown): string => String(v ?? '').replace(/\D/g, '');
+
+      const findUserMessageTsForValue = (value: unknown, mode: 'exact' | 'digits'): string | null => {
+        const raw = String(value ?? '').trim();
+        if (!raw) return null;
+        if (mode === 'digits') {
+          const d = digitsOnly(raw);
+          if (!d || d.length < 7) return null;
+          // Find first message that contains at least last 7 digits (robust to formatting).
+          const needle = d.slice(-7);
+          for (const m of userMessages) {
+            const msgDigits = digitsOnly(m.text);
+            if (msgDigits.includes(needle)) return new Date(m.createdAt).toISOString();
+          }
+          return null;
+        }
+        // exact substring match (case-insensitive)
+        const needle = raw.toLowerCase();
+        for (const m of userMessages) {
+          if (m.text.toLowerCase().includes(needle)) return new Date(m.createdAt).toISOString();
+        }
+        return null;
+      };
+
+      const findUserMessageTsForKeyValue = (key: string, value: unknown): string | null => {
+        const k = String(key || '').trim().toLowerCase();
+        if (!k) return null;
+        if (value === null || value === undefined) return null;
+
+        // Email keys: match exact email substring.
+        if (k.includes('email')) {
+          const s = String(value ?? '').trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s)) return null;
+          return findUserMessageTsForValue(s, 'exact');
+        }
+
+        // Phone keys: match digits.
+        if (k.includes('phone') || k.includes('mobile')) {
+          return findUserMessageTsForValue(value, 'digits');
+        }
+
+        return null;
       };
 
       const pickLastUserMessageTsWithin = (startMs: number, endMs: number): string | null => {
@@ -646,10 +720,13 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           const k = String(fieldSlug || '').trim();
           if (!k) continue;
           if (out[k]) continue;
-          if (inferredContributor === 'user') userCollectedKeys.add(k);
-          const contributor = classifyContributor(k, inferredContributor);
+          const overrideUserTs = !isSystemDefaultKey(k)
+            ? findUserMessageTsForKeyValue(k, (userData as any)?.[k])
+            : null;
+          const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
+          if (contributor === 'user') userCollectedKeys.add(k);
           out[k] = {
-            ts,
+            ts: overrideUserTs || ts,
             contributor,
             flowSlug: trace.flowSlug,
             stageSlug: trace.stageSlug,
@@ -674,9 +751,13 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           if (!k) continue;
           if (out[k]) continue;
           if (!isPresentValue(v)) continue;
-          const contributor = classifyContributor(k, inferredContributor);
+          const overrideUserTs = !isSystemDefaultKey(k)
+            ? (findUserMessageTsForKeyValue(k, (userData as any)?.[k]) || findUserMessageTsForKeyValue(k, v))
+            : null;
+          const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
+          if (contributor === 'user') userCollectedKeys.add(k);
           out[k] = {
-            ts,
+            ts: overrideUserTs || ts,
             contributor,
             flowSlug: trace.flowSlug,
             stageSlug: trace.stageSlug,
@@ -687,25 +768,6 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       }
 
       // Ensure we always have a provenance record for any key currently present in userData.
-      // When traces are missing or a key never appears in snapshots/fieldsCollected, fall back to:
-      // - contributor: treat as user if it is part of any UI-visible stage fieldsToCollect
-      // - ts: conversation.updatedAt (best-effort)
-      const userFieldKeys = new Set<string>();
-      try {
-        const flows: Array<UiFlow | null> = [activeFlow, ...completedFlows];
-        flows.forEach((flow) => {
-          flow?.stages?.forEach((s) => {
-            const fields = Array.isArray((s as any).fieldsToCollect) ? (s as any).fieldsToCollect : [];
-            fields.forEach((f: any) => {
-              const k = String(f || '').trim();
-              if (k) userFieldKeys.add(k);
-            });
-          });
-        });
-      } catch {
-        // ignore
-      }
-
       const fallbackSystemTs = conversation.updatedAt?.toISOString?.() || new Date().toISOString();
       const fallbackUserTs = lastUserMessageAtIso || fallbackSystemTs;
       Object.keys(userData || {}).forEach((kRaw) => {
@@ -713,9 +775,12 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (!k) return;
         if (out[k]) return;
         const inferred = userFieldKeys.has(k) ? 'user' : 'system';
-        const contributor = classifyContributor(k, inferred);
+        const overrideUserTs = !isSystemDefaultKey(k)
+          ? findUserMessageTsForKeyValue(k, (userData as any)?.[k])
+          : null;
+        const contributor = classifyContributor(k, inferred, { userAnswerTs: inferred === 'user' ? fallbackUserTs : null, overrideUserTs });
         out[k] = {
-          ts: contributor === 'user' ? fallbackUserTs : fallbackSystemTs,
+          ts: contributor === 'user' ? (overrideUserTs || fallbackUserTs) : fallbackSystemTs,
           contributor,
           method: 'snapshot',
         };
