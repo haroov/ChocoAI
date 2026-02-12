@@ -33,6 +33,7 @@ export const fieldDefinitionSchema = z.object({
   minLength: z.number().optional(),
   maxLength: z.number().optional(),
   pattern: z.string().optional(),
+  prohibitedWordsList: z.string().min(1).optional(),
   enum: z.array(z.string()).optional(),
 });
 

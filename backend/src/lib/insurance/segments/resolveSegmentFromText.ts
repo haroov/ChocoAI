@@ -3,13 +3,13 @@ import { llmService } from '../../flowEngine/llmService';
 import { getSegmentsCatalogProd } from './loadSegmentsCatalog';
 
 export type ResolvedSegment = {
-    segment_id?: string;
-    segment_group_id?: string;
-    segment_name_he?: string;
-    group_name_he?: string;
-    default_package_key?: string;
-    source: 'catalog' | 'llm' | 'none';
-    match_confidence: number;
+  segment_id?: string;
+  segment_group_id?: string;
+  segment_name_he?: string;
+  group_name_he?: string;
+  default_package_key?: string;
+  source: 'catalog' | 'llm' | 'none';
+  match_confidence: number;
 };
 
 function normalizeText(s: string): string {
@@ -27,7 +27,68 @@ function tokenize(s: string): string[] {
   return n
     .split(' ')
     .map((t) => t.trim())
-    .filter((t) => t.length >= 2);
+    .filter((t) => t.length >= 2)
+    // Avoid numeric noise from phone numbers / ids in the first message.
+    .filter((t) => !/^\d+$/.test(t));
+}
+
+function tokenizeInputWithAliases(rawInput: string): Set<string> {
+  // Input tokens: remove very common "quote request" noise words that cause false positives
+  // (e.g. matching "סוכן ביטוח" just because the user asked for ביטוח).
+  const stop = new Set([
+    'ביטוח',
+    'מבוטח',
+    'הצעה',
+    'הצעת',
+    'מחיר',
+    'רוצה',
+    'רציתי',
+    'צריך',
+    'צריכה',
+    'אשמח',
+    'אפשר',
+    'תודה',
+    'שלום',
+    'היי',
+    'הי',
+    'נא',
+    'לקבל',
+    'עבור',
+    'בשביל',
+    'למען',
+  ]);
+
+  const base = tokenize(rawInput).filter((t) => !stop.has(t));
+  const out = new Set<string>(base);
+
+  const raw = String(rawInput || '');
+  // Normalize punctuation to whitespace for abbreviation detection.
+  // Important: JS word-boundaries (\b) don't behave well with Hebrew letters, so we rely on whitespace-ish boundaries.
+  const rawWs = raw
+    .replace(/[(){}\[\],.;:!?/\\\-–—_]/g, ' ')
+    .replace(/\s+/g, ' ');
+
+  // Common Hebrew abbreviations that otherwise become ambiguous tokens after normalization:
+  // - רו"ח / רו״ח -> "רוח" (wind). We expand it to accounting-related tokens.
+  // - עו"ד / עו״ד -> "עוד". We expand it to legal-related tokens.
+  if (/(^|\s)רו[\"״'`’]?\s*ח(\s|$)/i.test(rawWs)) {
+    ['רואה', 'חשבון', 'רואי', 'חשבונות', 'הנהלת'].forEach((t) => out.add(t));
+  }
+  if (/(^|\s)עו[\"״'`’]?\s*ד(\s|$)/i.test(rawWs)) {
+    ['עורך', 'דין', 'עורכי'].forEach((t) => out.add(t));
+  }
+
+  // Insurance agent synonyms / inflections:
+  // Users often say "סוכני ביטוח" (plural) or "סוכנות ביטוח" which won't match the singular segment label
+  // due to token mismatch after normalization.
+  if (/(\s|^)סוכנ(?:י|ים|ת|ות|ות)?\s+ביטוח(\s|$)/i.test(rawWs) || /(\s|^)סוכנות\s+ביטוח(\s|$)/i.test(rawWs)) {
+    // Add the singular canonical token used in the catalog label ("סוכן ביטוח").
+    out.add('סוכן');
+    // Add "ביטוח" ONLY when explicitly in the phrase, to avoid generic insurance requests matching this segment.
+    out.add('ביטוח');
+  }
+
+  return out;
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -36,6 +97,14 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   for (const x of a) if (b.has(x)) inter++;
   const union = a.size + b.size - inter;
   return union ? inter / union : 0;
+}
+
+function overlapRatio(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  const denom = Math.min(a.size, b.size);
+  return denom ? inter / denom : 0;
 }
 
 function bestMatch<T>(items: T[], scoreFn: (it: T) => number): { item: T | null; score: number } {
@@ -57,17 +126,18 @@ function clamp01(n: number): number {
 }
 
 function buildResolvedFromCatalog(params: {
-    segment_id?: string;
-    segment_group_id?: string;
-    source: ResolvedSegment['source'];
-    match_confidence: number;
+  segment_id?: string;
+  segment_group_id?: string;
+  source: ResolvedSegment['source'];
+  match_confidence: number;
 }): ResolvedSegment {
   const catalog = getSegmentsCatalogProd();
-  const seg = params.segment_id ? catalog.segments.find((s) => s.segment_id === params.segment_id) : undefined;
-  const groupId = params.segment_group_id || seg?.segment_group_id;
+  const found = params.segment_id ? catalog.segments.find((s) => s.segment_id === params.segment_id) : undefined;
+  const seg: any = found;
+  const groupId = params.segment_group_id || seg?.segment_group_id || found?.segment_group_id;
   const group = groupId ? catalog.segment_groups.find((g) => g.group_id === groupId) : undefined;
   return {
-    segment_id: seg?.segment_id || params.segment_id,
+    segment_id: seg?.segment_id || found?.segment_id || params.segment_id,
     segment_group_id: groupId || undefined,
     segment_name_he: seg?.segment_name_he,
     group_name_he: group?.group_name_he,
@@ -92,7 +162,7 @@ export async function resolveSegmentFromText(
   if (!text) return { source: 'none', match_confidence: 0 };
 
   const catalog = getSegmentsCatalogProd();
-  const inputTokens = new Set(tokenize(text));
+  const inputTokens = tokenizeInputWithAliases(text);
   const inputNorm = normalizeText(text);
 
   // --- (1) Deterministic match: segments ---
@@ -105,9 +175,23 @@ export async function resolveSegmentFromText(
     const hay = [name, primary, groupName].filter(Boolean).join(' | ');
     const tokens = new Set(tokenize(hay));
     const jac = jaccard(inputTokens, tokens);
+    // Strong signal: overlap with the *segment name itself* (not the whole haystack).
+    // This is critical when the user's first message contains lots of extra tokens (name/phone/politeness),
+    // which would otherwise dilute Jaccard similarity.
+    const nameTokens = new Set(tokenize(name));
+    const nameOverlap = overlapRatio(inputTokens, nameTokens);
+    const kwArr = Array.isArray((s as any).keywords)
+      ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
+      : [];
+    const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
+    const kwOverlap = overlapRatio(inputTokens, kwTokens);
     const nameNorm = normalizeText(name);
-    const bonus = nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0;
-    return clamp01(jac + bonus);
+    // Strong signal: exact match with a segment name.
+    // Without this, short 2-token segments (e.g., "סוכן ביטוח") can be penalized by extra tokens
+    // coming from groupName/primary_activity, preventing them from crossing the deterministic threshold.
+    const exactName = Boolean(nameNorm && inputNorm === nameNorm);
+    const bonus = exactName ? 0.6 : (nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0);
+    return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus);
   });
 
   if (segMatch.item && segMatch.score >= 0.55) {
@@ -141,9 +225,14 @@ export async function resolveSegmentFromText(
       const hay = [name, primary].filter(Boolean).join(' | ');
       const tokens = new Set(tokenize(hay));
       const jac = jaccard(inputTokens, tokens);
+      const kwArr = Array.isArray((s as any).keywords)
+        ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
+        : [];
+      const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
+      const kwOverlap = overlapRatio(inputTokens, kwTokens);
       const nameNorm = normalizeText(name);
       const bonus = nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0;
-      return clamp01(jac + bonus);
+      return clamp01(Math.max(jac, kwOverlap * 0.9) + bonus);
     });
 
     const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.28 ? (segInGroup.item as any).segment_id : undefined;
@@ -242,9 +331,14 @@ export async function resolveSegmentFromText(
     const hay = [name, primary].filter(Boolean).join(' | ');
     const tokens = new Set(tokenize(hay));
     const jac = jaccard(inputTokens, tokens);
+    const kwArr = Array.isArray((s as any).keywords)
+      ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
+      : [];
+    const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
+    const kwOverlap = overlapRatio(inputTokens, kwTokens);
     const nameNorm = normalizeText(name);
     const bonus = nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0;
-    return clamp01(jac + bonus);
+    return clamp01(Math.max(jac, kwOverlap * 0.9) + bonus);
   });
 
   const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.3 ? (segInGroup.item as any).segment_id : undefined;

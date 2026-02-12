@@ -29,3 +29,14 @@ coverage/
 
 # QA artifacts (keep local, never commit)
 qa/*.xlsx
+
+# Cursor / AI tooling artifacts
+.cursor/
+
+# Local scratch / accidental output files
+NODE_ENV=development
+cd
+node
+tsc
+chocoai@*
+chocoai-admin@*

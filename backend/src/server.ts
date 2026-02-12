@@ -10,9 +10,11 @@ import './api';
 import { seedData } from './core';
 import { logger } from './utils/logger';
 import { config } from './core/config';
+import { initSegmentsCatalogProdOverrideCache } from './lib/insurance/segments/loadSegmentsCatalog';
 
 export const initServer = async (app: Express) => {
   await seedData();
+  await initSegmentsCatalogProdOverrideCache();
 
   app.use(helmet({
     contentSecurityPolicy: {

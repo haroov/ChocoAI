@@ -29,24 +29,12 @@ describe('MANIFEST.PROD.json ask_if expressions (03–06)', () => {
     for (const k of keys) {
       expect(byKey.has(k)).toBe(true);
       expect(typeof byKey.get(k)?.ask_if).toBe('string');
-      expect(String(byKey.get(k)?.ask_if)).toContain('OR');
     }
 
     // Use a minimal set of boolean fields referenced by 03–06 ask_if
     const allFalse = {
-      has_physical_premises: false,
-      ch1_contents_selected: false,
       ch2_building_selected: false,
-      ch4_burglary_selected: false,
-      ch5_money_selected: false,
-      ch10_electronic_selected: false,
     };
-
-    // If the user has physical premises, these processes should be relevant.
-    for (const k of keys) {
-      const askIf = String(byKey.get(k)?.ask_if || '');
-      expect(evaluateCondition(askIf, { ...allFalse, has_physical_premises: true })).toBe(true);
-    }
 
     // If everything is false, these processes should not be relevant.
     for (const k of keys) {
@@ -54,10 +42,10 @@ describe('MANIFEST.PROD.json ask_if expressions (03–06)', () => {
       expect(evaluateCondition(askIf, allFalse)).toBe(false);
     }
 
-    // If contents coverage was selected, they should be relevant even without physical premises.
+    // They should become relevant only when building coverage was selected.
     for (const k of keys) {
       const askIf = String(byKey.get(k)?.ask_if || '');
-      expect(evaluateCondition(askIf, { ...allFalse, ch1_contents_selected: true })).toBe(true);
+      expect(evaluateCondition(askIf, { ...allFalse, ch2_building_selected: true })).toBe(true);
     }
   });
 });

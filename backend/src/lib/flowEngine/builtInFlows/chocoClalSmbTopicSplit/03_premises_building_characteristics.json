@@ -106,13 +106,16 @@
         "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
         "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
       }
+    },
+    "ui": {
+      "fieldsSort": "priorityAsc"
     }
   },
   "process": {
     "process_key": "03_premises_building_characteristics",
     "title_he": "שאלון מבנה ומאפייני הנכס",
     "description_he": "מידע על המבנה/המיקום הפיזי (חומרי בנייה, גג, שטח, קומה, פל-קל וכו׳).",
-    "ask_if": "(has_physical_premises = true) OR (ch1_contents_selected = true) OR (ch2_building_selected = true) OR (ch4_burglary_selected = true) OR (ch5_money_selected = true) OR (ch10_electronic_selected = true)",
+    "ask_if": "ch2_building_selected = true",
     "audience": "customer",
     "included_module_keys": [
       "premises_building_characteristics"
@@ -147,7 +150,7 @@
         "web_chat": "נא לבחור זיקת המציע למבנה: (אפשרויות: בעלים, שוכר, חוכר לדורות)",
         "whatsapp": "נא לבחור זיקת המציע למבנה: (אפשרויות: בעלים, שוכר, חוכר לדורות)"
       },
-      "priority": 1,
+      "priority": 10,
       "whatsapp_rendering": {
         "type": "numbered_options",
         "options": [
@@ -190,7 +193,7 @@
         "web_chat": "נא לציין שנת הקמת המבנה (מספר).",
         "whatsapp": "נא לציין שנת הקמת המבנה (מספר)."
       },
-      "priority": 3,
+      "priority": 50,
       "validation": {
         "min": 1800
       },
@@ -221,7 +224,7 @@
         "web_chat": "נא לציין העסק בקומה (מספר).",
         "whatsapp": "נא לציין העסק בקומה (מספר)."
       },
-      "priority": 3,
+      "priority": 40,
       "whatsapp_rendering": {
         "type": "free_text",
         "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
@@ -249,7 +252,7 @@
         "web_chat": "נא לציין מתוך קומות (מספר).",
         "whatsapp": "נא לציין מתוך קומות (מספר)."
       },
-      "priority": 3,
+      "priority": 45,
       "whatsapp_rendering": {
         "type": "free_text",
         "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
@@ -277,7 +280,7 @@
         "web_chat": "נא לציין שטח בית העסק מ\"ר (מספר).",
         "whatsapp": "נא לציין שטח בית העסק מ\"ר (מספר)."
       },
-      "priority": 3,
+      "priority": 15,
       "whatsapp_rendering": {
         "type": "free_text",
         "hint_he": "אפשר להשיב במספר בלבד (למשל 250000) או בתאריך בפורמט 01/02/2026."
@@ -306,7 +309,7 @@
         "web_chat": "נא לבחור את האפשרויות המתאימות עבור המבנה בנוי (חומרי בנייה): (אפשרויות: אבן, לבנים ובטון, אסכורית/פח, עץ, אחר)",
         "whatsapp": "נא לבחור את האפשרויות המתאימות עבור המבנה בנוי (חומרי בנייה): (אפשרויות: אבן, לבנים ובטון, אסכורית/פח, עץ, אחר)"
       },
-      "priority": 1,
+      "priority": 20,
       "whatsapp_rendering": {
         "type": "numbered_options",
         "options": [
@@ -335,34 +338,6 @@
       }
     },
     {
-      "q_id": "Q043",
-      "page": 1,
-      "section": "Part A",
-      "subsection": "F. Building/premises information",
-      "stage_title_he": "חלק א — פרטי מבנה בית העסק",
-      "question_he": "אחר – פרט (חומרי בנייה)",
-      "prompt_he": "נא לציין אחר – פרט (חומרי בנייה).",
-      "field_key_en": "building_materials_other",
-      "data_type": "string",
-      "input_type": "text",
-      "required": "Conditional",
-      "required_mode": "conditional",
-      "required_if": "building_materials includes 'אחר'",
-      "json_path": "locations[0].building_info.construction_materials_other",
-      "module_key": "premises_building_characteristics",
-      "audience": "customer",
-      "stage_key": "03_premises_and_risk",
-      "ask_if": "building_materials includes 'אחר'",
-      "prompt_variants": {
-        "web_chat": "נא לציין אחר – פרט (חומרי בנייה).",
-        "whatsapp": "נא לציין אחר – פרט (חומרי בנייה)."
-      },
-      "priority": 2,
-      "whatsapp_rendering": {
-        "type": "free_text"
-      }
-    },
-    {
       "q_id": "Q044",
       "page": 1,
       "section": "Part A",
@@ -385,7 +360,7 @@
         "web_chat": "נא לבחור את האפשרויות המתאימות עבור הגג בנוי: (אפשרויות: בטון, רעפים, אסכורית/פח, אסבסט)",
         "whatsapp": "נא לבחור את האפשרויות המתאימות עבור הגג בנוי: (אפשרויות: בטון, רעפים, אסכורית/פח, אסבסט)"
       },
-      "priority": 1,
+      "priority": 29,
       "whatsapp_rendering": {
         "type": "numbered_options",
         "options": [
@@ -419,8 +394,8 @@
       "prompt_he": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)",
       "field_key_en": "pal_kal_construction",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].building_info.pal_kal_construction.answer",
@@ -432,7 +407,7 @@
         "web_chat": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)",
         "whatsapp": "האם הבניין בנוי בשיטת הפל-קל? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 27,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -470,7 +445,7 @@
         "web_chat": "אם כן, – פרט?",
         "whatsapp": "אם כן, – פרט?"
       },
-      "priority": 2,
+      "priority": 28,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -485,5 +460,62 @@
       "action": "route_to_underwriter"
     }
   ],
-  "attachments_checklist": []
+  "attachments_checklist": [],
+  "field_schemas": {
+    "business_floor": {
+      "type": "number",
+      "description": "העסק בקומה",
+      "priority": 40
+    },
+    "roof_materials": {
+      "type": "string",
+      "description": "הגג בנוי [רעפים, בטון, פלקל]",
+      "priority": 29
+    },
+    "pal_kal_details": {
+      "type": "string",
+      "description": "אם כן – פרט",
+      "priority": 28
+    },
+    "building_relation": {
+      "type": "string",
+      "description": "זיקת המציע למבנה",
+      "enum": [
+        "בעלים",
+        "שוכר",
+        "חוכר לדורות"
+      ],
+      "priority": 10
+    },
+    "premises_area_sqm": {
+      "type": "number",
+      "description": "שטח בית העסק מ\"ר",
+      "priority": 15
+    },
+    "building_materials": {
+      "type": "string",
+      "description": "המבנה בנוי (חומרי בנייה)",
+      "priority": 20
+    },
+    "building_year_built": {
+      "type": "number",
+      "description": "שנת הקמת המבנה",
+      "priority": 50
+    },
+    "pal_kal_construction": {
+      "type": "boolean",
+      "description": "האם הבניין בנוי בשיטת הפל-קל?",
+      "priority": 27
+    },
+    "building_total_floors": {
+      "type": "number",
+      "description": "מתוך קומות",
+      "priority": 45
+    },
+    "building_materials_other": {
+      "type": "string",
+      "description": "אחר – פרט (חומרי בנייה)",
+      "priority": 31
+    }
+  }
 }

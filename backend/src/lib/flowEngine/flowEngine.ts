@@ -23,6 +23,8 @@ import { conversationHelpers } from './conversationHelpers';
 import { flowHelpers } from './flowHelpers';
 import { llmService, ADAPTIVE_TONE_TEMPLATE } from './llmService';
 import { errorHandler } from './errorHandler';
+import { getFieldDisplayNameHe, isPresentNonPlaceholder, validateFieldValue } from './fieldValidation';
+import { evaluateCondition } from '../insurance/questionnaire/conditions';
 
 export class FlowEngine {
   async *processMessage(options: ProcessMessageOptions): AsyncGenerator<string | ProcessMessageRes> {
@@ -462,7 +464,12 @@ export class FlowEngine {
 
       const hasFieldsToCollect = checkStage.fieldsToCollect && checkStage.fieldsToCollect.length > 0;
       const missingFields = hasFieldsToCollect
-        ? checkStage.fieldsToCollect.filter((field: string) => !loopCollectedFields.includes(field))
+        ? checkStage.fieldsToCollect.filter((fieldSlug: string) => {
+          const v = (loopUserData as any)?.[fieldSlug];
+          if (!isPresentNonPlaceholder(v)) return true;
+          const def = (currentFlowDefinition.fields as any)?.[fieldSlug];
+          return !validateFieldValue(fieldSlug, def, v).ok;
+        })
         : [];
 
       const stageNeedsResponse = !promptSaysNoResponse && (
@@ -555,17 +562,17 @@ export class FlowEngine {
     // Get actual userData values to check for RAW_DATE prefix
     const actualUserData: Record<string, unknown> = options.actualUserData || {};
 
-    // Check if stage is completed
+    // Check if stage is completed (validation-aware when field definitions exist)
     const { flowRouter } = await import('./flowRouter');
-    const isStageComplete = flowRouter.isStageCompleted(stage, actualUserData);
+    const isStageComplete = flowRouter.isStageCompleted(stage, actualUserData, flowDefinition.fields);
 
     // Check what fields are missing
-    const missingFields = stage.fieldsToCollect.filter((fieldSlug) =>
-      !(fieldSlug in actualUserData &&
-        actualUserData[fieldSlug] !== undefined &&
-        actualUserData[fieldSlug] !== null &&
-        actualUserData[fieldSlug] !== ''),
-    );
+    const missingFields = stage.fieldsToCollect.filter((fieldSlug) => {
+      const v = (actualUserData as any)[fieldSlug];
+      if (!isPresentNonPlaceholder(v)) return true;
+      const def = (flowDefinition.fields as any)?.[fieldSlug];
+      return !validateFieldValue(fieldSlug, def, v).ok;
+    });
 
     // Detect conversation language for consistency
     const conversationLanguage = await this.detectConversationLanguage(options.conversationId);
@@ -666,6 +673,21 @@ export class FlowEngine {
       take: 12, // Check last 12 messages (5-6 exchanges) - less aggressive
       select: { role: true, content: true },
     });
+    const lastAssistantMessageText = String(recentMessages.find((m) => m.role === 'assistant')?.content || '');
+
+    // Expose recent user text for prompt hooks (topic-split phrasing).
+    // This is important when userData is stale/polluted across conversations (UserData is keyed by user+flow).
+    try {
+      const recentUserText = recentMessages
+        .filter((m) => m.role === 'user')
+        .map((m) => String(m.content || '').trim())
+        .filter(Boolean)
+        .reverse() // chronological
+        .join(' | ');
+      (mergedTemplateContext as any).__recent_user_text = recentUserText;
+    } catch {
+      // best-effort
+    }
 
     // Detect if conversation has been stuck/off-topic
     // CRITICAL: Only trigger recovery if there's ACTUAL confusion/loop, not just clarification questions
@@ -752,6 +774,256 @@ export class FlowEngine {
       '- No repetitive phrases or filler words',
       `- If asking questions, ask at most ${maxQuestionsPerTurn} question(s) per message`,
     ];
+
+    // Validation UX: if the user provided invalid values, we must NOT rely on the LLM to "do the right thing".
+    // Emit a deterministic, user-facing prompt so the flow can't get stuck.
+    // The invalid markers are persisted by the router when validation fails.
+    try {
+      const invalidRaw = (actualUserData as any).__invalid_fields;
+      const invalidAt = Number((actualUserData as any).__invalid_fields_at || 0);
+      const invalidIsRecent = Number.isFinite(invalidAt)
+        ? (Date.now() - invalidAt) < 1000 * 60 * 10 // 10 minutes
+        : false;
+      const invalidSlugs = Array.isArray(invalidRaw)
+        ? invalidRaw.map((x: any) => String(x || '').trim()).filter(Boolean)
+        : [];
+      const invalidInStage = invalidSlugs.filter((s) => stage.fieldsToCollect.includes(s));
+
+      if (invalidIsRecent && invalidInStage.length > 0) {
+        const hintsRaw = (actualUserData as any).__invalid_fields_hints;
+        const hints: Record<string, string> = (hintsRaw && typeof hintsRaw === 'object' && !Array.isArray(hintsRaw))
+          ? hintsRaw as Record<string, string>
+          : {};
+        const namesHe = [...new Set(invalidInStage.map((s) => (
+          getFieldDisplayNameHe(s, (flowDefinition.fields as any)?.[s])
+        )))];
+
+        const conversationLanguage = await this.detectConversationLanguage(options.conversationId);
+        if (conversationLanguage === 'hebrew') {
+          // Deterministic response: "X isn't valid, please re-enter"
+          if (invalidInStage.length === 1) {
+            const slug = invalidInStage[0];
+            const label = namesHe[0] || 'הערך';
+            const suggestion = String(hints[slug] || '').trim();
+            if (suggestion) {
+              yield `${label} נראה לא תקין — התכוונת ל־${suggestion}? אם כן, אפשר לכתוב אותו שוב בדיוק כך: ${suggestion}`;
+              return;
+            }
+            yield `${label} שהזנת אינו תקין — אפשר להזין שוב?`;
+            return;
+          }
+          yield `${namesHe.join(', ')} שהזנת אינם תקינים — אפשר להזין שוב?`;
+          return;
+        }
+        if (conversationLanguage === 'english') {
+          if (invalidInStage.length === 1) {
+            yield `That value for "${invalidInStage[0]}" is not valid — please enter it again.`;
+            return;
+          }
+          yield `Some values are not valid (${invalidInStage.join(', ')}) — please enter them again.`;
+          return;
+        }
+
+        // Fall back to prompt injection only if language couldn't be detected.
+        if (conversationLanguage === 'hebrew') {
+          systemPrompt.push(
+            '',
+            `CRITICAL: המשתמש הזין ערך לא תקין עבור ${namesHe.join(', ')}.`,
+            'אתה חובה לומר במפורש שהערך אינו תקין, ולבקש להזין אותו מחדש.',
+            'שאל עכשיו רק על השדות הלא-תקינים. אל תשאל שדות אחרים עד שיתקבל ערך תקין.',
+            'דוגמה: "הדוא״ל שהזנת אינו תקין — אפשר לכתוב אותו שוב?"',
+          );
+        } else {
+          systemPrompt.push(
+            '',
+            `CRITICAL: The user provided an invalid value for: ${invalidInStage.join(', ')}.`,
+            'You MUST explicitly say it is invalid and ask the user to re-enter it.',
+            'Ask ONLY for the invalid field(s) now. Do not ask other fields until valid values are provided.',
+          );
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // UX guardrail: address user by first name (never by profession/segment).
+    // We observed the agent sometimes replying "מעולה, <business_segment>" which is explicitly undesired.
+    try {
+      const ud = actualUserData || {};
+      const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+      const firstNameRaw = pickNonEmpty((ud as any).user_first_name, (ud as any).first_name, (ud as any).proposer_first_name);
+      const firstName = String(firstNameRaw || '').trim();
+      const seg = String((ud as any).business_segment || '').trim();
+      const badFirst = new Set(['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'לקוח', 'חדש', 'קיים', 'ותיק']);
+      if (firstName && !badFirst.has(firstName)) {
+        const segHint = seg ? ` (profession/segment="${seg}")` : '';
+        systemPrompt.push(
+          '',
+          `CRITICAL UX RULE: When addressing the user, use their first name ("${firstName}") and NEVER address them by their profession/segment${segHint}.`,
+          'Hebrew example: "מעולה, ליאב. ומה התפקיד שלך בעסק?"',
+          'Bad example: "מעולה, רואה חשבון. ומה התפקיד שלך בעסק?"',
+        );
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Segment-aware phrasing (generic + targeted enrichments).
+    // This is intentionally flow-agnostic: it only uses existing userData hints to improve wording.
+    try {
+      const ud = actualUserData || {};
+      const seg = String((ud as any).segment_name_he || (ud as any).business_segment || '').trim();
+      const occ = String((ud as any).business_occupation || (ud as any).business_used_for || (ud as any).business_activity_and_products || '').trim();
+      const siteType = String((ud as any).business_site_type || '').trim();
+      const hasSegmentHints = Boolean(seg || occ || siteType);
+      if (hasSegmentHints) {
+        systemPrompt.push(
+          '',
+          'SEGMENT PERSONALIZATION (CRITICAL): If you have a known segment / occupation / site type from userData (e.g., segment_name_he, business_segment, business_occupation, business_site_type) you MUST adapt question phrasing to that domain.',
+          '- Use the user\'s professional terminology and keep the same temperament and formality level.',
+          '- Replace generic terms like "business / בית העסק / העסק" with the correct domain noun (office/clinic/studio/store/etc.) whenever it makes the question more natural.',
+          '- When asking address/location fields, refer to the physical location of that domain noun (e.g., the office location).',
+        );
+      }
+
+      const lawyerHay = `${seg} | ${occ} | ${siteType}`;
+      const isLawyer = /עורכ/.test(lawyerHay) && /דין/.test(lawyerHay);
+      if (isLawyer) {
+        systemPrompt.push(
+          '',
+          'LAWYER SEGMENT (CRITICAL HEBREW PHRASING): The user is a lawyer / law firm.',
+          'In Hebrew, you MUST use: "משרד עורכי הדין" / "המשרד" instead of "העסק/בית העסק". Refer to the physical location as the office location.',
+          'Field-specific phrasing rules (MUST):',
+          '- If asking for business_name (name of the business): ask as the name of the law firm office, e.g. "מה שם משרד עורכי הדין שלך?" / "נא לציין את שם משרד עורכי הדין."',
+          '- If asking for insured_relation_to_business (your role): ask as the role in the law firm office, e.g. "ומה התפקיד שלך במשרד עורכי הדין שלך?"',
+          '- If asking for address fields (city/street/house number/zip): refer to the office address, e.g. "באיזה יישוב נמצא משרד עורכי הדין?"',
+        );
+      }
+
+      // Other common segments (generic rules + examples). Keep these as *phrasing instructions* only.
+      // IMPORTANT: Do not address the user by their profession; only adapt the nouns inside questions.
+      const hay = `${seg} | ${occ} | ${siteType}`;
+      const isAccountant = /(רוא[\"״׳']?ח|רואה\s*חשבון|חשבונ|הנה[\"״׳']?ח|הנהלת\s*חשבונות|משרד\s*רו[\"״׳']?ח)/.test(hay);
+      const isInsuranceAgency = /(סוכן\s*ביטוח|סוכנות\s*ביטוח|סוכני\s*ביטוח|משרד\s*ביטוח)/.test(hay);
+      const isRealEstateBrokerage = /(תיווך|משרד\s*תיווך|מתווך|מתווכ|נדל[\"״׳']?ן|נדלן)/.test(hay);
+      const isArchitectureEngineering = /(אדריכ|אדריכלות|משרד\s*אדריכל|מהנדס|מהנדסת|הנדסה|קונסטרוקטור|תכנון\s*מבנים)/.test(hay);
+      const isClinic = /(קליניק|מרפא|פיזיותרפ|ריפוי\s*בעיסוק|דיאטנ|פסיכולוג|טיפול|שינ|רופא|רפוא|וטרינר|קוסמטיק)/.test(hay);
+      const isStudio = /(סטודיו|פילאטיס|יוגה|חדר\s*כושר|אימון|מאמנ|צילום|עיצוב|גרפיקה|Dance|ריקוד)/i.test(hay);
+      const isStore = /(חנות|בוטיק|קמעונא|שופ|מכולת|מרכול)/.test(hay);
+      const isFoodBiz = /(מסעד|בית\s*קפה|קפה|בר\b|פאב|קייטרינג|מזון)/.test(hay);
+      const isWorkshop = /(בית\s*מלאכה|נגרי|מסגרי|מוסך|סדנ|ייצור|מפעל)/.test(hay);
+      const isWarehouse = /(מחסן|לוגיסט|מרלו[\"״׳']?ג|מרכז\s*לוגיסטי)/.test(hay);
+      const isOnlineOnlyHint = /(אונליין|דיגיטל|ללא\s*מקום\s*פיזי|מהבית|עבודה\s*מהבית|remote|online)/i.test(hay);
+
+      if (isAccountant) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: ACCOUNTANT (Hebrew phrasing examples): prefer "משרד רו״ח" / "המשרד" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם משרד רו״ח שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך במשרד רו״ח?"',
+          '- Address: "באיזה יישוב נמצא המשרד?"',
+        );
+      }
+      if (isInsuranceAgency) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: INSURANCE AGENCY (Hebrew phrasing examples): prefer "סוכנות הביטוח" / "המשרד" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם סוכנות הביטוח שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך בסוכנות הביטוח?"',
+          '- Address: "באיזה יישוב נמצא המשרד?"',
+        );
+      }
+      if (isRealEstateBrokerage) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: REAL ESTATE BROKERAGE (Hebrew phrasing examples): prefer "משרד התיווך" / "המשרד" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם משרד התיווך שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך במשרד התיווך?"',
+          '- Address: "באיזה יישוב נמצא משרד התיווך?"',
+        );
+      }
+      if (isArchitectureEngineering) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: ARCHITECTURE/ENGINEERING (Hebrew phrasing examples): prefer "משרד האדריכלים/המהנדסים" / "המשרד" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם משרד האדריכלים/המהנדסים שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך במשרד?" (או "במשרד האדריכלים/המהנדסים")',
+          '- Address: "באיזה יישוב נמצא המשרד?"',
+        );
+      }
+      if (isClinic) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: CLINIC (Hebrew phrasing examples): prefer "הקליניקה" / "המרפאה" (whichever fits user wording) instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם הקליניקה שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך בקליניקה?"',
+          '- Address: "באיזה יישוב נמצאת הקליניקה?"',
+        );
+      }
+      if (isStudio) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: STUDIO (Hebrew phrasing examples): prefer "הסטודיו" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם הסטודיו שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך בסטודיו?"',
+          '- Address: "באיזה יישוב נמצא הסטודיו?"',
+        );
+      }
+      if (isStore) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: STORE/RETAIL (Hebrew phrasing examples): prefer "החנות" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם החנות שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך בחנות?"',
+          '- Address: "באיזה יישוב נמצאת החנות?"',
+        );
+      }
+      if (isFoodBiz) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: RESTAURANT/CAFE (Hebrew phrasing examples): prefer "המסעדה/בית הקפה" (mirror user wording) instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם המסעדה/בית הקפה שלך?"',
+          '- "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך במסעדה/בבית הקפה?"',
+          '- Address: "באיזה יישוב נמצאת המסעדה/בית הקפה?"',
+        );
+      }
+      if (isWarehouse) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: WAREHOUSE/LOGISTICS (Hebrew phrasing examples): prefer "המחסן/המרלוג" instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם המחסן/המרלוג?" (or keep "שם החברה" if it\'s a company entity)',
+          '- Address: "באיזה יישוב נמצא המחסן/המרלוג?"',
+        );
+      }
+      if (isWorkshop) {
+        systemPrompt.push(
+          '',
+          'SEGMENT: WORKSHOP/PRODUCTION (Hebrew phrasing examples): prefer "בית המלאכה/הסדנה/המפעל" (mirror user wording) instead of "העסק/בית העסק".',
+          'Examples:',
+          '- "מה שם העסק?" → "מה שם בית המלאכה/הסדנה שלך?"',
+          '- Address: "באיזה יישוב נמצא בית המלאכה/הסדנה?"',
+        );
+      }
+      if (isOnlineOnlyHint) {
+        systemPrompt.push(
+          '',
+          'ONLINE BUSINESS PHRASE (Hebrew): If the user indicates the activity is online / no physical location, phrase location/address questions as "כתובת להתכתבות/כתובת עסקית" rather than "מיקום העסק".',
+          'Example:',
+          '- "נא לציין יישוב." → "לאיזו כתובת להתכתבות/כתובת עסקית נרשום את הפרטים? באיזה יישוב?"',
+        );
+      }
+    } catch {
+      // best-effort
+    }
 
     // Add recovery instructions if needed
     if (needsRecovery) {
@@ -1038,6 +1310,56 @@ export class FlowEngine {
       );
     }
 
+    // CRITICAL (Topic-split / question-bank stages):
+    // When the stage suppresses the core missing-fields section, the model often lacks a deterministic view
+    // of what is already stored in userData, which can cause re-asking loops (especially for yes/no coverages).
+    // Provide a compact snapshot of current stage field values so the model can reliably skip already-answered fields.
+    try {
+      const suppress = stage.orchestration?.questionPolicy?.suppressCoreMissingFieldsSection === true;
+      const ud = actualUserData || {};
+      if (suppress && ud && typeof ud === 'object') {
+        const stageKeys = new Set<string>(Array.isArray(stage.fieldsToCollect) ? stage.fieldsToCollect : []);
+        // Include a small set of extra orchestration keys commonly used by topic-split flows.
+        for (const k of [
+          'segment_id',
+          'segment_name_he',
+          'segment_coverages_prefilled_v1',
+          'business_segment',
+          'business_site_type',
+          'has_physical_premises',
+          'has_employees',
+          'has_products_activity',
+          'business_interruption_type',
+          'policy_start_date',
+          'business_legal_entity_type',
+        ]) stageKeys.add(k);
+
+        const snapshot: Record<string, string | number | boolean> = {};
+        for (const [k, v] of Object.entries(ud)) {
+          if (!stageKeys.has(k)) continue;
+          if (typeof v === 'string') {
+            const s = v.trim();
+            if (!s) continue;
+            snapshot[k] = s.length > 260 ? `${s.slice(0, 260)}…` : s;
+          } else if (typeof v === 'number' || typeof v === 'boolean') {
+            snapshot[k] = v;
+          }
+        }
+
+        if (Object.keys(snapshot).length > 0) {
+          systemPrompt.push(
+            '',
+            'CURRENT USER DATA SNAPSHOT (for skipping already-answered fields):',
+            JSON.stringify(snapshot, null, 2),
+            '',
+            'CRITICAL: When selecting the next question, treat any key present in the snapshot as already answered and do NOT ask it again.',
+          );
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     // CRITICAL: Campaign date handling - no follow-up questions
     if (stage.fieldsToCollect.includes('campaign_start_date')) {
       systemPrompt.push(
@@ -1077,9 +1399,56 @@ export class FlowEngine {
 
     // IMPORTANT: Inject the stage prompt LAST (after generic missing-field guidance),
     // so the stage's own instructions and exact copy remain the final, most salient instruction.
-    const stagePromptToInject = stage.prompt
+    let stagePromptToInject = stage.prompt
       ? this.replaceTemplateVariables(stage.prompt, mergedTemplateContext)
       : '';
+
+    // Topic-split hardening:
+    // When suppressing the deterministic "missing fields" section, the stage prompt includes a compiled question list.
+    // Empirically, the model may still ask questions whose keys are already present in userData (esp. booleans=false),
+    // or ask questions whose ask_if condition is false. Filter them out *deterministically* here so they cannot be asked.
+    try {
+      const suppress = stage.orchestration?.questionPolicy?.suppressCoreMissingFieldsSection === true;
+      const ud = actualUserData || {};
+      if (suppress && stagePromptToInject && ud && typeof ud === 'object') {
+        const lines = stagePromptToInject.split('\n');
+        const filtered: string[] = [];
+
+        for (const line of lines) {
+          // Only attempt to filter compiled question lines of the form:
+          // - qid=... | key=some_field | ... | ask_if=... | ...
+          const keyMatch = line.match(/\bkey=([A-Za-z_][A-Za-z0-9_]*)\b/);
+          if (!keyMatch) {
+            filtered.push(line);
+            continue;
+          }
+
+          const key = keyMatch[1];
+          const v = (ud as any)[key];
+
+          // If the key is present (including boolean=false), do not show this question at all.
+          if (isPresentNonPlaceholder(v)) {
+            continue;
+          }
+
+          // If an ask_if is present on the line, evaluate and suppress the question if false.
+          const askIfMatch = line.match(/\bask_if=([^|]+)(?:\s+\|\s+|$)/);
+          if (askIfMatch) {
+            const expr = String(askIfMatch[1] || '').trim();
+            if (expr) {
+              const ok = evaluateCondition(expr, ud as Record<string, unknown>);
+              if (!ok) continue;
+            }
+          }
+
+          filtered.push(line);
+        }
+
+        stagePromptToInject = filtered.join('\n');
+      }
+    } catch {
+      // best-effort
+    }
 
     // Apply systemPromptHooks after stage prompt
     if (stage.orchestration?.systemPromptHooks?.afterPrompt) {
@@ -1128,14 +1497,32 @@ export class FlowEngine {
         }
       }
 
-      const missingFields = fields.filter(([fieldSlug]) =>
-        requiredFieldSlugs.includes(fieldSlug) && !(
-          fieldSlug in actualUserData &&
-          actualUserData[fieldSlug] !== undefined &&
-          actualUserData[fieldSlug] !== null &&
-          actualUserData[fieldSlug] !== ''
-        ),
-      );
+      // If we recently detected invalid values for fields in this stage, prioritize re-collecting them.
+      // This prevents the assistant from treating them as generic "missing" without stating they were invalid.
+      try {
+        const invalidRaw = (actualUserData as any).__invalid_fields;
+        const invalidAt = Number((actualUserData as any).__invalid_fields_at || 0);
+        const invalidIsRecent = Number.isFinite(invalidAt)
+          ? (Date.now() - invalidAt) < 1000 * 60 * 10
+          : false;
+        const invalidSlugs = Array.isArray(invalidRaw)
+          ? invalidRaw.map((x: any) => String(x || '').trim()).filter(Boolean)
+          : [];
+        const invalidInStage = invalidSlugs.filter((s) => requiredFieldSlugs.includes(s));
+        if (invalidIsRecent && invalidInStage.length > 0) {
+          requiredFieldSlugs = invalidInStage;
+        }
+      } catch {
+        // best-effort
+      }
+
+      const missingFields = fields.filter(([fieldSlug]) => {
+        if (!requiredFieldSlugs.includes(fieldSlug)) return false;
+        const v = (actualUserData as any)[fieldSlug];
+        if (!isPresentNonPlaceholder(v)) return true;
+        const def = (flowDefinition.fields as any)?.[fieldSlug];
+        return !validateFieldValue(fieldSlug, def, v).ok;
+      });
 
       if (missingFields.length > 0) {
         const fieldsContext = missingFields.map((field) => `* ${field[1].description}`);
@@ -1174,12 +1561,12 @@ export class FlowEngine {
       } else {
         // CRITICAL: Double-check that ALL required fields are actually present before saying completion
         // This prevents premature "that's it" messages when fields aren't actually saved
-        const allRequiredFieldsPresent = stage.fieldsToCollect.every((fieldSlug) => (
-          fieldSlug in actualUserData &&
-          actualUserData[fieldSlug] !== undefined &&
-          actualUserData[fieldSlug] !== null &&
-          actualUserData[fieldSlug] !== ''
-        ));
+        const allRequiredFieldsPresent = stage.fieldsToCollect.every((fieldSlug) => {
+          const v = (actualUserData as any)[fieldSlug];
+          if (!isPresentNonPlaceholder(v)) return false;
+          const def = (flowDefinition.fields as any)?.[fieldSlug];
+          return validateFieldValue(fieldSlug, def, v).ok;
+        });
 
         if (allRequiredFieldsPresent) {
           // All fields are actually collected - proceed to next stage (signup)
@@ -1198,12 +1585,12 @@ export class FlowEngine {
           );
         } else {
           // Some fields are missing - list them and ask for them
-          const trulyMissingFields = stage.fieldsToCollect.filter((fieldSlug) => !(
-            fieldSlug in actualUserData &&
-            actualUserData[fieldSlug] !== undefined &&
-            actualUserData[fieldSlug] !== null &&
-            actualUserData[fieldSlug] !== ''
-          ));
+          const trulyMissingFields = stage.fieldsToCollect.filter((fieldSlug) => {
+            const v = (actualUserData as any)[fieldSlug];
+            if (!isPresentNonPlaceholder(v)) return true;
+            const def = (flowDefinition.fields as any)?.[fieldSlug];
+            return !validateFieldValue(fieldSlug, def, v).ok;
+          });
           const fields = flowHelpers.extractStageFields(flowDefinition, options.stage);
           const missingFields = fields.filter(([slug]) => trulyMissingFields.includes(slug));
 
@@ -1267,8 +1654,86 @@ export class FlowEngine {
       }
     }
 
+    // Post-stage critical instructions:
+    // We inject these AFTER the stage prompt only when we must deterministically recover from invalid user input.
+    // This is rare by design (stage prompt should normally remain last and most salient).
+    const postStageCriticalLines: string[] = [];
+    try {
+      const userText = String(options.message || '').trim();
+      const digits = userText.replace(/\D/g, '');
+      const askedForPhone = /נייד|טלפון|phone/i.test(lastAssistantMessageText);
+      const askedForPolicyStartDate = /מאיזה\s*תאריך|תאריך\s*תחילת|שהביטוח\s*יתחיל|הביטוח\s*יתחיל|effective\s*date|start\s*date/i.test(lastAssistantMessageText);
+      const stageNeedsMobilePhone = Array.isArray(stage.fieldsToCollect) && stage.fieldsToCollect.includes('mobile_phone');
+      const stageNeedsPolicyStartDate = Array.isArray(stage.fieldsToCollect) && stage.fieldsToCollect.includes('policy_start_date');
+      const hasMobilePhone = (
+        'mobile_phone' in actualUserData &&
+        actualUserData.mobile_phone !== undefined &&
+        actualUserData.mobile_phone !== null &&
+        String(actualUserData.mobile_phone).trim() !== ''
+      );
+      const hasPolicyStartDate = (
+        'policy_start_date' in actualUserData &&
+        actualUserData.policy_start_date !== undefined &&
+        actualUserData.policy_start_date !== null &&
+        /^\d{4}-\d{2}-\d{2}$/.test(String(actualUserData.policy_start_date).trim())
+      );
+
+      if (stageNeedsMobilePhone && askedForPhone && !hasMobilePhone && digits.length > 0) {
+        const looksValidMobileCandidate = (() => {
+          // Accept common IL mobile inputs: 05xxxxxxxx, +9725xxxxxxxx, 9725xxxxxxxx (after stripping non-digits)
+          if (digits.length >= 11 && digits.startsWith('9725')) return true;
+          if (digits.length === 10 && digits.startsWith('05')) return true;
+          if (digits.length === 9 && digits.startsWith('5')) return true;
+          // Generic E.164-like minimum (fallback)
+          if (digits.length >= 9 && digits.length <= 15) return true;
+          return false;
+        })();
+
+        if (!looksValidMobileCandidate) {
+          postStageCriticalLines.push(
+            '',
+            'CRITICAL PHONE VALIDATION:',
+            '- The user attempted to provide a mobile phone number, but it was NOT saved (likely invalid / too short).',
+            '- You MUST tell the user the mobile number is not valid and ask them to enter it again.',
+            '- Do NOT proceed to any other questions (like email) until mobile_phone is collected.',
+            '- Examples of valid formats: 05XXXXXXXX, +9725XXXXXXXX, 9725XXXXXXXX.',
+          );
+        }
+      }
+
+      // Date validation (policy_start_date): if user attempted to provide a start date but it was not saved,
+      // force a clear retry UX (even when the stage suppresses the core missing-fields section).
+      if (stageNeedsPolicyStartDate && askedForPolicyStartDate && !hasPolicyStartDate) {
+        const looksLikeDateAttempt = (() => {
+          if (!userText) return false;
+          if (digits.length >= 2) return true;
+          // Common Hebrew relative date tokens + English fallbacks.
+          if (/(היום|מחר|ממחר|מחרתיים|בעוד|בשבוע|בחודש|תחילת|אמצע|סוף)\b/i.test(userText)) return true;
+          if (/\b(today|tomorrow|next\s+week|next\s+month|in\s+\d+\s+(days?|weeks?|months?))\b/i.test(userText)) return true;
+          return false;
+        })();
+
+        if (looksLikeDateAttempt) {
+          postStageCriticalLines.push(
+            '',
+            'CRITICAL POLICY START DATE VALIDATION:',
+            '- The user attempted to provide a policy start date, but it was NOT saved (invalid / out of allowed range).',
+            '- You MUST tell the user the date is not valid and ask them to enter it again.',
+            '- Allowed range: from today up to 45 days from today.',
+            '- Do NOT proceed to any other questions until policy_start_date is collected.',
+            '- Accept formats: YYYY-MM-DD (e.g., 2026-02-12) or DD/MM/YYYY (e.g., 12/02/2026) or Hebrew relative (e.g., "ממחר", "תחילת השבוע הבא").',
+          );
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     if (stagePromptToInject) {
       systemPrompt.push(stagePromptToInject);
+    }
+    if (postStageCriticalLines.length) {
+      systemPrompt.push(...postStageCriticalLines);
     }
 
     const resp = llmService.generateResponse({

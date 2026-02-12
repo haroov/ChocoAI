@@ -12,3 +12,5 @@ import './whatsapp';
 import './webhooks';
 import './views';
 import './agent';
+import './segmentsCatalog';
+import './chocoProducts';

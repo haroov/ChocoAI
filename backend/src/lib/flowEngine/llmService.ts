@@ -23,6 +23,8 @@ import { switchCaseGuard } from '../../utils/switchCaseGuard';
 import { logApiCall } from '../../utils/trackApiCall';
 import { logger } from '../../utils/logger';
 import type { FieldsExtractionContext } from './types';
+import { validateEmailValue } from './fieldValidation';
+import { parsePolicyStartDateToYmd } from './utils/dateTimeUtils';
 
 enum AIOperationType {
   DetermineFlow = 'determine_flow',
@@ -80,7 +82,7 @@ const OPENAI_PRICING: Record<string, { input: number; output: number }> = {
  * Can be disabled for specific flows if needed.
  */
 export const ADAPTIVE_TONE_TEMPLATE = `
-You are the trusted AI partner to the founder and entrepreneur. When speaking with users, you must adapt your emotional and cultural tone to match theirs. You silently monitor cues in the user's language — such as religious expressions, cultural references, generational tone, or ideological values — and adapt your style accordingly, without labeling or stereotyping.
+You are the trusted AI insurance broker for SMB and BOP insurance policies. When speaking with users, you must adapt your emotional and cultural tone to match theirs. You silently monitor cues in the user's language — such as religious expressions, cultural references, generational tone, or ideological values — and adapt your style accordingly, without labeling or stereotyping.
 
 When users speak in religious Hebrew (e.g., use expressions like ברוך השם, בעזרת ה׳, בלי נדר), reflect their language and tone naturally — without overdoing it. If the user uses religious phrases in other languages, respond with appropriate respectful expressions, adapting to their cultural context.
 
@@ -132,12 +134,103 @@ class LlmService {
       orderBy: { createdAt: 'asc' },
       take: 20,
     });
+    // IMPORTANT:
+    // We need the assistant message the user is *actually replying to*.
+    // Using "latest assistant message in the conversation" can be wrong when other assistant/system
+    // messages are written between turns (e.g., tool/status messages), which breaks deterministic parsing
+    // for answers like "לא"/"אין" (PO box, yes/no questions, etc.).
+    const currentMsgCreatedAt = await (async (): Promise<Date | null> => {
+      try {
+        const m = await prisma.message.findUnique({
+          where: { id: options.messageId },
+          select: { createdAt: true },
+        });
+        return m?.createdAt ?? null;
+      } catch {
+        return null;
+      }
+    })();
     const lastAssistant = await prisma.message.findFirst({
-      where: { conversationId: options.conversationId, role: 'assistant' },
+      where: {
+        conversationId: options.conversationId,
+        role: 'assistant',
+        ...(currentMsgCreatedAt ? { createdAt: { lt: currentMsgCreatedAt } } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       select: { content: true },
     });
     const lastAssistantQuestion = String(lastAssistant?.content || '').trim();
+
+    // Deterministic first-message extraction (no prior assistant question).
+    // This protects against early-stage "segment/name not detected" issues when the user provides
+    // intent + full name in the first message, before any question/expected-set exists.
+    try {
+      const msgRaw = String(options.message || '').trim();
+      const noPriorQuestion = !lastAssistantQuestion;
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      if (noPriorQuestion && msgRaw) {
+        const out: Record<string, unknown> = {};
+
+        // Name: look for two Hebrew tokens at the end (e.g., "... תודה רבה, עופרי גפן.").
+        if (hasField('first_name') || hasField('last_name')) {
+          const tail = msgRaw
+            .replace(/[“”"׳״']/g, '')
+            .replace(/[.,;:!?()[\]{}]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          const toks = tail.split(' ').filter(Boolean);
+          const he = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
+          const stop = new Set(['תודה', 'רבה', 'שלום', 'הי', 'היי', 'אהלן', 'אני', 'מבקשת', 'מבקש', 'רוצה']);
+          const filtered = toks.filter((t) => he(t) && !stop.has(t));
+          if (filtered.length >= 2) {
+            const last = filtered[filtered.length - 1];
+            const first = filtered[filtered.length - 2];
+            if (hasField('first_name')) out.first_name = first;
+            if (hasField('last_name')) out.last_name = last;
+          }
+        }
+
+        // Segment/site-type: insurance agent office.
+        if (hasField('business_segment')) {
+          if (/(^|[\s,.;:!?()\[\]{}])סוכנ(?:י|ים|ת|ות)?\s*ביטוח([\s,.;:!?()\[\]{}]|$)/.test(msgRaw)
+            || /סוכנות\s*ביטוח/.test(msgRaw)) {
+            out.business_segment = 'סוכן ביטוח';
+          }
+        }
+        if (hasField('business_site_type')) {
+          if (/משרד/.test(msgRaw)) out.business_site_type = 'משרד';
+        }
+
+        if (Object.keys(out).length > 0) return out;
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Fast-path deterministic extraction for high-confidence single-field answers.
+    // This avoids long/expensive LLM calls and prevents rare cases where the model emits huge garbage JSON
+    // (observed: email answer triggered a max-token JSON output causing request timeouts and "stuck" UX).
+    try {
+      const msgRaw = String(options.message || '').trim();
+      const asksForEmail = /מייל|אימייל|דואר\s*אלקטרוני|email/i.test(lastAssistantQuestion);
+      const hasAnyEmailField = Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'email')
+        || Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'user_email')
+        || Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'business_email');
+
+      // Heuristic: email answers are usually single-line and contain '@'.
+      if (asksForEmail && hasAnyEmailField && msgRaw && msgRaw.includes('@') && !/\s/.test(msgRaw)) {
+        const vr = validateEmailValue(msgRaw);
+        if (vr.ok) {
+          if (Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'email')) return { email: vr.normalized };
+          if (Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'user_email')) return { user_email: vr.normalized };
+          if (Object.prototype.hasOwnProperty.call(options.context.fieldsDescription || {}, 'business_email')) return { business_email: vr.normalized };
+          return { email: vr.normalized };
+        }
+      }
+    } catch {
+      // best-effort
+    }
 
     const client = await this.getClient();
     const prompt: ChatCompletionMessageParam[] = [
@@ -190,6 +283,8 @@ Example of empty fields:
       temperature: config.temperature,
       messages: prompt,
       response_format: zodResponseFormat(options.context.zodSchema as never, 'data'),
+      // Safety: extraction should be small; huge outputs cause timeouts/stuck UX.
+      max_tokens: 1200,
     });
     const latencyMs = Date.now() - tStart;
 
@@ -210,10 +305,15 @@ Example of empty fields:
         let cleanValue = value.trim();
         // Strip leading punctuation that models sometimes prepend (e.g. ".עורך דין")
         cleanValue = cleanValue.replace(/^[\\s.\\-–—,;:]+/g, '').trim();
+        // If stripping punctuation produced an empty string, treat as missing.
+        if (!cleanValue) {
+          delete json[key];
+          return;
+        }
         json[key] = cleanValue;
         // Treat common placeholder strings as missing values.
         // IMPORTANT: do NOT keep "null"/"none"/"undefined" as literal strings in userData.
-        if (['/', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined'].includes(cleanValue.toLowerCase())) {
+        if (['/', '//', '///', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined'].includes(cleanValue.toLowerCase())) {
           delete json[key];
         }
 
@@ -259,6 +359,9 @@ Example of empty fields:
       const msgRaw = String(options.message || '').trim();
       const msgDigits = msgRaw.replace(/\D/g, '');
       const msgIsMostlyDigits = msgDigits.length >= 6 && msgDigits.length === msgRaw.replace(/\s+/g, '').length;
+      // Israel business registration ID (ח"פ / ע"מ) is typically 8-10 digits.
+      // If the user reply looks like such an ID, do not allow it to populate address fields.
+      const msgLooksLikeBusinessRegistrationId = msgIsMostlyDigits && msgDigits.length >= 8 && msgDigits.length <= 10;
       const lastQ = lastAssistantQuestion;
 
       const expected = new Set<string>();
@@ -270,7 +373,26 @@ Example of empty fields:
 
       // Common "single answer" questions in the SMB flows
       if (/מספר\s*הזהות|ת[\"״׳']?ז|תעודת\s*זהות/i.test(lastQ)) addIfExists('user_id', 'legal_id');
-      if (/שם\s*(בית\s*)?העסק|מה\s*שם\s*העסק/i.test(lastQ)) addIfExists('business_name');
+      // Business name (segment-aware): accept "חברה/סוכנות" and "משרד/קליניקה/סטודיו/חנות/מסעדה/סדנה/מחסן" variants.
+      if (/שם\s*(?:בית\s*)?(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)|מה\s*שם\s*(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)|איך\s*נקרא\s*(?:בית\s*)?(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)/i.test(lastQ)) {
+        addIfExists('business_name');
+      }
+      // Occupation / business segment (Flow 01 Q040 and similar)
+      if (/במה\s+.*עוסק|במה\s+.*עוסקת|מה\s+.*הפעילות|פעילות\s+העסק|מה\s+.*העיסוק|מה\s+.*המקצוע|עיסוק|מקצוע|occupation/i.test(lastQ)) {
+        addIfExists(
+          'business_segment',
+          'business_occupation',
+          'segment_description',
+          'industry',
+          'activity_description',
+          'business_used_for',
+          'business_activity_and_products',
+        );
+      }
+      // Business site type (Flow 01 Q033 and similar)
+      if (/סוג\s+העסק|סוג\s+המקום|סיווג\s+עסק|משרד\s*\/\s*חנות|קליניקה|מחסן|site\s*type/i.test(lastQ)) {
+        addIfExists('business_site_type', 'business_site_type_other', 'has_physical_premises');
+      }
       if (/ח[\"״׳']?פ|ע[\"״׳']?מ|מספר\s*(?:רישום|ח\\.פ|ע\\.מ)/i.test(lastQ)) addIfExists('business_registration_id', 'entity_tax_id', 'regNum');
       if (/מקום\s*פיזי|פעילות\s*מתבצעת|הכל\s*אונליין|משרד\/חנות\/קליניקה/i.test(lastQ)) addIfExists('has_physical_premises');
       if (/עובדים\s*שכירים|יש\s*לעסק\s*עובדים|מעסיק/i.test(lastQ)) addIfExists('has_employees');
@@ -278,16 +400,100 @@ Example of empty fields:
       if (/הפסקת\s*פעילות|אובדן\s*הכנסה|אובדן\s*תוצאתי/i.test(lastQ)) addIfExists('business_interruption_type');
       if (/יישוב|עיר/i.test(lastQ)) addIfExists('business_city');
       if (/רחוב/i.test(lastQ)) addIfExists('business_street');
-      if (/מס['\"״׳']?\s*בית|מספר\s*בית/i.test(lastQ)) addIfExists('business_house_number');
+      // House number can be phrased as: "מס' בית", "מס' הבית", "מספר בית", "מספר הבית"
+      if (/מס['\"״׳']?\s*(?:ה)?בית|מספר\s*(?:ה)?בית/i.test(lastQ)) addIfExists('business_house_number');
       if (/מיקוד/i.test(lastQ)) addIfExists('business_zip');
-      if (/ת\\.ד|תא\s*דואר/i.test(lastQ)) addIfExists('business_po_box');
+      // PO box can be phrased as "ת.ד", "ת״ד", "תא דואר", or "תיבת דואר".
+      if (/ת\\.?[\"״׳']?ד|תא\\s*דואר|תיבת\\s*דואר|po\\s*box/i.test(lastQ)) addIfExists('business_po_box');
+      // Legal entity type (חברה/עוסק/שותפות...) is a single-choice question; avoid cross-field pollution.
+      if (/סוג\s+(?:העסק|הישות)|חברה\s+פרטית|עוסק\s+מורשה|עוסק\s+זעיר|שותפות\s+רשומה|חברה\s+ציבורית|legal\s*entity/i.test(lastQ)) {
+        addIfExists('business_legal_entity_type');
+      }
+      // Premises / building questions (topic-split flows 03-06 and similar)
+      // NOTE: addIfExists() keeps this safe across flows (only keys present in schema are added).
+      // Building relationship ("בעלים/שוכר/חוכר לדורות") can be phrased in multiple ways.
+      // We match both the Hebrew "זיקה ... למבנה" phrasing and the common options list.
+      if (
+        /זיקת.*למבנה/i.test(lastQ)
+        || (/(^|[\s(])בעלים([\s,.)]|$)/.test(lastQ) && /שוכר/.test(lastQ) && /חוכר/.test(lastQ))
+        || /relationship\s*to\s*(?:the\s*)?building|relation\s*to\s*(?:the\s*)?building/i.test(lastQ)
+      ) {
+        addIfExists('building_relation');
+      }
+      if (/שטח.*מ[\"״׳']?ר|sqm|square\s*meters?/i.test(lastQ)) addIfExists('premises_area_sqm');
+      if (/חומרי\s*הבנייה|חומרי\s*בנייה|המבנה\s*בנוי|building\s*materials?/i.test(lastQ)) addIfExists('building_materials');
+      if (/חומרי\s*הגג|הגג\s*בנוי|roof\s*materials?/i.test(lastQ)) addIfExists('roof_materials');
+      if (/פל[-\s]?קל|פלקל|pal\s*kal/i.test(lastQ)) addIfExists('pal_kal_construction', 'pal_kal_details');
+      if (/העסק\s*בקומה|\bbusiness\s*floor\b|(?<!total\s*)\bfloor\b/i.test(lastQ)) addIfExists('business_floor');
+      if (/מתוך\s*קומות|total\s*floors|\bfloors\b/i.test(lastQ)) addIfExists('building_total_floors');
+      if (/שנת\s*(?:הקמת|בניית|בנייה)|year\s*built/i.test(lastQ)) addIfExists('building_year_built');
+      // Additional locations (branches) - yes/no, optionally with count.
+      if (/כתובות\s+נוספות|ממוקם\s+בכתובות\s+נוספות|סניפים\s+נוספים|מיקומים\s+נוספים/i.test(lastQ)) {
+        addIfExists('business_has_additional_locations', 'business_additional_locations_count');
+      }
+      // Policy start date (effective date) - normalize to ISO (YYYY-MM-DD).
+      if (/מאיזה\s*תאריך|תאריך\s*תחילת|שהביטוח\s*יתחיל|הביטוח\s*יתחיל|effective\s*date|start\s*date/i.test(lastQ)) {
+        addIfExists('policy_start_date');
+      }
+      // Premises surroundings / water-flood risk (Insurance SMB Topic-Split Flow 04 and similar).
+      // Keep these patterns generic and keyed off Hebrew copy, but safe because addIfExists() only
+      // includes keys present in the current extraction schema.
+      if (/תאר.*סביבת.*ממוקם|תאר.*סביבת.*ממוקמת|סביבת\s+(?:בית\s*)?(?:העסק|המשרד)|where\s+is\s+(?:the\s*)?(?:business|office)\s+located/i.test(lastQ)) {
+        addIfExists('environment_description');
+      }
+      if (/ציין.*(עסקים|מבנים).*בשכנות|העסקים\s+והמבנים\s+בשכנות|neighboring\s+(?:business|businesses|buildings)|nearby\s+(?:business|businesses|buildings)/i.test(lastQ)) {
+        addIfExists('neighboring_businesses');
+      }
+      if (/סחורות\s+מסוכנות|מתלקחות|hazardous\s+goods|flammable/i.test(lastQ)) {
+        addIfExists('hazardous_goods_nearby', 'hazardous_goods_details');
+      }
+      if (/קיר\s+משותף|shared\s+wall/i.test(lastQ)) {
+        addIfExists('shared_wall', 'shared_wall_details');
+      }
+      if (/נמוך\s+מגובה\s+פני\s+הקרקע|מתחת\s+לגובה\s+פני\s+הקרקע|below\s+ground/i.test(lastQ)) {
+        addIfExists('below_ground');
+      }
+      if (/גורם\s+שעלול\s+לגרום\s+לשיטפון|וואדי|תעלה|נחל|ים|מאגר\s+מים|nearby\s+flood\s+source/i.test(lastQ)) {
+        addIfExists('flood_source_nearby', 'flood_source_details');
+      }
+      if (/(?:ב-?\s*3\s*השנים\s+האחרונות).*(?:נזקי\s+טבע|שיטפון)|נזקי\s+טבע.*ב-?\s*3\s*השנים|previous.*flood/i.test(lastQ)) {
+        addIfExists('nature_damage_last_3y', 'nature_damage_last_3y_details');
+      }
+
       if (/דואר\s*אלקטרוני|אימייל|מייל|email/i.test(lastQ)) addIfExists('business_email', 'email', 'user_email');
-      if (/טלפון/i.test(lastQ)) addIfExists('business_phone', 'phone', 'user_phone', 'mobile_phone');
-      if (/התפקיד\s*שלך\s*בעסק|זיקת\s*המציע/i.test(lastQ)) addIfExists('insured_relation_to_business');
-      if (/לקוח\s*חדש|לקוח\s*(קיים|ותיק)|האם\s+אתה\s+לקוח/i.test(lastQ)) addIfExists('is_new_customer');
+      // Phone questions are often phrased as "מספר נייד" (without the word "טלפון").
+      if (/טלפון|נייד|מספר\s*נייד|mobile/i.test(lastQ)) addIfExists('business_phone', 'phone', 'user_phone', 'mobile_phone');
+      // Relation/role question can be phrased with segment nouns (office/clinic/studio/store/etc.)
+      if (/התפקיד\s*שלך\s*(?:בעסק|ב(?:ה)?משרד|ב(?:ה)?סוכנות(?:\s*הביטוח)?|ב(?:ה)?קליניקה|ב(?:ה)?מרפאה|ב(?:ה)?סטודיו|ב(?:ה)?חנות|ב(?:ה)?מסעדה|בבית\s*הקפה|ב(?:ה)?סדנה|בבית\s*המלאכה|ב(?:ה)?מחסן|ב(?:ה)?מרלוג)|זיקת\s*המציע/i.test(lastQ)) addIfExists('insured_relation_to_business');
+      // Customer status question can be phrased in masculine/feminine:
+      // "האם אתה לקוח חדש או קיים?" / "האם את לקוחה חדשה או קיימת?"
+      if (/לקוח(?:ה)?\s*חדש(?:ה)?|לקוח(?:ה)?\s*(?:קיים|קיימת|ותיק|ותיקה)|האם\s+את(?:ה)?\s+לקוח(?:ה)?/i.test(lastQ)) {
+        addIfExists('is_new_customer');
+      }
       if (/איך\s*הגעת|הגעת\s*אלינו|מקור\s*(?:הפניה|פנייה)|referral\s*source/i.test(lastQ)) addIfExists('referral_source');
       if (/שם\s*פרטי|השם\s*הפרטי|מה\s+השם\s+הפרטי/i.test(lastQ)) addIfExists('first_name');
-      if (/שם\s*משפחה|השם\s+משפחה|מה\s+שם\s+המשפחה/i.test(lastQ)) addIfExists('last_name');
+      // Accept both "שם משפחה" and "שם המשפחה" (common phrasing in deterministic invalid prompts).
+      if (/שם\s*(?:ה)?משפחה|השם\s+(?:ה)?משפחה|מה\s+שם\s+(?:ה)?משפחה/i.test(lastQ)) addIfExists('last_name');
+      // Coverage selection questions (Flow 02 and others): map question text → specific *_selected field.
+      if (/חבות\s*מעבידים/i.test(lastQ)) addIfExists('ch8_employers_selected');
+      if (/צד\s*שלישי|צד\s*ג|צד\s*ג['\"״׳']?/i.test(lastQ)) addIfExists('ch7_third_party_selected');
+      if (/טרור/i.test(lastQ)) addIfExists('terror_selected');
+      if (/סייבר/i.test(lastQ)) addIfExists('cyber_selected');
+      if (/תכולה/i.test(lastQ)) addIfExists('ch1_contents_selected');
+      // Stock/inventory selection is asked separately from contents/equipment.
+      if (/מלאי|inventory|stock/i.test(lastQ)) addIfExists('ch1_stock_selected');
+      if (/מבנה/i.test(lastQ)) addIfExists('ch2_building_selected');
+      if (/פריצה|שוד/i.test(lastQ)) addIfExists('ch4_burglary_selected');
+      if (/כספים|מזומן|קופה|כספת/i.test(lastQ)) addIfExists('ch5_money_selected');
+      // Transit should be asked only when the question is explicitly about goods/property in transit,
+      // not when the word "בהעברה" appears in a *money* context.
+      if (/בהובלות|הובלות|רכוש\s+או\s+סחורה.*(בהובלות|בהעברה)|in\s+transit/i.test(lastQ)) addIfExists('ch6_transit_selected');
+      if (/אחריות\s*מוצר|חבות\s*מוצר/i.test(lastQ)) addIfExists('ch9_product_selected');
+      if (/ציוד\s*אלקטרוני|מחשבים|שרתים/i.test(lastQ)) addIfExists('ch10_electronic_selected');
+
+      // Disambiguation: follow-up burglary questions often mention "תכולה" but should NOT flip contents selection.
+      // If we're asking about burglary/shod, constrain expected to burglary only.
+      if (expected.has('ch4_burglary_selected')) expected.delete('ch1_contents_selected');
 
       // If we know what we asked, prune aggressively for short / single-answer replies.
       const looksLikeSingleAnswer = msgIsMostlyDigits || (msgRaw.length <= 80 && !msgRaw.includes('\n'));
@@ -303,19 +509,685 @@ Example of empty fields:
         }
       }
 
+      // Hard guardrail: regardless of what the model extracted, never accept an ID-like numeric token
+      // as address fields. This prevents "business_registration_id" from spilling into city/street/etc.
+      if (msgLooksLikeBusinessRegistrationId) {
+        for (const k of ['business_city', 'business_street', 'business_house_number', 'business_zip', 'business_po_box']) {
+          delete (json as any)[k];
+        }
+        // Also: do not allow a ח"פ/ע"מ-like reply to populate other non-ID fields (dates, counts, enums, etc.).
+        // This directly addresses observed production pollution where the same registration number got saved into
+        // unrelated fields like policy_start_date / *_count / business_interruption_type.
+        const keepIdLike = new Set<string>([
+          'business_registration_id',
+          'entity_tax_id',
+          'regNum',
+          // Some flows still use legal_id/user_id; keep them only if they were expected in this turn.
+          ...(expected.has('user_id') ? ['user_id'] : []),
+          ...(expected.has('legal_id') ? ['legal_id'] : []),
+        ]);
+        for (const k of Object.keys(json)) {
+          if (!keepIdLike.has(k)) delete (json as any)[k];
+        }
+      }
+
+      // Extra guardrail: when the user is answering an occupation/site-type question,
+      // never let that overwrite personal name fields.
+      if (looksLikeSingleAnswer) {
+        const isOccupationLike = expected.has('business_segment')
+          || expected.has('business_occupation')
+          || expected.has('business_used_for')
+          || expected.has('business_activity_and_products')
+          || expected.has('business_site_type');
+        if (isOccupationLike && !expected.has('first_name') && !expected.has('last_name')) {
+          for (const k of ['first_name', 'last_name', 'proposer_first_name', 'proposer_last_name', 'user_first_name', 'user_last_name']) {
+            delete (json as any)[k];
+          }
+        }
+      }
+
       // Deterministic overrides for critical single-field questions:
       // - business_name: store the full message (avoid partial extraction)
-      if (expected.has('business_name') && hasField('business_name')) {
-        const multiField = msgRaw.includes('\n')
-          || /@/.test(msgRaw)
-          || /ח[\"״׳']?פ|ע[\"״׳']?מ/.test(msgRaw)
+      const askedForBusinessName = /שם\s*(?:בית\s*)?(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)|מה\s*שם\s*(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)|איך\s*נקרא\s*(?:בית\s*)?(?:החברה|חברה|ה?סוכנות(?:\s*הביטוח)?|סוכנות(?:\s*הביטוח)?|העסק|ה?משרד|ה?קליניקה|ה?מרפאה|ה?סטודיו|ה?חנות|ה?מסעדה|בית\s*הקפה|ה?סדנה|בית\s*המלאכה|ה?מחסן|ה?מרלוג)/i.test(lastQ);
+      if ((askedForBusinessName && hasField('business_name')) || (expected.has('business_name') && hasField('business_name'))) {
+        // Allow multi-line business names (e.g., "חברת X\nבע\"מ") but avoid
+        // capturing full address/contact blocks as the business name.
+        const multiField = /@/.test(msgRaw)
           || msgDigits.length >= 7
           || /רחוב|יישוב|עיר|מיקוד|ת\\.ד/i.test(msgRaw);
-        if (!multiField && msgRaw) {
+        if (msgRaw && !multiField) {
           json.business_name = msgRaw;
           // When asked for business name, never set address fields from the same answer.
           for (const k of ['business_city', 'business_street', 'business_house_number', 'business_zip', 'business_po_box', 'business_registration_id']) {
             delete (json as any)[k];
+          }
+          // Also: prune everything else. This prevents the model from "re-sending" old values
+          // (e.g. a previous invalid phone/ID) into unrelated fields during a business-name answer.
+          for (const k of Object.keys(json)) {
+            if (k !== 'business_name') delete (json as any)[k];
+          }
+        }
+      }
+
+      // Deterministic yes/no mapping for explicit token replies:
+      // Many insurance stages ask single (or 2) yes/no questions per turn.
+      // When the user replies with a single explicit yes/no token ("כן"/"לא"/true/false),
+      // store it deterministically for the expected boolean field(s), even if the model failed.
+      try {
+        const fieldTypes = options.context.fieldsType || {};
+        const parseExplicitYesNo = (raw: string): boolean | null => {
+          const s = String(raw || '').trim().toLowerCase();
+          if (!s) return null;
+          // Common Hebrew + EN tokens (keep in sync with Flow 04 accepted values).
+          if (['כן', 'y', 'yes', 'true', '1'].includes(s)) return true;
+          if (['לא', 'n', 'no', 'false', '0'].includes(s)) return false;
+          return null;
+        };
+        const explicit = parseExplicitYesNo(msgRaw);
+        const isSingleToken = msgRaw.length <= 16 && !/\s/.test(msgRaw);
+        if (explicit !== null && isSingleToken) {
+          const boolExpected = Array.from(expectedFromLastQuestion).filter((k) => fieldTypes[k] === 'boolean');
+          if (boolExpected.length > 0) {
+            for (const k of boolExpected) (json as any)[k] = explicit;
+            // For a single-token yes/no reply, keep ONLY the boolean fields we were expecting.
+            for (const k of Object.keys(json)) {
+              if (!boolExpected.includes(k)) delete (json as any)[k];
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
+
+      // Deterministic free-text mapping for specific insurance fields:
+      // For short replies to a single expected textarea/text field, store the full message as-is.
+      // This avoids model placeholders like ":" / "." and fixes "answered but not saved" cases.
+      try {
+        const fieldTypes = options.context.fieldsType || {};
+        const deterministicTextKeys = new Set<string>([
+          'environment_description',
+          'neighboring_businesses',
+          'hazardous_goods_details',
+          'shared_wall_details',
+          'flood_source_details',
+          'nature_damage_last_3y_details',
+        ]);
+        const explicitYesNo = (() => {
+          const s = msgRaw.trim().toLowerCase();
+          return ['כן', 'לא', 'y', 'n', 'yes', 'no', 'true', 'false', '0', '1'].includes(s);
+        })();
+        const isShortish = msgRaw.length <= 1200; // allow textarea-sized replies
+        const isMultiField = msgRaw.includes('\n') || /@/.test(msgRaw);
+        if (!explicitYesNo && isShortish && !isMultiField && msgRaw) {
+          const expectedText = Array.from(expectedFromLastQuestion).filter((k) =>
+            deterministicTextKeys.has(k) && fieldTypes[k] === 'string',
+          );
+          if (expectedText.length === 1) {
+            const k = expectedText[0];
+            (json as any)[k] = msgRaw.trim();
+            for (const kk of Object.keys(json)) {
+              if (kk !== k) delete (json as any)[kk];
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
+
+      // - email/user_email/business_email: for short single-answer replies, store deterministically.
+      // This prevents partial extraction like "@domain.com" from being persisted.
+      if ((expected.has('email') || expected.has('user_email') || expected.has('business_email'))
+        && (hasField('email') || hasField('user_email') || hasField('business_email'))) {
+        const isShortAnswer = msgRaw.length <= 120 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n') || /@/.test(msgRaw) === false; // email must include '@'
+        // Guardrail: when we're asking for an email, never allow this turn to overwrite name fields.
+        for (const k of ['first_name', 'last_name', 'proposer_first_name', 'proposer_last_name', 'user_first_name', 'user_last_name']) {
+          delete (json as any)[k];
+        }
+
+        if (isShortAnswer && !multiField && msgRaw) {
+          const s = msgRaw.trim();
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
+
+          // IMPORTANT:
+          // - Even if the value is invalid, keep it under the email field so validation can flag it.
+          // - But prune EVERYTHING else so an "email-like" typo cannot overwrite unrelated fields.
+          if (hasField('email')) json.email = s;
+          if (hasField('user_email')) json.user_email = s;
+          if (hasField('business_email')) json.business_email = s;
+
+          if (!isEmail) {
+            // Keep raw `s` for validation (do not normalize partials).
+          }
+
+          for (const k of Object.keys(json)) {
+            if (!['email', 'user_email', 'business_email'].includes(k)) delete (json as any)[k];
+          }
+        }
+      }
+
+      // - user_id/legal_id (Israel): if the assistant asked for ID and the reply is a plain digit string,
+      // keep ONLY the ID fields deterministically (prevents the model from re-sending an old invalid ID).
+      if ((expected.has('user_id') || expected.has('legal_id')) && (hasField('user_id') || hasField('legal_id'))) {
+        if (msgIsMostlyDigits && msgDigits.length >= 8 && msgDigits.length <= 9) {
+          if (hasField('user_id')) json.user_id = msgDigits;
+          if (hasField('legal_id') && !hasField('user_id')) json.legal_id = msgDigits;
+          for (const k of Object.keys(json)) {
+            if (!['user_id', 'legal_id'].includes(k)) delete (json as any)[k];
+          }
+        }
+      }
+
+      // Deterministic overrides for common "yes/no" replies.
+      // When a user answers "כן/לא" to a specific boolean field question, do not trust the model to pick the right field.
+      const parseYesNoToken = (raw: string): boolean | null => {
+        const s = String(raw || '').trim().toLowerCase();
+        if (!s) return null;
+        // Accept single-token replies (common in WhatsApp/web): "כן"/"לא"/1/0/true/false
+        if (/^(כן|yes|y|true|1)$/.test(s)) return true;
+        if (/^(לא|no|n|false|0)$/.test(s)) return false;
+        return null;
+      };
+
+      const isBoolLikeField = (k: string): boolean => {
+        if (options.context.fieldsType?.[k] === 'boolean') return true;
+        if (k.endsWith('_selected')) return true;
+        if (/^ch\d+_/.test(k)) return true;
+        if (k === 'has_employees' || k === 'has_products_activity' || k === 'has_physical_premises') return true;
+        return false;
+      };
+
+      // If exactly one boolean-like field is expected and the answer is a clean yes/no token, set it deterministically.
+      const expectedBoolCandidates = Array.from(expected).filter((k) => isBoolLikeField(k) && hasField(k));
+      if (expectedBoolCandidates.length === 1) {
+        const yn = parseYesNoToken(msgRaw);
+        if (yn !== null) {
+          const only = expectedBoolCandidates[0];
+          (json as any)[only] = yn;
+          for (const k of Object.keys(json)) {
+            if (k !== only) delete (json as any)[k];
+          }
+        }
+      }
+
+      // - business_interruption_type: yes/no phrasing should map to the allowed enum values.
+      // (Flow 02 asks a yes/no question but stores an enum: "לא" / "אובדן הכנסה (פיצוי יומי)".)
+      const askedAboutBusinessInterruption = /הפסקת\s*פעילות|אובדן\s*הכנסה|אובדן\s*תוצאתי/i.test(String(lastQ || ''));
+      if (askedAboutBusinessInterruption || (expected.has('business_interruption_type') && hasField('business_interruption_type'))) {
+        const yn = parseYesNoToken(msgRaw);
+        if (yn !== null) {
+          json.business_interruption_type = yn ? 'אובדן הכנסה (פיצוי יומי)' : 'לא';
+          for (const k of Object.keys(json)) {
+            if (k !== 'business_interruption_type') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - business_interruption_type: also accept direct option labels / WhatsApp numbered answers.
+      if (askedAboutBusinessInterruption || (expected.has('business_interruption_type') && hasField('business_interruption_type'))) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+          const s = cleanChoiceToken(msgRaw);
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            1: 'לא',
+            2: 'אובדן הכנסה (פיצוי יומי)',
+          };
+          const allowed = new Map<string, string>([
+            ['לא', 'לא'],
+            ['אובדן הכנסה (פיצוי יומי)', 'אובדן הכנסה (פיצוי יומי)'],
+            ['no', 'לא'],
+            ['yes', 'אובדן הכנסה (פיצוי יומי)'],
+          ]);
+          const normalized = mapNum[s] || allowed.get(s) || allowed.get(lowered) || '';
+          if (normalized) {
+            json.business_interruption_type = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_interruption_type') delete (json as any)[k];
+            }
+          } else {
+            // Do not persist invalid enum values (prevents cross-field pollution overwriting a required enum).
+            delete (json as any).business_interruption_type;
+          }
+        }
+      }
+
+      // - insured_relation_to_business: map short answers deterministically to allowed enum options.
+      // Users often reply with a single token ("בעלים") or a WhatsApp number (1/2/3).
+      if (expected.has('insured_relation_to_business') && hasField('insured_relation_to_business')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|יישוב|עיר|מיקוד|ת\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+          const s = cleanChoiceToken(msgRaw);
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            1: 'בעלים',
+            2: 'מורשה חתימה',
+            3: 'מנהל',
+          };
+          const allowed = new Map<string, string>([
+            ['בעלים', 'בעלים'],
+            ['owner', 'בעלים'],
+            ['מורשה חתימה', 'מורשה חתימה'],
+            ['מורשה', 'מורשה חתימה'],
+            ['signatory', 'מורשה חתימה'],
+            ['מנהל', 'מנהל'],
+            ['manager', 'מנהל'],
+          ]);
+          const normalized = mapNum[s] || allowed.get(s) || allowed.get(lowered) || '';
+          if (normalized) {
+            (json as any).insured_relation_to_business = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'insured_relation_to_business') delete (json as any)[k];
+            }
+          } else {
+            // Do not persist invalid enum values.
+            delete (json as any).insured_relation_to_business;
+          }
+        }
+      }
+
+      // - business_legal_entity_type: tolerate short/partial replies and map to allowed enum values.
+      // (We observed answers like "מורשה" which must normalize to "עוסק מורשה".)
+      if (expected.has('business_legal_entity_type') && hasField('business_legal_entity_type')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+          const s = cleanChoiceToken(msgRaw);
+          const sNoSpace = s.replace(/\s+/g, '');
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            1: 'חברה פרטית',
+            2: 'עוסק מורשה',
+            3: 'עוסק פטור',
+            4: 'עוסק זעיר',
+            5: 'שותפות',
+            6: 'אגודה',
+            7: 'עמותה',
+            8: 'חברה ציבורית',
+          };
+          const normalized = (() => {
+            if (mapNum[s]) return mapNum[s];
+            // Hebrew partials
+            if (sNoSpace === 'עמ' || /^ע\.?מ\.?$/i.test(sNoSpace)) return 'עוסק מורשה';
+            // Company Ltd. suffix: בע"מ / חברה בע"מ -> company (in this flow we map to "חברה פרטית")
+            if (sNoSpace === 'בעמ' || /בע.?מ/.test(sNoSpace) || /חברה.*בע.?מ/.test(sNoSpace)) return 'חברה פרטית';
+            if (/מורשה/.test(s)) return 'עוסק מורשה';
+            if (/זעיר/.test(s)) return 'עוסק זעיר';
+            if (/פטור/.test(s)) return 'עוסק פטור';
+            if (/שותפ/.test(s)) return 'שותפות';
+            if (/ציבור/.test(s)) return 'חברה ציבורית';
+            if (/פרט/.test(s)) return 'חברה פרטית';
+            if (sNoSpace === 'חפ' || /ח[\"״׳']?פ/.test(msgRaw)) return 'חברה פרטית';
+            if (sNoSpace === 'חצ' || /ח[\"״׳']?צ/.test(msgRaw)) return 'חברה ציבורית';
+            if (/עמות/.test(s)) return 'עמותה';
+            if (/אגוד/.test(s)) return 'אגודה';
+            // English-ish fallbacks
+            if (/\bsole\b|\bproprietor\b|\bself\b/i.test(lowered)) return 'עוסק מורשה';
+            if (/\bpartnership\b/i.test(lowered)) return 'שותפות';
+            if (/\bpublic\b/i.test(lowered)) return 'חברה ציבורית';
+            if (/\bprivate\b/i.test(lowered)) return 'חברה פרטית';
+            if (/\bauthorized\s+dealer\b|\bvat\b|\bregistered\b/i.test(lowered)) return 'עוסק מורשה';
+            if (/\bexempt\b/i.test(lowered)) return 'עוסק פטור';
+            if (/\bnon[-\s]?profit\b|\bngo\b/i.test(lowered)) return 'עמותה';
+            if (/\bassociation\b|\bcooperative\b/i.test(lowered)) return 'אגודה';
+            return '';
+          })();
+
+          if (normalized) {
+            json.business_legal_entity_type = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_legal_entity_type') delete (json as any)[k];
+            }
+          } else {
+            // Do not persist invalid enum values.
+            delete (json as any).business_legal_entity_type;
+          }
+        }
+      }
+
+      // - business_city: store the full reply deterministically (short answer).
+      if (expected.has('business_city') && hasField('business_city')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|מיקוד|ת\\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          json.business_city = msgRaw;
+          for (const k of Object.keys(json)) {
+            if (k !== 'business_city') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - business_street / business_house_number: handle combined answer like "היובלים 52".
+      if (expected.has('business_street') && hasField('business_street')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /מיקוד|ת\\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleaned = msgRaw.replace(/^רחוב\s*/i, '').trim();
+          const m = cleaned.match(/^(.+?)\s+(\d+[A-Za-z\u0590-\u05FF]?)$/);
+          const street = (m ? m[1] : cleaned).trim();
+          const house = m ? m[2].trim() : '';
+          // Guardrail: street must contain at least one letter (Hebrew/Latin),
+          // otherwise a numeric-only reply like "52" should NOT populate business_street.
+          if (street && /[A-Za-z\u0590-\u05FF]/.test(street)) {
+            json.business_street = street;
+            if (house && hasField('business_house_number')) {
+              json.business_house_number = house;
+            }
+            for (const k of Object.keys(json)) {
+              if (!['business_street', 'business_house_number'].includes(k)) delete (json as any)[k];
+            }
+          }
+        }
+      }
+
+      if (expected.has('business_house_number') && hasField('business_house_number')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|יישוב|עיר|מיקוד|ת\\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          const digits = msgRaw.replace(/\D/g, '');
+          // Guardrail: house number should not look like a business reg ID.
+          if (digits && digits.length <= 5) {
+            json.business_house_number = digits;
+            // IMPORTANT:
+            // If we already deterministically extracted the street from the same reply
+            // (e.g. "היובלים 52"), do NOT delete it.
+            const keep = new Set<string>(['business_house_number']);
+            if (expected.has('business_street') && typeof (json as any).business_street === 'string' && String((json as any).business_street).trim()) {
+              keep.add('business_street');
+            }
+            for (const k of Object.keys(json)) {
+              if (!keep.has(k)) delete (json as any)[k];
+            }
+          }
+        }
+      }
+
+      if (expected.has('business_zip') && hasField('business_zip')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n') || /@/.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          const token = String(msgRaw || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          const isUnknown = token === 'לא ידוע'
+            || token === 'לא יודע'
+            || token === 'לא יודעת'
+            || token === 'unknown'
+            || token === 'dont know'
+            || token === "don't know";
+          if (isUnknown) {
+            json.business_zip = 'לא ידוע';
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_zip') delete (json as any)[k];
+            }
+            return json;
+          }
+          const digits = msgRaw.replace(/\D/g, '');
+          // Israel ZIP is usually 7 digits; accept 5-7 to be tolerant.
+          const lenOk = digits.length === 5 || digits.length === 7;
+          const startsOk = digits.length > 0 && digits[0] !== '0';
+          // Treat "0" / "00000" / "0000000" as "unknown"
+          if (digits && /^0+$/.test(digits)) {
+            json.business_zip = 'לא ידוע';
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_zip') delete (json as any)[k];
+            }
+            return json;
+          }
+          if (lenOk && startsOk) {
+            json.business_zip = digits;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_zip') delete (json as any)[k];
+            }
+          } else {
+            // Never persist invalid ZIP values (prevents PO box / house-number answers from populating zip).
+            delete (json as any).business_zip;
+          }
+        }
+      }
+
+      // - business_has_additional_locations (+ optional count): if user says "לא", persist count=0 to satisfy completion.
+      if (expected.has('business_has_additional_locations') && hasField('business_has_additional_locations')) {
+        const yn = parseYesNoToken(msgRaw);
+        if (yn !== null) {
+          json.business_has_additional_locations = yn;
+          if (!yn && hasField('business_additional_locations_count')) {
+            json.business_additional_locations_count = 0;
+          }
+          // If user provided an explicit count (rare), keep it.
+          if (yn && hasField('business_additional_locations_count')) {
+            const n = Number((msgRaw.match(/\b\d+\b/) || [])[0] || '');
+            if (Number.isFinite(n) && n > 0 && n < 1000) {
+              json.business_additional_locations_count = n;
+            }
+          }
+          for (const k of Object.keys(json)) {
+            if (!['business_has_additional_locations', 'business_additional_locations_count'].includes(k)) delete (json as any)[k];
+          }
+        }
+      }
+
+      // - business_registration_id: store digits deterministically when asked for ח"פ/ע"מ.
+      if (expected.has('business_registration_id') && hasField('business_registration_id')) {
+        const isShortAnswer = msgRaw.length <= 120 && !msgRaw.includes('\n');
+        const digits = msgRaw.replace(/\D/g, '');
+        const looksLikeReg = digits.length >= 8 && digits.length <= 10;
+        if (isShortAnswer && looksLikeReg) {
+          json.business_registration_id = digits;
+          for (const k of Object.keys(json)) {
+            if (k !== 'business_registration_id') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - business_po_box: handle replies like "כן\\nת\"ד 105" (multi-line).
+      // Use lastQ detection (not only `expected`) because in some edge cases the expected-set
+      // can be empty/truncated, which would otherwise prevent storing "אין" as `false`.
+      const askedForPoBox = /ת\\.?[\"״׳']?ד|תיבת\\s*דואר|תא\\s*דואר|po\\s*box/i.test(String(lastQ || ''));
+      if ((askedForPoBox || expected.has('business_po_box')) && hasField('business_po_box')) {
+        const trimmed = String(msgRaw || '').trim();
+        const digits = trimmed.replace(/\D/g, '');
+        // If user explicitly says they *don't* have a PO box, persist boolean false so we don't re-ask.
+        // Examples: "לא", "אין", "אין לי תיבת דואר", "ללא".
+        if (!digits) {
+          const yn = parseYesNoToken(trimmed);
+          // NOTE: avoid `\b` word-boundary for Hebrew (it fails because Hebrew letters are not `\w` in JS).
+          const looksLikeNo = yn === false
+            || /^(?:אין(?:\s+לי|\s+לנו)?|ללא|לא|none|no)(?:$|[\s,.:;!?()\[\]{}"'“”׳״\-–—])/i.test(trimmed);
+          if (looksLikeNo) {
+            (json as any).business_po_box = false;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_po_box') delete (json as any)[k];
+            }
+          }
+        }
+        const hasPoBoxHint = /ת\\.?[\"״׳']?ד|תיבת\\s*דואר|תא\\s*דואר|po\\s*box/i.test(msgRaw);
+        if (digits && (hasPoBoxHint || digits.length <= 7)) {
+          json.business_po_box = digits;
+          for (const k of Object.keys(json)) {
+            if (k !== 'business_po_box') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - policy_start_date: normalize short date answers to ISO.
+      // Fill missing year with current year, except if now is December and user asks for January → next year.
+      // Also enforce: policy_start_date must be >= today (never in the past).
+      if (expected.has('policy_start_date')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|יישוב|עיר|מיקוד|ת\\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+
+        if (isShortAnswer && !multiField && msgRaw) {
+          const iso = await parsePolicyStartDateToYmd(msgRaw, 'Asia/Jerusalem');
+          if (iso) {
+            json.policy_start_date = iso;
+            for (const k of Object.keys(json)) {
+              if (k !== 'policy_start_date') delete (json as any)[k];
+            }
+          } else {
+            // If we can't parse it, don't store a partial/ambiguous date.
+            delete (json as any).policy_start_date;
+          }
+        }
+      }
+
+      // - business_po_box (תיבת דואר): map short answers deterministically and prevent numeric spill to other fields.
+      if ((askedForPoBox || expected.has('business_po_box')) && hasField('business_po_box')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || /רחוב|יישוב|עיר|מיקוד/i.test(msgRaw);
+        if (isShortAnswer && msgRaw) {
+          const trimmed = String(msgRaw || '').trim();
+          const yn = parseYesNoToken(trimmed);
+          // NOTE: avoid `\b` word-boundary for Hebrew (it fails because Hebrew letters are not `\w` in JS).
+          const looksLikeNo = yn === false
+            || /^(?:אין(?:\s+לי|\s+לנו)?|ללא|לא|none|no)(?:$|[\s,.:;!?()\[\]{}"'“”׳״\-–—])/i.test(trimmed);
+          const digitsOnly = msgRaw.replace(/\D/g, '');
+          if (!digitsOnly && looksLikeNo) {
+            (json as any).business_po_box = false;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_po_box') delete (json as any)[k];
+            }
+          } else {
+            const normalized = digitsOnly || msgRaw
+              .replace(/^\s*ת\\.?[\"״׳']?ד\s*/i, '')
+              .replace(/^\s*תיבת\\s*דואר\s*/i, '')
+              .replace(/^\s*תא\\s*דואר\s*/i, '')
+              .trim();
+
+            if (normalized) {
+              json.business_po_box = normalized;
+              // PO box answers are often short-numeric; never let them populate unrelated numeric fields.
+              for (const k of Object.keys(json)) {
+                if (k !== 'business_po_box') delete (json as any)[k];
+              }
+            }
+          }
+        } else if (!multiField && msgRaw) {
+          // Non-short but still single-purpose PO box answer (rare).
+          const digitsOnly = msgRaw.replace(/\D/g, '');
+          if (digitsOnly) {
+            json.business_po_box = digitsOnly;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_po_box') delete (json as any)[k];
+            }
+          }
+        }
+      }
+
+      // - business_legal_entity_type: map short answers deterministically to allowed options.
+      if (expected.has('business_legal_entity_type') && hasField('business_legal_entity_type')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7
+          || /רחוב|יישוב|עיר|מיקוד|ת\\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            // remove quotes (straight + Hebrew geresh/gershayim + curly quotes)
+            .replace(/[“”"׳״']/g, '')
+            // trim common punctuation/brackets around single-token replies (e.g. "1.", "(בעלים)")
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+
+          const s = cleanChoiceToken(msgRaw);
+          const sNoSpace = s.replace(/\s+/g, '');
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            '1': 'חברה פרטית',
+            '2': 'עוסק מורשה',
+            '3': 'עוסק פטור',
+            '4': 'עוסק זעיר',
+            '5': 'שותפות',
+            '6': 'אגודה',
+            '7': 'עמותה',
+            '8': 'חברה ציבורית',
+          };
+          const allowed = new Map<string, string>([
+            ['חברה פרטית', 'חברה פרטית'],
+            ['פרטית', 'חברה פרטית'],
+            ['חפ', 'חברה פרטית'],
+            ['עוסק מורשה', 'עוסק מורשה'],
+            ['מורשה', 'עוסק מורשה'],
+            ['עמ', 'עוסק מורשה'],
+            ['בעמ', 'חברה פרטית'],
+            ['עוסק זעיר', 'עוסק זעיר'],
+            ['זעיר', 'עוסק זעיר'],
+            ['עוסק פטור', 'עוסק פטור'],
+            ['פטור', 'עוסק פטור'],
+            ['שותפות', 'שותפות'],
+            ['אגודה', 'אגודה'],
+            ['עמותה', 'עמותה'],
+            ['חברה ציבורית', 'חברה ציבורית'],
+            ['ציבורית', 'חברה ציבורית'],
+            ['חצ', 'חברה ציבורית'],
+            ['private company', 'חברה פרטית'],
+            ['authorized dealer', 'עוסק מורשה'],
+            ['vat dealer', 'עוסק מורשה'],
+            ['exempt dealer', 'עוסק פטור'],
+            ['small dealer', 'עוסק זעיר'],
+            ['partnership', 'שותפות'],
+            ['registered partnership', 'שותפות'],
+            ['non-profit', 'עמותה'],
+            ['ngo', 'עמותה'],
+            ['association', 'אגודה'],
+            ['public company', 'חברה ציבורית'],
+          ]);
+
+          const normalized = mapNum[s] || mapNum[sNoSpace] || allowed.get(s) || allowed.get(sNoSpace) || allowed.get(lowered) || '';
+          if (normalized) {
+            json.business_legal_entity_type = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'business_legal_entity_type') delete (json as any)[k];
+            }
+          } else {
+            // Do not persist invalid enum values (prevents answers like "אובדן הכנסה" from overwriting entity type).
+            delete (json as any).business_legal_entity_type;
           }
         }
       }
@@ -332,6 +1204,167 @@ Example of empty fields:
           json.referral_source = msgRaw;
           for (const k of Object.keys(json)) {
             if (k !== 'referral_source') delete (json as any)[k];
+          }
+        }
+      }
+
+      // - insured_relation_to_business: map short answers deterministically (prevents misses in UI/timeline).
+      // Accept either the Hebrew option label or the WhatsApp numbered option (1-4).
+      if (expected.has('insured_relation_to_business') && hasField('insured_relation_to_business')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            // remove quotes (straight + Hebrew geresh/gershayim + curly quotes)
+            .replace(/[“”"׳״']/g, '')
+            // trim common punctuation/brackets around single-token replies (e.g. "1.", "(בעלים)")
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+
+          const s = cleanChoiceToken(msgRaw);
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            1: 'בעלים',
+            2: 'מורשה חתימה',
+            3: 'מנהל',
+            4: 'אחר',
+          };
+          const allowed = new Map<string, string>([
+            ['בעלים', 'בעלים'],
+            ['מורשה חתימה', 'מורשה חתימה'],
+            ['מנהל', 'מנהל'],
+            ['אחר', 'אחר'],
+            ['owner', 'בעלים'],
+            ['authorized signer', 'מורשה חתימה'],
+            ['manager', 'מנהל'],
+            ['other', 'אחר'],
+          ]);
+
+          // Also accept natural-language replies like "אני בעלים של המשרד".
+          const inferFromPhrase = (raw: string): string => {
+            const t = String(raw || '').trim();
+            const tLower = t.toLowerCase();
+            if (!t) return '';
+
+            // Hebrew patterns (be tolerant to gender/declensions + extra words).
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])בעלים([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t)
+              || /בעל(?:ת)?\s*(?:ה)?(?:משרד|עסק)/.test(t)
+              || /אני\s+(?:ה)?בעל(?:ים|ת)/.test(t)) return 'בעלים';
+
+            if (/מורשה\s*חתימ/i.test(t) || (/מורשה/.test(t) && /חתימ/.test(t))) return 'מורשה חתימה';
+
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])מנהל(?:ת)?([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t)
+              || /מנכ(?:ל|״ל|\"ל)/.test(t)
+              || /אני\s+(?:ה)?מנהל(?:ת)?/.test(t)) return 'מנהל';
+
+            // "שותף/שותפה" is not an explicit option in this flow; map to "אחר" so the user won't get stuck.
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])שותפ(?:ה|ים|ות|ות)?([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t)) return 'אחר';
+
+            // Avoid false-positive on words like "אחריות"
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])אחר([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t) && !/אחריות/.test(t)) return 'אחר';
+
+            // English patterns (web users sometimes reply in English).
+            if (/\b(owner|founder)\b/.test(tLower)) return 'בעלים';
+            if (/\b(authorized\s+signer|signatory)\b/.test(tLower)) return 'מורשה חתימה';
+            if (/\b(manager|ceo)\b/.test(tLower)) return 'מנהל';
+            if (/\b(other|partner)\b/.test(tLower)) return 'אחר';
+
+            return '';
+          };
+
+          const normalized = mapNum[s] || allowed.get(s) || allowed.get(lowered) || inferFromPhrase(s) || '';
+          if (normalized) {
+            json.insured_relation_to_business = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'insured_relation_to_business') delete (json as any)[k];
+            }
+          } else {
+            // Do not persist invalid enum values.
+            delete (json as any).insured_relation_to_business;
+          }
+        }
+      }
+
+      // - building_relation: map short answers deterministically (topic-split premises/building flows).
+      // Accept either the Hebrew option label or the WhatsApp numbered option (1-3).
+      if (expected.has('building_relation') && hasField('building_relation')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        const multiField = msgRaw.includes('\n')
+          || /@/.test(msgRaw)
+          || msgDigits.length >= 7;
+        if (isShortAnswer && !multiField && msgRaw) {
+          const cleanChoiceToken = (raw: string): string => String(raw || '')
+            .trim()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+            .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+            .trim();
+
+          const s = cleanChoiceToken(msgRaw);
+          const lowered = s.toLowerCase();
+          const mapNum: Record<string, string> = {
+            1: 'בעלים',
+            2: 'שוכר',
+            3: 'חוכר לדורות',
+          };
+          const allowed = new Map<string, string>([
+            ['בעלים', 'בעלים'],
+            ['שוכר', 'שוכר'],
+            ['חוכר לדורות', 'חוכר לדורות'],
+            // English fallbacks
+            ['owner', 'בעלים'],
+            ['rent', 'שוכר'],
+            ['renter', 'שוכר'],
+            ['tenant', 'שוכר'],
+            ['lessee', 'חוכר לדורות'],
+            ['long term lessee', 'חוכר לדורות'],
+            ['leaseholder', 'חוכר לדורות'],
+          ]);
+
+          const inferFromPhrase = (raw: string): string => {
+            const t = String(raw || '').trim();
+            const tLower = t.toLowerCase();
+            if (!t) return '';
+
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])בעלים([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t)
+              || /\bowner\b/.test(tLower)) return 'בעלים';
+
+            if (/(^|[\s"'“”׳״()\[\]{}.,;:!?-])שוכר([\s"'“”׳״()\[\]{}.,;:!?-]|$)/.test(t)
+              || /\b(renter|tenant)\b/.test(tLower)) return 'שוכר';
+
+            // "חוכר לדורות" may be shortened to just "חוכר"
+            if (/חוכר/.test(t) || /\b(lessee|leaseholder)\b/.test(tLower)) return 'חוכר לדורות';
+
+            return '';
+          };
+
+          const normalized = mapNum[s] || allowed.get(s) || allowed.get(lowered) || inferFromPhrase(msgRaw) || '';
+          if (normalized) {
+            (json as any).building_relation = normalized;
+            for (const k of Object.keys(json)) {
+              if (k !== 'building_relation') delete (json as any)[k];
+            }
+          } else {
+            delete (json as any).building_relation;
+          }
+        }
+      }
+
+      // - building_materials / roof_materials: for short answers, store deterministically as the full reply.
+      // (Some process schemas represent these as string even when the UI is multi-select.)
+      for (const k of ['building_materials', 'roof_materials'] as const) {
+        if (expected.has(k) && hasField(k)) {
+          const isShortAnswer = msgRaw.length <= 120 && !msgRaw.includes('\n');
+          const multiField = msgRaw.includes('\n') || /@/.test(msgRaw);
+          if (isShortAnswer && !multiField && msgRaw) {
+            (json as any)[k] = msgRaw.trim();
+            for (const kk of Object.keys(json)) {
+              if (kk !== k) delete (json as any)[kk];
+            }
           }
         }
       }
@@ -354,14 +1387,18 @@ Example of empty fields:
           || msgDigits.length >= 7;
         if (isShortAnswer && !multiField && msgRaw) {
           const toks = splitHebrewTokens(msgRaw);
-          if (toks.length === 2 && hasField('last_name')) {
+          // IMPORTANT:
+          // Only split "first last" into both fields if the assistant explicitly asked for BOTH fields in the same turn.
+          // Otherwise, multi-word first names (e.g., "יעל שרה") would be incorrectly split into first_name + last_name.
+          const askedBoth = expected.has('first_name') && expected.has('last_name');
+          if (askedBoth && toks.length >= 2 && hasField('last_name')) {
             json.first_name = toks[0];
-            json.last_name = toks[1];
+            json.last_name = toks.slice(1).join(' ');
             for (const k of Object.keys(json)) {
               if (!['first_name', 'last_name'].includes(k)) delete (json as any)[k];
             }
           } else {
-            json.first_name = msgRaw;
+            json.first_name = msgRaw.trim();
             for (const k of Object.keys(json)) {
               if (k !== 'first_name') delete (json as any)[k];
             }
@@ -376,14 +1413,17 @@ Example of empty fields:
           || msgDigits.length >= 7;
         if (isShortAnswer && !multiField && msgRaw) {
           const toks = splitHebrewTokens(msgRaw);
-          if (toks.length === 2 && hasField('first_name')) {
+          // Same rule as above: only split if BOTH fields were requested explicitly in the same assistant turn.
+          // Otherwise, multi-word last names (e.g., "פינקלמן נייגר") must remain intact.
+          const askedBoth = expected.has('first_name') && expected.has('last_name');
+          if (askedBoth && toks.length >= 2 && hasField('first_name')) {
             json.first_name = toks[0];
-            json.last_name = toks[1];
+            json.last_name = toks.slice(1).join(' ');
             for (const k of Object.keys(json)) {
               if (!['first_name', 'last_name'].includes(k)) delete (json as any)[k];
             }
           } else {
-            json.last_name = msgRaw;
+            json.last_name = msgRaw.trim();
             for (const k of Object.keys(json)) {
               if (k !== 'last_name') delete (json as any)[k];
             }
@@ -420,7 +1460,8 @@ Example of empty fields:
       })();
 
       const boolEvidence = (key: string, value: boolean): boolean => {
-        if (hasExplicitYesNo) return true;
+        // Explicit yes/no is only evidence for the field we actually asked about.
+        if (hasExplicitYesNo && expectedFromLastQuestion.has(key)) return true;
         if (looksLikeSingleAnswerForExpected && expectedFromLastQuestion.has(key)) return true;
 
         // Field-specific negative/positive patterns for common SMB gate questions
@@ -440,10 +1481,31 @@ Example of empty fields:
         return false;
       };
 
+      const isBoolLikeField = (k: string): boolean => fieldTypes[k] === 'boolean'
+        || k.endsWith('_selected')
+        || /^ch\d+_/.test(k)
+        || k === 'has_employees'
+        || k === 'has_products_activity'
+        || k === 'has_physical_premises'
+        || k === 'is_new_customer'
+        || k.endsWith('_has_additional_locations');
+
       for (const [k, v] of Object.entries(json)) {
-        if (fieldTypes[k] !== 'boolean') continue;
-        if (typeof v !== 'boolean') continue;
-        if (!boolEvidence(k, v)) delete (json as any)[k];
+        if (!isBoolLikeField(k)) continue;
+        let asBool: boolean | null = null;
+        if (typeof v === 'boolean') asBool = v;
+        if (typeof v === 'string') {
+          const s = v.trim().toLowerCase();
+          if (s === 'true') asBool = true;
+          if (s === 'false') asBool = false;
+        }
+        if (asBool === null) continue;
+        if (!boolEvidence(k, asBool)) {
+          delete (json as any)[k];
+        } else {
+          // Normalize to actual boolean so we store correct field type (prevents string "false" pollution).
+          (json as any)[k] = asBool;
+        }
       }
     } catch {
       // best-effort
@@ -460,20 +1522,20 @@ Example of empty fields:
         const s = msgRaw.toLowerCase();
         const lastQ = String(lastAssistantQuestion || '').toLowerCase();
 
-        const looksLikeStatusQuestion = /לקוח\s*חדש|לקוח\s*(?:קיים|ותיק)|האם\s+אתה\s+לקוח/.test(lastQ);
+        const looksLikeStatusQuestion = /לקוח(?:ה)?\s*חדש(?:ה)?|לקוח(?:ה)?\s*(?:קיים|קיימת|ותיק|ותיקה)|האם\s+את(?:ה)?\s+לקוח(?:ה)?/.test(lastQ);
         const isShortAnswer = msgRaw.length <= 30 && !msgRaw.includes('\n');
 
         // Avoid confusing "הצעה חדשה" with "לקוח חדש"
         const isNewQuoteIntent = /הצעה\s*חדשה|\bnew\s+quote\b|\bquote\b/.test(s);
 
         const explicitNew = !isNewQuoteIntent && (
-          /לקוח\s*חדש/.test(s)
+          /לקוח(?:ה)?\s*חדש(?:ה)?/.test(s)
           || /פעם\s*ראשונה/.test(s)
           || /עוד\s*לא\s*לקוח/.test(s)
           || /לא\s*מבוטח\s*אצלכם/.test(s)
         );
         const explicitExisting = (
-          /לקוח\s*(?:קיים|ותיק)/.test(s)
+          /לקוח(?:ה)?\s*(?:קיים|קיימת|ותיק|ותיקה)/.test(s)
           || /כבר\s*לקוח/.test(s)
           || /מבוטח\s*אצלכם/.test(s)
           || /יש\s*לי\s*כבר\s*פוליסה/.test(s)
@@ -483,12 +1545,15 @@ Example of empty fields:
         const replyNew = looksLikeStatusQuestion && isShortAnswer && (
           /^\s*1\s*$/.test(s)
           || /^חדש$/.test(s)
+          || /^חדשה$/.test(s)
           || /^כן$/.test(s)
         );
         const replyExisting = looksLikeStatusQuestion && isShortAnswer && (
           /^\s*2\s*$/.test(s)
           || /^קיים$/.test(s)
+          || /^קיימת$/.test(s)
           || /^ותיק$/.test(s)
+          || /^ותיקה$/.test(s)
           || /^לא$/.test(s)
         );
 
@@ -540,8 +1605,8 @@ Example of empty fields:
       const fields = options.context.fieldsDescription || {};
       const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
       const s = msg.trim().toLowerCase();
-      const isNew = /לקוח\s*חדש|חדש\b|new\s*customer/i.test(s);
-      const isExisting = /לקוח\s*(קיים|ותיק)|קיים\b|existing\s*customer/i.test(s);
+      const isNew = /לקוח(?:ה)?\s*חדש(?:ה)?|חדש\b|חדשה\b|new\s*customer/i.test(s);
+      const isExisting = /לקוח(?:ה)?\s*(קיים|קיימת|ותיק|ותיקה)|קיים\b|קיימת\b|existing\s*customer/i.test(s);
       if (hasField('is_new_customer') && (isNew || isExisting)) {
         isCustomerStatusReply = true;
         json.is_new_customer = Boolean(isNew && !isExisting);
@@ -578,6 +1643,39 @@ Example of empty fields:
       }
     });
 
+    // Numeric plausibility filters (generic, flow-agnostic):
+    // - Reject "ID-like" huge numbers for *_count fields.
+    // - Reject digit-only strings for *date* fields unless already normalized ISO (YYYY-MM-DD).
+    try {
+      for (const [k, v] of Object.entries(json)) {
+        if (v === null || v === undefined) continue;
+
+        // *_count: should be a small integer in almost all questionnaires.
+        if (/_count$/.test(k)) {
+          const asNum = typeof v === 'number' ? v : Number(String(v).trim());
+          if (Number.isFinite(asNum) && asNum >= 1000) {
+            delete (json as any)[k];
+          }
+          if (typeof v === 'string') {
+            const digits = v.replace(/\D/g, '');
+            if (digits.length >= 8 && digits === String(v).replace(/\s+/g, '')) {
+              delete (json as any)[k];
+            }
+          }
+        }
+
+        // *date*: never accept a pure numeric token like "025689183".
+        if (/_date$/.test(k) && typeof v === 'string') {
+          const s = v.trim();
+          if (/^\d{8,10}$/.test(s) && !/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            delete (json as any)[k];
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     // Deterministic domain enrichments (no extra LLM calls):
     // - Normalize business segment names (e.g. "דין" -> "עורכי דין")
     // - Infer business_site_type from the segments catalog (e.g. lawyer office -> "משרד")
@@ -599,9 +1697,10 @@ Example of empty fields:
             const defaults = buildQuestionnaireDefaultsFromResolution(resolved);
             const segName = String((defaults.userData as any)?.segment_name_he || '').trim();
             if (hasField('business_segment') && segName) {
-              // Prefer a compact label for the segment field (without "משרד " prefix).
-              const compact = segName.replace(/^משרד\s+/, '').trim();
-              json.business_segment = compact || segName;
+              // Prefer a canonical, user-facing label.
+              // If the catalog uses "X / Y" style, keep the first part (e.g., "משרד אדריכלים / מהנדסים" -> "משרד אדריכלים").
+              const firstPart = segName.split('/')[0]?.trim();
+              json.business_segment = firstPart || segName;
             }
             if (hasField('business_site_type')) {
               const st = (defaults.prefill as any)?.business_site_type;
@@ -618,26 +1717,59 @@ Example of empty fields:
       // IMPORTANT: do NOT attempt to infer names from customer-status replies like "לקוח חדש".
       // Also: if the assistant asked for referral_source ("איך הגעת אלינו?") and the user replied "גוגל"/etc,
       // do NOT treat that token as a personal name.
-      if (!isReferralSourceReply && !isCustomerStatusReply && hasHebrew && (hasField('first_name') || hasField('last_name')) && !(json.first_name || json.last_name)) {
+      const likelyContactBlock = /@/.test(msg) || msg.replace(/\D/g, '').length >= 9;
+      const askedForNameNow = expectedFromLastQuestion.has('first_name') || expectedFromLastQuestion.has('last_name');
+      const askedForOccupationNow = expectedFromLastQuestion.has('business_segment')
+        || expectedFromLastQuestion.has('business_occupation')
+        || expectedFromLastQuestion.has('business_used_for')
+        || expectedFromLastQuestion.has('business_activity_and_products')
+        || expectedFromLastQuestion.has('business_site_type');
+
+      if (!isReferralSourceReply
+        && !isCustomerStatusReply
+        && hasHebrew
+        && (hasField('first_name') || hasField('last_name'))
+        && !(json.first_name || json.last_name)
+        && (askedForNameNow || (likelyContactBlock && !askedForOccupationNow))) {
         const head = msg.split(/(?:נייד|טלפון|phone|email|אימייל|מייל|@|\d)/i)[0] || msg;
         const chunks = head.split(/[,;\n]+/).map((c) => c.trim()).filter(Boolean);
         const stop = new Set([
           'אני', 'צריך', 'רוצה', 'מבקש', 'הצעת', 'הצעה', 'ביטוח', 'לעסק', 'לעסקי',
           'משרד', 'עורך', 'עורכי', 'דין',
+          // common closing / politeness that should never be inferred as a personal name
+          'תודה',
+          // insurance business terms that can appear in contact blocks
+          'סוכנות', 'סוכן', 'סוכנים',
+          // common occupations that should never be inferred as a personal name
+          'רואה', 'חשבון',
           // customer status tokens
           'לקוח', 'חדש', 'קיים', 'ותיק',
           // greetings
           'הי', 'היי', 'שלום', 'אהלן', 'הלו',
         ]);
         const heToken = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
+        const normTok = (t: string) => String(t || '')
+          .replace(/[“”"׳״']/g, '')
+          .replace(/[.,;:!?()[\]{}]/g, '')
+          .trim();
+        const isStopTok = (t: string): boolean => {
+          const s = normTok(t);
+          if (!s) return true;
+          if (stop.has(s)) return true;
+          // Tolerate common Hebrew single-letter prefixes (e.g., "לביטוח" -> "ביטוח")
+          // ONLY for stopword matching (do not mutate the actual token value).
+          const stripped = s.replace(/^[ולבהכשמ]/, '');
+          if (stripped && stripped !== s && stop.has(stripped)) return true;
+          return false;
+        };
         const pick = (chunk: string) => chunk
           .replace(/[“”"׳״']/g, '')
           .replace(/^(שמי|שם|קוראים לי|אני)\s*[:\-–—]?\s*/i, '')
           .trim()
           .split(/\s+/)
-          .map((t) => t.replace(/[.,;:!?()[\]{}]/g, '').trim())
+          .map((t) => normTok(t))
           .filter(Boolean)
-          .filter((t) => heToken(t) && !stop.has(t));
+          .filter((t) => heToken(t) && !isStopTok(t));
         for (let i = chunks.length - 1; i >= 0; i -= 1) {
           const he = pick(chunks[i]);
           if (he.length >= 2) {
@@ -650,6 +1782,89 @@ Example of empty fields:
             break;
           }
         }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Normalize Hebrew name tokens (common preposition artifacts).
+    // Example: "נא לחזור לליאב גפן" should yield first_name="ליאב" (not "לליאב").
+    try {
+      const rawMsg = String(options.message || '');
+      const hasCallbackTo = /(נא\s+)?לחזור\s+ל/i.test(rawMsg) || /(נא\s+)?תחזרו\s+ל/i.test(rawMsg);
+
+      const normalizeFirstNameHe = (raw: unknown): string => {
+        let s = String(raw ?? '').trim();
+        if (!s) return s;
+        s = s.replace(/[“”"׳״']/g, '').trim();
+
+        // Repair: sometimes a hyphenated Hebrew first name is truncated to the suffix (e.g. "-בר").
+        // If that happens, try to reconstruct from the user message text.
+        try {
+          if (/^[-־–—][\u0590-\u05FF]{2,}$/.test(s)) {
+            const m = rawMsg.match(/([\u0590-\u05FF]{2,})\s*[-־–—]\s*([\u0590-\u05FF]{2,})/);
+            if (m?.[1] && m?.[2]) return `${m[1]}-${m[2]}`;
+          }
+        } catch {
+          // best-effort
+        }
+
+        // Collapse double-lamed prefix: "לליאב" -> "ליאב"
+        if (/^לל[\u0590-\u05FF]{2,}$/.test(s)) return s.slice(1);
+        // If the message clearly uses "לחזור ל<name>", strip a single leading ל from the captured name.
+        if (hasCallbackTo && /^ל[\u0590-\u05FF]{2,}$/.test(s)) return s.slice(1);
+        return s;
+      };
+
+      for (const k of ['first_name', 'user_first_name', 'proposer_first_name'] as const) {
+        if (k in json && typeof (json as any)[k] === 'string') {
+          const before = String((json as any)[k] ?? '');
+          const after = normalizeFirstNameHe(before);
+          if (after && after !== before) (json as any)[k] = after;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Final domain validations (Israel SMB address guardrails):
+    // Prevent numeric spillover between PO box / ZIP / house number and avoid nonsense street values.
+    try {
+      const digitsOnly = (v: unknown): string => String(v ?? '').replace(/\D/g, '');
+
+      if (typeof (json as any).business_zip === 'string') {
+        const raw = String((json as any).business_zip || '').trim();
+        if (raw === 'לא ידוע') {
+          // keep as-is
+        } else {
+          const d = digitsOnly(raw);
+          // Israel ZIP is typically 7 digits; accept 5 or 7 digits, and do not allow leading zero.
+          const lenOk = d.length === 5 || d.length === 7;
+          const startsOk = d.length > 0 && d[0] !== '0';
+          if (d && /^0+$/.test(d)) (json as any).business_zip = 'לא ידוע';
+          else if (lenOk && startsOk) (json as any).business_zip = d;
+          else delete (json as any).business_zip;
+        }
+      }
+
+      if (typeof (json as any).business_po_box === 'string') {
+        const d = digitsOnly((json as any).business_po_box);
+        // PO box numbers are short; accept up to 7 digits.
+        if (d && d.length <= 7) (json as any).business_po_box = d;
+        else delete (json as any).business_po_box;
+      }
+
+      if (typeof (json as any).business_house_number === 'string') {
+        const d = digitsOnly((json as any).business_house_number);
+        if (d && d.length <= 5) (json as any).business_house_number = d;
+        else delete (json as any).business_house_number;
+      }
+
+      if (typeof (json as any).business_street === 'string') {
+        const s = String((json as any).business_street ?? '').trim();
+        // Street must contain at least one letter (Hebrew/Latin).
+        if (!s || !/[A-Za-z\u0590-\u05FF]/.test(s)) delete (json as any).business_street;
+        else (json as any).business_street = s;
       }
     } catch {
       // best-effort

@@ -112,7 +112,7 @@
     "process_key": "08_property_inventory_stock",
     "title_he": "שאלון מלאי",
     "description_he": "סכום ביטוח למלאי ובסיס הצהרתי (אם נדרש).",
-    "ask_if": "ch1_contents_selected = true",
+    "ask_if": "ch1_stock_selected = true",
     "audience": "customer",
     "included_module_keys": [],
     "notes_best_practice_he": [
@@ -136,12 +136,12 @@
       "input_type": "currency",
       "required": "Conditional",
       "required_mode": "conditional",
-      "required_if": "ch1_contents_selected=true",
+      "required_if": "ch1_stock_selected=true",
       "json_path": "coverages.property.by_location[0].chapter_1_contents.sum_insured_stock_ils",
       "module_key": "cov_property_contents",
       "audience": "customer",
       "stage_key": "04_coverages_details",
-      "ask_if": "ch1_contents_selected=true",
+      "ask_if": "ch1_stock_selected=true",
       "prompt_variants": {
         "web_chat": "נא לציין סכום ביטוח למלאי (מספר).",
         "whatsapp": "נא לציין סכום ביטוח למלאי (מספר)."
@@ -167,12 +167,12 @@
       "options_he": "לא, כן",
       "required": "Conditional",
       "required_mode": "conditional",
-      "required_if": "ch1_contents_selected=true",
+      "required_if": "ch1_stock_selected=true",
       "json_path": "coverages.property.by_location[0].chapter_1_contents.stock_declaration_basis",
       "module_key": "cov_property_contents",
       "audience": "customer",
       "stage_key": "04_coverages_details",
-      "ask_if": "ch1_contents_selected=true",
+      "ask_if": "ch1_stock_selected=true",
       "prompt_variants": {
         "web_chat": "האם מעוניין לבטח את המלאי על בסיס הצהרתי? (אפשרויות: לא, כן)",
         "whatsapp": "האם מעוניין לבטח את המלאי על בסיס הצהרתי? (אפשרויות: לא, כן)"

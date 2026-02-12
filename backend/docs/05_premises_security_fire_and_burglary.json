@@ -112,7 +112,7 @@
     "process_key": "05_premises_security_fire_and_burglary",
     "title_he": "אמצעי מיגון, כיבוי ופריצה",
     "description_he": "שאלון מיגון אש/פריצה: מטפים, גלאים, ספרינקלרים, אזעקה, דלתות, סורגים וכו׳.",
-    "ask_if": "(has_physical_premises = true) OR (ch1_contents_selected = true) OR (ch2_building_selected = true) OR (ch4_burglary_selected = true) OR (ch5_money_selected = true) OR (ch10_electronic_selected = true)",
+    "ask_if": "ch2_building_selected = true",
     "audience": "customer",
     "included_module_keys": [
       "premises_risk_mitigation"

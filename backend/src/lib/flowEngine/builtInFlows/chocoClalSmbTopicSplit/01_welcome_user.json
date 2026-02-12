@@ -341,11 +341,11 @@
       "subsection": "A. Proposer details & contact",
       "stage_title_he": "חלק א — פרטי המציע/ה ויצירת קשר",
       "question_he": "זיקת המציע לבית העסק",
-      "prompt_he": "ומה התפקיד שלך בעסק?",
+      "prompt_he": "ומה התפקיד שלך בעסק? (למשל: בעלים, מורשה חתימה וכו׳)",
       "field_key_en": "insured_relation_to_business",
       "data_type": "enum",
       "input_type": "select",
-      "options_he": "בעלים, מורשה חתימה, מנהל, אחר",
+      "options_he": "בעלים, מורשה חתימה, מנהל",
       "required": "Y",
       "required_mode": "required",
       "json_path": "applicant.relationship_to_business",
@@ -408,12 +408,18 @@
     "first_name": {
       "type": "string",
       "description": "שם פרטי",
-      "priority": 10
+      "priority": 10,
+      "minLength": 2,
+      "pattern": "^(?=(?:.*[A-Za-zא-ת]){2,})(?!.*([A-Za-zא-ת])\\\\1\\\\1)[A-Za-zא-ת\\s־'\\\"’“”׳״–—-]+$",
+      "prohibitedWordsList": "hebrew_prohibited_words_v1"
     },
     "last_name": {
       "type": "string",
       "description": "שם משפחה",
-      "priority": 10
+      "priority": 10,
+      "minLength": 2,
+      "pattern": "^(?=(?:.*[A-Za-zא-ת]){2,})(?!.*([A-Za-zא-ת])\\\\1\\\\1)[A-Za-zא-ת\\s־'\\\"’“”׳״–—-]+$",
+      "prohibitedWordsList": "hebrew_prohibited_words_v1"
     },
     "mobile_phone": {
       "type": "string",
@@ -447,8 +453,13 @@
     },
     "insured_relation_to_business": {
       "type": "string",
-      "description": "זיקת המציע לעסק [בעלים, שותף, עובד וכו׳]",
-      "priority": 30
+      "description": "זיקת המציע לעסק [בעלים, שותף, מנהל וכו׳]",
+      "priority": 30,
+      "enum": [
+        "בעלים",
+        "מורשה חתימה",
+        "מנהל"
+      ]
     },
     "is_new_customer": {
       "type": "boolean",

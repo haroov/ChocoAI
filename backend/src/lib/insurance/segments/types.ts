@@ -23,26 +23,31 @@ export type SegmentsCatalogSegmentGroup = {
   };
 };
 
-export type SegmentsCatalogPackage = {
-  package_key: string;
-  package_name_he?: string;
-  insurer_code?: string;
-  product_key?: string;
-  currency?: string;
-  defaults_source?: string;
-  segment_id?: string;
-  default_limits?: Record<string, unknown>;
-  default_deductibles?: Record<string, unknown>;
-  included_extensions?: Record<string, unknown>;
-  selected_coverages?: Record<string, unknown>;
-  notes_he?: string;
-  important_logic_he?: string[];
-};
-
 export type SegmentsCatalogSegment = {
   segment_id: string;
   segment_name_he?: string;
   segment_group_id?: string;
+  /**
+   * When multiple catalog rows represent the same logical segment (duplicate name within same group),
+   * we keep the non-canonical rows but point them to the canonical segment_id.
+   * Admin UI should hide duplicates by default and the resolver should return the canonical id.
+   */
+  duplicate_of?: string;
+  /**
+   * Optional alias / keyword phrases to improve segment matching.
+   * Intended for free-text resolution (Hebrew/English/etc).
+   */
+  keywords?: string[];
+  /**
+   * Coverage toggles per segment (agent-configured).
+   * Keys are normalized semantic IDs (e.g. "building", "contents", "third_party", "cyber", ...).
+   * Values represent the default inclusion (on/off) for this segment.
+   */
+  coverages?: Record<string, boolean>;
+  /**
+   * Optional linkage to Choco "insurance-products" catalog rows (CSV import).
+   */
+  choco_product_slugs?: string[];
   business_profile_defaults?: {
     segment_group_he?: string;
     site_type_he?: string;
@@ -84,6 +89,5 @@ export type SegmentsCatalogProd = {
   };
   insurance_products?: SegmentsCatalogInsuranceProduct[];
   segment_groups: SegmentsCatalogSegmentGroup[];
-  packages: Record<string, SegmentsCatalogPackage>;
   segments: SegmentsCatalogSegment[];
 };

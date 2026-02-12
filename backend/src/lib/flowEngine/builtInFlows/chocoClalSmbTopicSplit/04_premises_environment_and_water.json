@@ -106,13 +106,16 @@
         "pii_minimization": "לא לאסוף נתונים שלא נדרשים להצעה.",
         "consents": "אישורי שיווק/דיוור לפי חלק ד׳ בסוף התהליך."
       }
+    },
+    "ui": {
+      "fieldsSort": "priorityAsc"
     }
   },
   "process": {
     "process_key": "04_premises_environment_and_water",
     "title_he": "סביבת העסק + סיכוני מים/שיטפון/נזקי טבע",
     "description_he": "סביבה, שכנים, חומרים מסוכנים, קיר משותף, חלקים מתחת לקרקע ושיטפונות.",
-    "ask_if": "(has_physical_premises = true) OR (ch1_contents_selected = true) OR (ch2_building_selected = true) OR (ch4_burglary_selected = true) OR (ch5_money_selected = true) OR (ch10_electronic_selected = true)",
+    "ask_if": "ch2_building_selected = true",
     "audience": "customer",
     "included_module_keys": [
       "premises_surroundings",
@@ -147,7 +150,7 @@
         "web_chat": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה.",
         "whatsapp": "נא לפרט: תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה."
       },
-      "priority": 1,
+      "priority": 10,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -174,7 +177,7 @@
         "web_chat": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים.",
         "whatsapp": "נא לפרט: ציין את העסקים והמבנים בשכנות ולמה הם משמשים."
       },
-      "priority": 1,
+      "priority": 98,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -189,8 +192,8 @@
       "prompt_he": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
       "field_key_en": "hazardous_goods_nearby",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].surroundings.hazardous_goods_nearby.answer",
@@ -202,7 +205,7 @@
         "web_chat": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)",
         "whatsapp": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 160,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -240,7 +243,7 @@
         "web_chat": "אם כן, – פרט?",
         "whatsapp": "אם כן, – פרט?"
       },
-      "priority": 2,
+      "priority": 170,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -255,8 +258,8 @@
       "prompt_he": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
       "field_key_en": "shared_wall",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].surroundings.shared_wall_with_neighbors.answer",
@@ -268,7 +271,7 @@
         "web_chat": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)",
         "whatsapp": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 100,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -306,7 +309,7 @@
         "web_chat": "אם כן, – פרט?",
         "whatsapp": "אם כן, – פרט?"
       },
-      "priority": 2,
+      "priority": 110,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -321,8 +324,8 @@
       "prompt_he": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
       "field_key_en": "below_ground",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].risk_and_security.water_flood_risk.below_ground_parts.answer",
@@ -334,7 +337,7 @@
         "web_chat": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)",
         "whatsapp": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 20,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -359,8 +362,8 @@
       "prompt_he": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
       "field_key_en": "flood_source_nearby",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].risk_and_security.water_flood_risk.nearby_flood_source.answer",
@@ -372,7 +375,7 @@
         "web_chat": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)",
         "whatsapp": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 50,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -410,7 +413,7 @@
         "web_chat": "אם כן, – פרט?",
         "whatsapp": "אם כן, – פרט?"
       },
-      "priority": 2,
+      "priority": 80,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -425,8 +428,8 @@
       "prompt_he": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
       "field_key_en": "nature_damage_last_3y",
       "data_type": "boolean",
-      "input_type": "yes_no",
-      "options_he": "לא, כן",
+      "input_type": "select",
+      "options_he": "כן, לא",
       "required": "Y",
       "required_mode": "required",
       "json_path": "locations[0].risk_and_security.water_flood_risk.previous_flooding_events_last_3_years.answer",
@@ -438,7 +441,7 @@
         "web_chat": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)",
         "whatsapp": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה? (אפשרויות: לא, כן)"
       },
-      "priority": 1,
+      "priority": 90,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -476,7 +479,7 @@
         "web_chat": "אם כן, – פרט?",
         "whatsapp": "אם כן, – פרט?"
       },
-      "priority": 2,
+      "priority": 95,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -491,5 +494,62 @@
       "action": "route_to_underwriter"
     }
   ],
-  "attachments_checklist": []
+  "attachments_checklist": [],
+  "field_schemas": {
+    "shared_wall": {
+      "type": "boolean",
+      "description": "האם יש לבית העסק קיר משותף עם אחד או יותר מהעסקים שציינת לעיל?",
+      "priority": 100
+    },
+    "below_ground": {
+      "type": "boolean",
+      "description": "האם מבנה בית העסק (או חלק ממנו) נמוך מגובה פני הקרקע?",
+      "priority": 20
+    },
+    "flood_source_nearby": {
+      "type": "boolean",
+      "description": "האם בסביבה הקרובה גורם שעלול לגרום לשיטפון (וואדי/תעלה/נחל/ים/מאגר מים...)?",
+      "priority": 50
+    },
+    "shared_wall_details": {
+      "type": "string",
+      "description": "אם כן – פרט",
+      "priority": 110
+    },
+    "flood_source_details": {
+      "type": "string",
+      "description": "אם כן – פרט",
+      "priority": 80
+    },
+    "nature_damage_last_3y": {
+      "type": "boolean",
+      "description": "האם ב-3 השנים האחרונות אירעו נזקי טבע/שיטפון במקום או בסביבה הקרובה?",
+      "priority": 90
+    },
+    "hazardous_goods_nearby": {
+      "type": "boolean",
+      "description": "האם ידוע לך על סחורות מסוכנות/מתלקחות המאוחסנות במבנים אלה?",
+      "priority": 160
+    },
+    "neighboring_businesses": {
+      "type": "string",
+      "description": "ציין את העסקים והמבנים בשכנות ולמה הם משמשים",
+      "priority": 98
+    },
+    "environment_description": {
+      "type": "string",
+      "description": "תאר בקצרה את סביבת בית העסק והיכן הוא ממוקם בה",
+      "priority": 10
+    },
+    "hazardous_goods_details": {
+      "type": "string",
+      "description": "אם כן – פרט",
+      "priority": 170
+    },
+    "nature_damage_last_3y_details": {
+      "type": "string",
+      "description": "אם כן – פרט",
+      "priority": 95
+    }
+  }
 }

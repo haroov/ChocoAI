@@ -38,8 +38,7 @@ const bootstrap = async () => {
   console.log('DEBUG: Calling initServer...');
   await initServer(app);
   console.log('DEBUG: initServer done, calling listen...');
-  let httpServer: Server | undefined;
-  httpServer = app.listen(config.port, (error) => {
+  const httpServer: Server = app.listen(config.port, (error) => {
     if (error) {
       const anyErr = error as any;
       if (anyErr?.code === 'EADDRINUSE') {

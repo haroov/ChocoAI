@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Chip, Select, SelectItem } from '@heroui/react';
 import {
   CheckIcon,
@@ -14,6 +14,7 @@ import {
   FlagIcon,
 } from '@heroicons/react/24/outline';
 import moment from 'moment';
+import { Link as RouterLink } from 'react-router-dom';
 import { apiClientStore } from '../../../stores/apiClientStore';
 import classNames from '../../../helpers/classNames';
 import { ConversationDetails } from '../queries/useConversation';
@@ -114,6 +115,23 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'creditcard',
   ]));
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
+  const DEFAULT_DETAILS_WIDTH_PX = 384;
+  const DETAILS_WIDTH_STORAGE_KEY = 'choco.conversationDetails.widthPx';
+  const [detailsWidthPx, setDetailsWidthPx] = useState<number>(() => {
+    try {
+      const raw = window.localStorage.getItem(DETAILS_WIDTH_STORAGE_KEY);
+      const n = raw ? Number(raw) : NaN;
+      if (Number.isFinite(n) && n >= 320 && n <= 1200) return n;
+    } catch {
+      // ignore
+    }
+    return DEFAULT_DETAILS_WIDTH_PX;
+  });
+  const resizeStateRef = useRef<{
+    isResizing: boolean;
+    startX: number;
+    startWidth: number;
+  }>({ isResizing: false, startX: 0, startWidth: DEFAULT_DETAILS_WIDTH_PX });
 
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -122,6 +140,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     activeFlow,
     completedFlows,
     log = [],
+    fieldProvenance,
   } = conversationDetails;
 
   // Canonicalize legacy keys for display.
@@ -165,6 +184,102 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   };
 
   const displayUserData = canonicalizeUserDataForDisplay(userData);
+
+  const isPresentValue = (v: unknown): boolean => {
+    if (v === undefined || v === null) return false;
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return false;
+      const lowered = s.toLowerCase();
+      if (
+        lowered === 'null'
+        || lowered === ':null'
+        || lowered === 'undefined'
+        || lowered === ':undefined'
+      ) return false;
+      return true;
+    }
+    if (Array.isArray(v)) return v.length > 0;
+    // boolean false is a valid answer
+    return true;
+  };
+
+  type FieldContributor = 'user' | 'system';
+  type FieldProvenance = {
+    ts: string | null;
+    contributor: FieldContributor;
+    traceId?: string;
+    flowSlug?: string;
+    stageSlug?: string;
+    method: 'fieldsCollected' | 'snapshot';
+  };
+
+  const contributorFromStageSlug = (stageSlug: string | null | undefined): FieldContributor => {
+    const slug = String(stageSlug || '').trim().toLowerCase();
+    if (!slug) return 'system';
+    if (['route', 'resolvesegment', 'decidenextstep', 'prefillcoverages', 'error'].includes(slug)) return 'system';
+    return 'user';
+  };
+
+  const tracesChrono = useMemo(
+    () => [...traces].sort((a, b) => new Date(a.enteredAt).getTime() - new Date(b.enteredAt).getTime()),
+    [traces],
+  );
+
+  const fieldsCollectedProvenanceBySlug = useMemo(() => {
+    const map = new Map<string, FieldProvenance>();
+    tracesChrono.forEach((trace) => {
+      const ts = trace.completedAt || trace.enteredAt || null;
+      const fields = Array.isArray(trace.fieldsCollected) ? trace.fieldsCollected : [];
+      fields.forEach((fieldSlug) => {
+        const k = String(fieldSlug || '').trim();
+        if (!k) return;
+        if (map.has(k)) return;
+        map.set(k, {
+          ts,
+          contributor: contributorFromStageSlug(trace.stageSlug),
+          traceId: trace.id,
+          flowSlug: trace.flowSlug,
+          stageSlug: trace.stageSlug,
+          method: 'fieldsCollected',
+        });
+      });
+    });
+    return map;
+  }, [tracesChrono]);
+
+  const snapshotFirstSeenProvenanceBySlug = useMemo(() => {
+    const map = new Map<string, FieldProvenance>();
+    tracesChrono.forEach((trace) => {
+      const snap = trace.userDataSnapshot;
+      if (!snap || typeof snap !== 'object') return;
+      Object.entries(snap).forEach(([k, v]) => {
+        const key = String(k || '').trim();
+        if (!key) return;
+        if (map.has(key)) return;
+        if (!isPresentValue(v)) return;
+        map.set(key, {
+          ts: trace.enteredAt || null,
+          contributor: contributorFromStageSlug(trace.stageSlug),
+          traceId: trace.id,
+          flowSlug: trace.flowSlug,
+          stageSlug: trace.stageSlug,
+          method: 'snapshot',
+        });
+      });
+    });
+    return map;
+  }, [tracesChrono]);
+
+  const provenanceForField = (fieldSlug: string): FieldProvenance | null => (
+    (() => {
+      const fromApi = fieldProvenance?.[fieldSlug];
+      if (fromApi) return fromApi as FieldProvenance;
+      return fieldsCollectedProvenanceBySlug.get(fieldSlug)
+        || snapshotFirstSeenProvenanceBySlug.get(fieldSlug)
+        || null;
+    })()
+  );
 
   const getDebugBundle = () => ({
     conversationId,
@@ -221,6 +336,39 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     return () => clearInterval(interval);
   }, [conversationId]);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(DETAILS_WIDTH_STORAGE_KEY, String(detailsWidthPx));
+    } catch {
+      // ignore
+    }
+  }, [detailsWidthPx]);
+
+  useEffect(() => {
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeStateRef.current.isResizing) return;
+      const dx = resizeStateRef.current.startX - ev.clientX; // panel is on the right; dragging left increases width
+      const next = resizeStateRef.current.startWidth + dx;
+      const max = Math.min(1200, Math.floor(window.innerWidth * 0.85));
+      const clamped = Math.max(320, Math.min(max, next));
+      setDetailsWidthPx(clamped);
+    };
+
+    const onUp = () => {
+      if (!resizeStateRef.current.isResizing) return;
+      resizeStateRef.current.isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, []);
+
   // Auto-expand active flow and collapse completed flows
   useEffect(() => {
     const expanded = new Set<string>();
@@ -254,25 +402,6 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       setScrollToStageId(null);
     }
   }, [scrollToStageId]);
-
-  const isPresentValue = (v: unknown): boolean => {
-    if (v === undefined || v === null) return false;
-    if (typeof v === 'string') {
-      const s = v.trim();
-      if (!s) return false;
-      const lowered = s.toLowerCase();
-      if (
-        lowered === 'null'
-        || lowered === ':null'
-        || lowered === 'undefined'
-        || lowered === ':undefined'
-      ) return false;
-      return true;
-    }
-    if (Array.isArray(v)) return v.length > 0;
-    // boolean false is a valid answer
-    return true;
-  };
 
   const isFieldSatisfied = (field: string, value: unknown): boolean => {
     if (!isPresentValue(value)) return false;
@@ -462,6 +591,15 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'legal_id_type',
     'legal_id',
     'business_legal_entity_type',
+    // Segment resolution (system-derived, but part of insured payload)
+    'segment_id',
+    'segment_name_he',
+    'segment_group_id',
+    'segment_group_name_he',
+    'default_package_key',
+    'segment_resolution_confidence',
+    'segment_resolution_source',
+    'segment_coverages_prefilled_v1',
     // Profile / needs
     'segment_description',
     'product_line',
@@ -497,11 +635,25 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   };
 
   // Fields explicitly collected by any flow/stage in this conversation (union of fieldsToCollect).
-  // This ensures flow-specific fields (e.g. flow02 has_* and ch*_selected) always appear in Collected Data.
+  // These are conceptually part of the insured/candidate payload (not "User contact").
   const flowDefinedFieldKeys = Array.from(new Set(
     flowHistory.flatMap((f) => f.stages.flatMap((s) => (Array.isArray(s.fieldsToCollect) ? s.fieldsToCollect : []))),
   ));
-  const flowDefinedData = pickNonEmptyKeys(displayUserData, flowDefinedFieldKeys);
+  const excludeFromInsured = new Set<string>([
+    ...userDataKeys,
+    // Legacy/alias user-contact keys (we show them under "User")
+    'first_name',
+    'last_name',
+    'phone',
+    'mobile_phone',
+    'email',
+  ]);
+  const flowDefinedInsuredKeys = flowDefinedFieldKeys.filter((k) => !excludeFromInsured.has(k));
+  const flowDefinedInsuredData = pickNonEmptyKeys(displayUserData, flowDefinedInsuredKeys);
+  const insuredDataMerged = {
+    ...insuredData,
+    ...flowDefinedInsuredData,
+  };
 
   // Build collected entities
   const collectedEntities: CollectedEntityType[] = [
@@ -514,19 +666,11 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       }] : [],
     },
     {
-      type: 'flow-defined',
-      label: 'Flow fields',
-      instances: Object.keys(flowDefinedData).length > 0 ? [{
-        id: 'flow-fields',
-        data: flowDefinedData,
-      }] : [],
-    },
-    {
       type: 'insured',
       label: 'Insured',
-      instances: Object.keys(insuredData).length > 0 ? [{
+      instances: Object.keys(insuredDataMerged).length > 0 ? [{
         id: 'insured-data',
-        data: insuredData,
+        data: insuredDataMerged,
       }] : [],
     },
   ];
@@ -770,6 +914,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     const isCurrentActive = !!activeFlow &&
       flow.sessionId === activeFlow.sessionId &&
       flow.slug === activeFlow.slug;
+    const shouldShowStageTimeline = flow.stages.length > 1 || getTracesForFlow(flow.slug).some((t) => (
+      (t.toolsExecuted?.length ?? 0) > 0 || (t.errorsEncountered?.length ?? 0) > 0
+    ));
 
     const flowStatusLabel = isCurrentActive
       ? 'In progress'
@@ -901,347 +1048,326 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
               )}
             </div>
 
-            {/* Stage Items - Chronologically sorted */}
-            <div className="relative pl-6">
-              {/* Timeline line */}
-              <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-gray-200" />
+            {shouldShowStageTimeline && (
+              <>
+                {/* Stage Items - Chronologically sorted */}
+                <div className="relative pl-6">
+                  {/* Timeline line */}
+                  <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-gray-200" />
 
-              <div className="space-y-2">
-                {(() => {
-                  // Separate stages into: completed, current (in-progress), and not started
-                  const completedStages: typeof flow.stages = [];
-                  const inProgressStages: typeof flow.stages = [];
-                  const notStartedStages: typeof flow.stages = [];
+                  <div className="space-y-2">
+                    {(() => {
+                      // Separate stages into: completed, current (in-progress), and not started
+                      const completedStages: typeof flow.stages = [];
+                      const inProgressStages: typeof flow.stages = [];
+                      const notStartedStages: typeof flow.stages = [];
 
-                  flow.stages.forEach((stage) => {
-                    // Option A: Use source of truth
-                    const isCurrentStage = currentFlowSlug === flow.slug && currentStageSlug === stage.slug;
+                      flow.stages.forEach((stage) => {
+                        // Option A: Use source of truth
+                        const isCurrentStage = currentFlowSlug === flow.slug && currentStageSlug === stage.slug;
 
-                    if (stage.isCompleted) {
-                      completedStages.push(stage);
-                    } else if (isCurrentStage) {
-                      // Only the current stage (from UserFlow)
-                      inProgressStages.push(stage);
-                    } else {
-                      // Everything else that hasn't started
-                      notStartedStages.push(stage);
-                    }
-                  });
+                        if (stage.isCompleted) {
+                          completedStages.push(stage);
+                        } else if (isCurrentStage) {
+                          // Only the current stage (from UserFlow)
+                          inProgressStages.push(stage);
+                        } else {
+                          // Everything else that hasn't started
+                          notStartedStages.push(stage);
+                        }
+                      });
 
-                  // Sort completed stages chronologically (oldest first)
-                  completedStages.sort((a, b) => {
-                    const traceA = getTraceForStage(flow.slug, a.slug);
-                    const traceB = getTraceForStage(flow.slug, b.slug);
-                    const timeA = traceA?.enteredAt ? new Date(traceA.enteredAt).getTime() : 0;
-                    const timeB = traceB?.enteredAt ? new Date(traceB.enteredAt).getTime() : 0;
-                    return timeA - timeB; // Chronological order (oldest first)
-                  });
+                      // Sort completed stages chronologically (oldest first)
+                      completedStages.sort((a, b) => {
+                        const traceA = getTraceForStage(flow.slug, a.slug);
+                        const traceB = getTraceForStage(flow.slug, b.slug);
+                        const timeA = traceA?.enteredAt ? new Date(traceA.enteredAt).getTime() : 0;
+                        const timeB = traceB?.enteredAt ? new Date(traceB.enteredAt).getTime() : 0;
+                        return timeA - timeB; // Chronological order (oldest first)
+                      });
 
-                  // Combine: completed first (chronological), then current (in-progress), then not started
-                  const sortedStages = [...completedStages, ...inProgressStages, ...notStartedStages];
+                      // Combine: completed first (chronological), then current (in-progress), then not started
+                      const sortedStages = [...completedStages, ...inProgressStages, ...notStartedStages];
 
-                  return sortedStages.map((stage) => {
-                    const trace = getTraceForStage(flow.slug, stage.slug);
-                    const stageKey = `${flow.sessionId}-${stage.slug}`;
-                    const isStageExpanded = expandedStages.has(stageKey);
-                    const stageFieldProgress = getStageFieldProgress(stage, trace);
-                    const hasDetails = trace && (
-                      trace.fieldsCollected.length > 0 ||
-                      trace.toolsExecuted.length > 0 ||
-                      trace.errorsEncountered.length > 0
-                    );
-                    // Option A: Use source of truth data
-                    // Current stage: from UserFlow (via trace API)
-                    const isCurrentStage = currentFlowSlug === flow.slug && currentStageSlug === stage.slug;
-                    // Completed: from FlowHistory (via activeFlow.stages.isCompleted)
-                    const { isCompleted } = stage;
-                    // Error: from FlowTrace.errorsEncountered
-                    const hasError = trace && trace.errorsEncountered && trace.errorsEncountered.length > 0;
+                      return sortedStages.map((stage) => {
+                        const trace = getTraceForStage(flow.slug, stage.slug);
+                        const stageKey = `${flow.sessionId}-${stage.slug}`;
+                        const isStageExpanded = expandedStages.has(stageKey);
+                        const stageFieldProgress = getStageFieldProgress(stage, trace);
+                        const hasDetails = trace && (
+                          trace.fieldsCollected.length > 0 ||
+                          trace.toolsExecuted.length > 0 ||
+                          trace.errorsEncountered.length > 0
+                        );
+                        // Option A: Use source of truth data
+                        // Current stage: from UserFlow (via trace API)
+                        const isCurrentStage = currentFlowSlug === flow.slug && currentStageSlug === stage.slug;
+                        // Completed: from FlowHistory (via activeFlow.stages.isCompleted)
+                        const { isCompleted } = stage;
+                        // Error: from FlowTrace.errorsEncountered
+                        const hasError = trace && trace.errorsEncountered && trace.errorsEncountered.length > 0;
 
-                    // Determine status using clear priority: error > completed > current > not-started
-                    let status: 'completed' | 'in-progress' | 'error' | 'not-started';
-                    if (hasError) {
-                      status = 'error';
-                    } else if (isCompleted) {
-                      status = 'completed';
-                    } else if (isCurrentStage) {
-                      status = 'in-progress';
-                    } else {
-                      status = 'not-started';
-                    }
+                        // Determine status using clear priority: error > completed > current > not-started
+                        let status: 'completed' | 'in-progress' | 'error' | 'not-started';
+                        if (hasError) {
+                          status = 'error';
+                        } else if (isCompleted) {
+                          status = 'completed';
+                        } else if (isCurrentStage) {
+                          status = 'in-progress';
+                        } else {
+                          status = 'not-started';
+                        }
 
-                    const isNotStarted = status === 'not-started';
+                        const isNotStarted = status === 'not-started';
 
-                    return (
-                      <div
-                        key={stage.slug}
-                        ref={(el) => {
-                          const refKey = `${flow.slug}-${stage.slug}`;
-                          stageRefs.current[refKey] = el;
-                        }}
-                        className={classNames(
-                          'bg-white border rounded-lg p-3 relative',
-                          isNotStarted ? 'bg-gray-50 border-gray-200' : 'border-gray-200',
-                          isCurrentStage && !isNotStarted ? 'border-[#882DD7]/30 bg-[#882DD7]/10' : '',
-                        )}
-                      >
-                        {/* Timeline dot */}
-                        <div className={classNames(
-                          'absolute left-[-21px] top-4 w-2.5 h-2.5 rounded-full border-2 z-10',
-                          status === 'completed' ? 'bg-green-500 border-green-500' :
-                            status === 'error' ? 'bg-red-500 border-red-500' :
-                              status === 'in-progress' ? 'bg-[#882DD7] border-[#882DD7]' :
-                                'bg-white border-gray-400',
-                        )}
-                        />
+                        return (
+                          <div
+                            key={stage.slug}
+                            ref={(el) => {
+                              const refKey = `${flow.slug}-${stage.slug}`;
+                              stageRefs.current[refKey] = el;
+                            }}
+                            className={classNames(
+                              'bg-white border rounded-lg p-3 relative',
+                              isNotStarted ? 'bg-gray-50 border-gray-200' : 'border-gray-200',
+                              isCurrentStage && !isNotStarted ? 'border-[#882DD7]/30 bg-[#882DD7]/10' : '',
+                            )}
+                          >
+                            {/* Timeline dot */}
+                            <div className={classNames(
+                              'absolute left-[-21px] top-4 w-2.5 h-2.5 rounded-full border-2 z-10',
+                              status === 'completed' ? 'bg-green-500 border-green-500' :
+                                status === 'error' ? 'bg-red-500 border-red-500' :
+                                  status === 'in-progress' ? 'bg-[#882DD7] border-[#882DD7]' :
+                                    'bg-white border-gray-400',
+                            )}
+                            />
 
-                        {/* Stage Header */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              {trace?.toolsExecuted && trace.toolsExecuted.length > 0 && (
-                                <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                              )}
-                              <span className="text-sm font-medium">
-                                <span className="text-gray-500">{flow.slug}</span>
-                                {' / '}
-                                <span className="font-semibold">{stage.name || stage.slug}</span>
-                              </span>
-                            </div>
-                            {trace ? (
-                              <div className="mt-1 space-y-1">
-                                <div className="text-xs text-gray-500">
-                                  {moment(trace.enteredAt).format('M/D/YYYY, h:mm:ss A')}
-                                  {trace.completedAt && (
-                                    <>
-                                      {' → '}
-                                      {moment(trace.completedAt).format('M/D/YYYY, h:mm:ss A')}
-                                    </>
+                            {/* Stage Header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  {trace?.toolsExecuted && trace.toolsExecuted.length > 0 && (
+                                    <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                   )}
-                                  {stageFieldProgress.required.length > 0 && (
-                                    <>
-                                      {' '}
-                                      ·
-                                      {' '}
-                                      Fields
-                                      {' '}
-                                      {stageFieldProgress.collected.length}
-                                      /
-                                      {stageFieldProgress.required.length}
-                                      {stageFieldProgress.missing.length > 0
-                                        ? ` (${stageFieldProgress.missing.length} missing)`
-                                        : ''}
-                                    </>
-                                  )}
+                                  <span className="text-sm font-medium">
+                                    <span className="text-gray-500">{flow.slug}</span>
+                                    {' / '}
+                                    <span className="font-semibold">{stage.name || stage.slug}</span>
+                                  </span>
                                 </div>
-                                {stageFieldProgress.missing.length > 0 && (
-                                  <div
-                                    className="text-xs text-orange-700"
-                                    title={stageFieldProgress.missing.map(labelForField).join(', ')}
-                                  >
-                                    Missing:
-                                    {' '}
-                                    {formatMissingFieldsInline(stageFieldProgress.missing)}
-                                  </div>
-                                )}
-                              </div>
-                            ) : isNotStarted ? null : (
-                              <div className="text-xs text-gray-400 mt-1 italic">
-                                No timestamp available
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {/* Status Badge */}
-                            {status === 'completed' && (
-                              <Chip
-                                size="sm"
-                                className="bg-green-100 text-green-700 border border-green-300 rounded-full"
-                                startContent={<CheckIcon className="w-3 h-3 text-green-600" />}
-                              >
-                                Completed
-                              </Chip>
-                            )}
-                            {status === 'in-progress' && (
-                              <Chip
-                                size="sm"
-                                className="bg-[#882DD7]/10 text-[#882DD7] border border-[#882DD7]/30 rounded-full"
-                                startContent={<ClockIcon className="w-3 h-3 text-[#882DD7]" />}
-                              >
-                                In progress
-                              </Chip>
-                            )}
-                            {status === 'error' && (
-                              <Chip
-                                size="sm"
-                                className="bg-red-100 text-red-700 border border-red-300 rounded-full"
-                                startContent={<ExclamationTriangleIcon className="w-3 h-3 text-red-600" />}
-                              >
-                                Error
-                              </Chip>
-                            )}
-                            {status === 'not-started' && (
-                              <Chip
-                                size="sm"
-                                className="bg-gray-100 text-gray-600 border border-gray-300 rounded-full"
-                                startContent={
-                                  <div className="w-3 h-3 rounded-full border border-gray-400" />
-                                }
-                              >
-                                Not started
-                              </Chip>
-                            )}
-                            {hasDetails && (
-                              <button
-                                onClick={() => toggleStage(stageKey)}
-                                className="text-gray-400 hover:text-gray-600"
-                              >
-                                {isStageExpanded ? (
-                                  <ChevronDownIcon className="w-4 h-4" />
-                                ) : (
-                                  <ChevronRightIcon className="w-4 h-4" />
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Stage Details (expanded) */}
-                        {isStageExpanded && trace && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                            {/* Required Fields (derived from stage definition) */}
-                            {stageFieldProgress.required.length > 0 && (
-                              <div>
-                                <div className="text-xs font-semibold text-gray-700 mb-2">
-                                  Required Fields
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  {stageFieldProgress.required.map((field) => {
-                                    const value = trace.userDataSnapshot?.[field] ?? userData[field];
-                                    const present = isPresentValue(value);
-                                    return (
-                                      <div key={field} className="flex items-center gap-2">
-                                        <div className={[
-                                          'w-2 h-2 rounded-full',
-                                          present ? 'bg-green-500' : 'bg-gray-300',
-                                        ].join(' ')}
-                                        />
-                                        <span className="font-mono text-gray-600">{field}</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {stageFieldProgress.missing.length > 0 && (
-                                  <div className="text-xs text-orange-700 mt-2">
-                                    Missing:
-                                    {' '}
-                                    {stageFieldProgress.missing.join(', ')}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-
-                            {/* Fields Collected */}
-                            {trace.fieldsCollected.length > 0 && (
-                              <div>
-                                <div className="text-xs font-semibold text-gray-700 mb-2">
-                                  Fields Collected
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                  {trace.fieldsCollected.map((field) => {
-                                    const value = trace.userDataSnapshot?.[field] ?? userData[field];
-                                    const isMasked = maskedFields.has(field.toLowerCase());
-                                    const displayValue = value !== undefined && value !== null && value !== ''
-                                      ? (typeof value === 'string' || typeof value === 'number'
-                                        ? String(value)
-                                        : JSON.stringify(value))
-                                      : '–';
-                                    return (
-                                      <div key={field} className="space-y-1">
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-gray-500 font-mono text-xs">
-                                            {field}
-                                            :
-                                          </span>
-                                          <button
-                                            onClick={() => toggleMaskField(field)}
-                                            className="text-gray-400 hover:text-gray-600"
-                                          >
-                                            {isMasked ? (
-                                              <EyeSlashIcon className="w-3 h-3" />
-                                            ) : (
-                                              <EyeIcon className="w-3 h-3" />
-                                            )}
-                                          </button>
-                                        </div>
-                                        <div className="text-gray-800 break-words text-xs">
-                                          {isMasked ? maskValue(field, displayValue) : displayValue}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Tools Executed */}
-                            {trace.toolsExecuted.length > 0 && (
-                              <div>
-                                <div className="text-xs font-semibold text-gray-700 mb-2">
-                                  Tools Executed
-                                </div>
-                                <div className="space-y-2">
-                                  {trace.toolsExecuted.map((tool, idx: number) => (
-                                    <div
-                                      key={idx}
-                                      className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200"
-                                    >
-                                      <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-xs font-medium text-gray-800">
-                                          {tool.toolName}
-                                        </div>
-                                        {tool.timestamp && (
-                                          <div className="text-xs text-gray-500">
-                                            {moment(tool.timestamp).format('M/D/YYYY, h:mm:ss A')}
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-1 flex-shrink-0">
-                                        {tool.success !== false ? (
-                                          <div
-                                            className={[
-                                              'w-4 h-4 rounded-full bg-green-500',
-                                              'flex items-center justify-center',
-                                            ].join(' ')}
-                                          >
-                                            <CheckIcon className="w-3 h-3 text-white" />
-                                          </div>
-                                        ) : (
-                                          <div
-                                            className={[
-                                              'w-4 h-4 rounded-full bg-red-500',
-                                              'flex items-center justify-center',
-                                            ].join(' ')}
-                                          >
-                                            <XMarkIcon className="w-3 h-3 text-white" />
-                                          </div>
-                                        )}
-                                        <QuestionMarkCircleIcon className="w-4 h-4 text-gray-400" />
-                                      </div>
+                                {trace ? (
+                                  <div className="mt-1 space-y-1">
+                                    <div className="text-xs text-gray-500">
+                                      {moment(trace.enteredAt).format('M/D/YYYY, h:mm:ss A')}
+                                      {trace.completedAt && (
+                                        <>
+                                          {' → '}
+                                          {moment(trace.completedAt).format('M/D/YYYY, h:mm:ss A')}
+                                        </>
+                                      )}
                                     </div>
-                                  ))}
-                                </div>
+                                  </div>
+                                ) : isNotStarted ? null : (
+                                  <div className="text-xs text-gray-400 mt-1 italic">
+                                    No timestamp available
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {/* Status Badge */}
+                                {status === 'completed' && (
+                                  <Chip
+                                    size="sm"
+                                    className="bg-green-100 text-green-700 border border-green-300 rounded-full"
+                                    startContent={<CheckIcon className="w-3 h-3 text-green-600" />}
+                                  >
+                                    Completed
+                                  </Chip>
+                                )}
+                                {status === 'in-progress' && (
+                                  <Chip
+                                    size="sm"
+                                    className="bg-[#882DD7]/10 text-[#882DD7] border border-[#882DD7]/30 rounded-full"
+                                    startContent={<ClockIcon className="w-3 h-3 text-[#882DD7]" />}
+                                  >
+                                    In progress
+                                  </Chip>
+                                )}
+                                {status === 'error' && (
+                                  <Chip
+                                    size="sm"
+                                    className="bg-red-100 text-red-700 border border-red-300 rounded-full"
+                                    startContent={<ExclamationTriangleIcon className="w-3 h-3 text-red-600" />}
+                                  >
+                                    Error
+                                  </Chip>
+                                )}
+                                {status === 'not-started' && (
+                                  <Chip
+                                    size="sm"
+                                    className="bg-gray-100 text-gray-600 border border-gray-300 rounded-full"
+                                    startContent={
+                                      <div className="w-3 h-3 rounded-full border border-gray-400" />
+                                    }
+                                  >
+                                    Not started
+                                  </Chip>
+                                )}
+                                {hasDetails && (
+                                  <button
+                                    onClick={() => toggleStage(stageKey)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                  >
+                                    {isStageExpanded ? (
+                                      <ChevronDownIcon className="w-4 h-4" />
+                                    ) : (
+                                      <ChevronRightIcon className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Stage Details (expanded) */}
+                            {isStageExpanded && trace && (
+                              <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+                                {/* Required Fields (derived from stage definition) */}
+                                {stageFieldProgress.required.length > 0 && (
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                                      Required Fields
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      {stageFieldProgress.required.map((field) => {
+                                        const value = trace.userDataSnapshot?.[field] ?? userData[field];
+                                        const present = isPresentValue(value);
+                                        return (
+                                          <div key={field} className="flex items-center gap-2">
+                                            <div className={[
+                                              'w-2 h-2 rounded-full',
+                                              present ? 'bg-green-500' : 'bg-gray-300',
+                                            ].join(' ')}
+                                            />
+                                            <span className="font-mono text-gray-600">{field}</span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    {stageFieldProgress.missing.length > 0 && (
+                                      <div className="text-xs text-orange-700 mt-2">
+                                        Missing:
+                                        {' '}
+                                        {stageFieldProgress.missing.join(', ')}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Fields Collected */}
+                                {trace.fieldsCollected.length > 0 && (
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                                      Fields Collected
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      {trace.fieldsCollected.map((field) => {
+                                        const value = trace.userDataSnapshot?.[field] ?? userData[field];
+                                        const isMasked = maskedFields.has(field.toLowerCase());
+                                        const displayValue = value !== undefined && value !== null && value !== ''
+                                          ? (typeof value === 'string' || typeof value === 'number'
+                                            ? String(value)
+                                            : JSON.stringify(value))
+                                          : '–';
+                                        return (
+                                          <div key={field} className="space-y-1">
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-gray-500 font-mono text-xs">
+                                                {field}
+                                                :
+                                              </span>
+                                              <button
+                                                onClick={() => toggleMaskField(field)}
+                                                className="text-gray-400 hover:text-gray-600"
+                                              >
+                                                {isMasked ? (
+                                                  <EyeSlashIcon className="w-3 h-3" />
+                                                ) : (
+                                                  <EyeIcon className="w-3 h-3" />
+                                                )}
+                                              </button>
+                                            </div>
+                                            <div className="text-gray-800 break-words text-xs">
+                                              {isMasked ? maskValue(field, displayValue) : displayValue}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Tools Executed */}
+                                {trace.toolsExecuted.length > 0 && (
+                                  <div>
+                                    <div className="text-xs font-semibold text-gray-700 mb-2">
+                                      Tools Executed
+                                    </div>
+                                    <div className="space-y-2">
+                                      {trace.toolsExecuted.map((tool, idx: number) => (
+                                        <div
+                                          key={idx}
+                                          className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200"
+                                        >
+                                          <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-xs font-medium text-gray-800">
+                                              {tool.toolName}
+                                            </div>
+                                            {tool.timestamp && (
+                                              <div className="text-xs text-gray-500">
+                                                {moment(tool.timestamp).format('M/D/YYYY, h:mm:ss A')}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-1 flex-shrink-0">
+                                            {tool.success !== false ? (
+                                              <div
+                                                className={[
+                                                  'w-4 h-4 rounded-full bg-green-500',
+                                                  'flex items-center justify-center',
+                                                ].join(' ')}
+                                              >
+                                                <CheckIcon className="w-3 h-3 text-white" />
+                                              </div>
+                                            ) : (
+                                              <div
+                                                className={[
+                                                  'w-4 h-4 rounded-full bg-red-500',
+                                                  'flex items-center justify-center',
+                                                ].join(' ')}
+                                              >
+                                                <XMarkIcon className="w-3 h-3 text-white" />
+                                              </div>
+                                            )}
+                                            <QuestionMarkCircleIcon className="w-4 h-4 text-gray-400" />
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1296,7 +1422,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     collectedEntities.forEach((entityType) => {
       const entityKey = entityType.type;
       const isExpanded = expandedEntities.has(entityKey);
-      if (isExpanded && entityType.instances.length > 0) {
+      // Auto-expand instances only when there are multiple instances (otherwise we render flattened).
+      if (isExpanded && entityType.instances.length > 1) {
         const firstInstanceKey = `${entityKey}-${entityType.instances[0].id}`;
         if (!expandedEntityInstances.has(firstInstanceKey)) {
           setExpandedEntityInstances((prev) => new Set([...prev, firstInstanceKey]));
@@ -1309,10 +1436,31 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   // Collected Data View Component
   const CollectedDataView = () => (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Collected Data</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Collected Data</h2>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="flat"
+            onPress={() => setExpandedEntities(new Set(collectedEntities.map((e) => e.type)))}
+          >
+            Expand all
+          </Button>
+          <Button
+            size="sm"
+            variant="flat"
+            onPress={() => setExpandedEntities(new Set())}
+          >
+            Collapse all
+          </Button>
+        </div>
+      </div>
       {collectedEntities.map((entityType) => {
         const entityKey = entityType.type;
         const isExpanded = expandedEntities.has(entityKey);
+        const isFlattened = entityType.instances.length === 1;
+        const flattenedFieldCount = isFlattened ? Object.keys(entityType.instances[0].data || {}).length : 0;
+        const chipCount = isFlattened ? flattenedFieldCount : entityType.instances.length;
 
         return (
           <div key={entityKey} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1328,14 +1476,115 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                 )}
                 <span className="font-medium">{entityType.label}</span>
                 <Chip size="sm" variant="flat" className="text-xs">
-                  {entityType.instances.length}
+                  {chipCount}
                 </Chip>
               </div>
             </button>
 
             {isExpanded && (
               <div className="border-t border-gray-200 px-4 py-3 space-y-2 bg-gray-50">
-                {entityType.instances.map((instance) => {
+                {isFlattened ? (() => {
+                  const instance = entityType.instances[0];
+                  const entries = Object.entries(instance.data || {});
+                  const rows = entries
+                    .map(([key, value]) => {
+                      const prov = provenanceForField(key);
+                      const tsMs = prov?.ts ? new Date(prov.ts).getTime() : Number.POSITIVE_INFINITY;
+                      return { key, value, prov, tsMs };
+                    })
+                    .sort((a, b) => {
+                      if (a.tsMs !== b.tsMs) return a.tsMs - b.tsMs; // oldest-first
+                      return String(a.key).localeCompare(String(b.key));
+                    });
+
+                  return (
+                    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="px-3 py-2">
+                        {rows.length === 0 ? (
+                          <div className="text-xs text-gray-500 italic">No fields</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {rows.map(({ key, value, prov }) => {
+                              const isMasked = maskedFields.has(String(key).toLowerCase());
+                              const formattedValue = formatCollectedValue(key, value);
+                              const metaText = `${prov?.ts ? moment(prov.ts).format('M/D/YYYY, h:mm A') : '—'} · ${prov?.contributor || 'system'}`;
+                              const segmentId = (() => {
+                                if (key !== 'business_segment' || isMasked) return null;
+                                const direct = String((instance.data as any)?.segment_id ?? '').trim();
+                                if (direct) return direct;
+                                const fromConversation = String((displayUserData as any)?.segment_id ?? '').trim();
+                                return fromConversation || null;
+                              })();
+
+                              return (
+                                <div key={key} className="flex items-start gap-2 text-xs">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-gray-500 font-mono">
+                                          {key}
+                                          :
+                                        </span>
+                                        <button
+                                          onClick={() => toggleMaskField(key)}
+                                          className="text-gray-400 hover:text-gray-600"
+                                        >
+                                          {isMasked ? (
+                                            <EyeSlashIcon className="w-3 h-3" />
+                                          ) : (
+                                            <EyeIcon className="w-3 h-3" />
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="text-gray-800 break-words">
+                                      {(() => {
+                                        if (isMasked) return maskValue(key, formattedValue);
+                                        if (typeof formattedValue === 'object') {
+                                          return JSON.stringify(formattedValue, null, 2);
+                                        }
+                                        if (key === 'business_segment' && segmentId) {
+                                          return (
+                                            <RouterLink
+                                              to={`/settings/segments/${encodeURIComponent(segmentId)}`}
+                                              className="text-primary underline underline-offset-2 hover:opacity-80"
+                                              title={`Open segment: ${segmentId}`}
+                                            >
+                                              {String(formattedValue)}
+                                            </RouterLink>
+                                          );
+                                        }
+                                        return String(formattedValue);
+                                      })()}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5" title={metaText}>
+                                      {metaText}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      {instance.metadata && Object.keys(instance.metadata).length > 0 && (
+                        <div className="border-t border-gray-200 px-3 py-2">
+                          <div className="text-xs font-semibold text-gray-700 mb-1">Metadata</div>
+                          {Object.entries(instance.metadata).map(([k, v]) => (
+                            <div key={k} className="text-xs text-gray-600">
+                              <span className="font-mono">
+                                {k}
+                                :
+                              </span>
+                              {' '}
+                              {String(v)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : entityType.instances.map((instance) => {
                   const instanceKey = `${entityKey}-${instance.id}`;
                   const isInstanceExpanded = expandedEntityInstances.has(instanceKey);
 
@@ -1365,41 +1614,75 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
 
                       {isInstanceExpanded && (
                         <div className="border-t border-gray-200 px-3 py-2 space-y-2">
-                          {Object.entries(instance.data).map(([key, value]) => {
-                            const isMasked = maskedFields.has(key.toLowerCase());
-                            const formattedValue = formatCollectedValue(key, value);
-                            return (
-                              <div key={key} className="flex items-start gap-2 text-xs">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-gray-500 font-mono">
-                                      {key}
-                                      :
-                                    </span>
-                                    <button
-                                      onClick={() => toggleMaskField(key)}
-                                      className="text-gray-400 hover:text-gray-600"
-                                    >
-                                      {isMasked ? (
-                                        <EyeSlashIcon className="w-3 h-3" />
-                                      ) : (
-                                        <EyeIcon className="w-3 h-3" />
-                                      )}
-                                    </button>
-                                  </div>
-                                  <div className="text-gray-800 break-words">
-                                    {(() => {
-                                      if (isMasked) return maskValue(key, formattedValue);
-                                      if (typeof formattedValue === 'object') {
-                                        return JSON.stringify(formattedValue, null, 2);
-                                      }
-                                      return String(formattedValue);
-                                    })()}
+                          {Object.entries(instance.data)
+                            .map(([key, value]) => {
+                              const prov = provenanceForField(key);
+                              const tsMs = prov?.ts ? new Date(prov.ts).getTime() : Number.POSITIVE_INFINITY;
+                              return { key, value, prov, tsMs };
+                            })
+                            .sort((a, b) => {
+                              if (a.tsMs !== b.tsMs) return a.tsMs - b.tsMs; // oldest-first
+                              return String(a.key).localeCompare(String(b.key));
+                            })
+                            .map(({ key, value, prov }) => {
+                              const isMasked = maskedFields.has(key.toLowerCase());
+                              const formattedValue = formatCollectedValue(key, value);
+                              const metaText = `${prov?.ts ? moment(prov.ts).format('M/D/YYYY, h:mm A') : '—'} · ${prov?.contributor || 'system'}`;
+                              const segmentId = (() => {
+                                if (key !== 'business_segment' || isMasked) return null;
+                                // Prefer explicit resolved segment_id if present in this entity snapshot.
+                                const direct = String((instance.data as any)?.segment_id ?? '').trim();
+                                if (direct) return direct;
+                                // Fallback: use the conversation-level resolved segment_id (written by the backend flow router).
+                                const fromConversation = String((displayUserData as any)?.segment_id ?? '').trim();
+                                return fromConversation || null;
+                              })();
+                              return (
+                                <div key={key} className="flex items-start gap-2 text-xs">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-1 mb-1">
+                                      <span className="text-gray-500 font-mono">
+                                        {key}
+                                        :
+                                      </span>
+                                      <button
+                                        onClick={() => toggleMaskField(key)}
+                                        className="text-gray-400 hover:text-gray-600"
+                                      >
+                                        {isMasked ? (
+                                          <EyeSlashIcon className="w-3 h-3" />
+                                        ) : (
+                                          <EyeIcon className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                    <div className="text-gray-800 break-words">
+                                      {(() => {
+                                        if (isMasked) return maskValue(key, formattedValue);
+                                        if (typeof formattedValue === 'object') {
+                                          return JSON.stringify(formattedValue, null, 2);
+                                        }
+                                        if (key === 'business_segment' && segmentId) {
+                                          return (
+                                            <RouterLink
+                                              to={`/settings/segments/${encodeURIComponent(segmentId)}`}
+                                              className="text-primary underline underline-offset-2 hover:opacity-80"
+                                              title={`Open segment: ${segmentId}`}
+                                            >
+                                              {String(formattedValue)}
+                                            </RouterLink>
+                                          );
+                                        }
+                                        return String(formattedValue);
+                                      })()}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5" title={metaText}>
+                                      {metaText}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
                           {instance.metadata && Object.keys(instance.metadata).length > 0 && (
                             <div className="pt-2 border-t border-gray-200">
                               <div className="text-xs font-semibold text-gray-700 mb-1">Metadata</div>
@@ -1495,7 +1778,30 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   };
 
   return (
-    <div className="w-96 flex-shrink-0 border-l border-default-200 flex flex-col bg-white">
+    <div
+      className="relative flex-shrink-0 border-l border-default-200 flex flex-col bg-white"
+      style={{ width: detailsWidthPx }}
+    >
+      {/* Resize handle */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        title="Drag to resize"
+        className={[
+          'absolute left-0 top-0 h-full w-1',
+          'cursor-col-resize',
+          'hover:bg-default-200/70',
+          'active:bg-default-300/80',
+        ].join(' ')}
+        onMouseDown={(ev) => {
+          resizeStateRef.current.isResizing = true;
+          resizeStateRef.current.startX = ev.clientX;
+          resizeStateRef.current.startWidth = detailsWidthPx;
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+        }}
+        onDoubleClick={() => setDetailsWidthPx(DEFAULT_DETAILS_WIDTH_PX)}
+      />
       {/* Header */}
       <header className="border-b border-default-200 px-4 py-3 flex justify-between items-center gap-2">
         <span className="truncate block font-semibold">Conversation details</span>

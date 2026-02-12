@@ -9,6 +9,7 @@ import { DashboardSection } from '../pages/SettingsPage/sections/DashboardSectio
 import { AIProviderSection } from '../pages/SettingsPage/sections/AIProviderSection';
 import { FlowsSection } from '../pages/SettingsPage/sections/FlowsSection';
 import { FlowEditor } from '../pages/SettingsPage/sections/FlowEditor';
+import { SegmentsCatalogSection } from '../pages/SettingsPage/sections/SegmentsCatalogSection';
 import { WebWidgetSection } from '../pages/SettingsPage/sections/WebWidgetSection';
 import { SystemSection } from '../pages/SettingsPage/sections/SystemSection';
 import { WhatsappSection } from '../pages/SettingsPage/sections/WhatsappSection';
@@ -31,6 +32,8 @@ export const AuthorizedRoutes: React.FC = observer(() => (
         <Route path="ai-provider" element={<AIProviderSection />} />
         <Route path="flows" element={<FlowsSection />} />
         <Route path="flows/:flowId" element={<FlowEditor />} />
+        <Route path="segments" element={<SegmentsCatalogSection />} />
+        <Route path="segments/:segmentId" element={<SegmentsCatalogSection />} />
         <Route path="whatsapp" element={<WhatsappSection />} />
         <Route path="email" element={<EmailSection />} />
         <Route path="web-widget" element={<WebWidgetSection />} />

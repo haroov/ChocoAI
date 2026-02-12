@@ -161,6 +161,7 @@ describe('topic-split process completion expression', () => {
     expect(evalExpr(expr, {})).toBe(false);
     expect(evalExpr(expr, { insured_relation_to_business: 'xyz' })).toBe(false);
     expect(evalExpr(expr, { insured_relation_to_business: 'בעלים' })).toBe(true);
+    expect(evalExpr(expr, { insured_relation_to_business: '״בעלים״' })).toBe(true);
     expect(evalExpr(expr, { insured_relation_to_business: 'מנהל' })).toBe(true);
     expect(evalExpr(expr, { insured_relation_to_business: 'owner' })).toBe(true);
   });

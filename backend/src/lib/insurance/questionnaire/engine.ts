@@ -51,11 +51,24 @@ function parseBooleanHe(raw: string): boolean | null {
   const head = s
     .replace(/^[\s"'“”׳״]+/g, '')
     .trim();
-  const m = head.match(/^(כן|לא|yes|no|y|n|true|false)(?=$|[\s,.:;!?()\[\]{}'"“”\-–—])/i);
-  if (!m) return null;
-  const token = m[1].toLowerCase();
-  if (token === 'כן' || token === 'yes' || token === 'y' || token === 'true') return true;
-  if (token === 'לא' || token === 'no' || token === 'n' || token === 'false') return false;
+
+  // 1) Explicit yes/no tokens (Hebrew/English) + common synonyms.
+  const m = head.match(/^(כן|לא|חיובי|שלילי|yes|no|y|n|true|false)(?=$|[\s,.:;!?()\[\]{}'"“”\-–—])/i);
+  if (m) {
+    const token = m[1].toLowerCase();
+    if (token === 'כן' || token === 'חיובי' || token === 'yes' || token === 'y' || token === 'true') return true;
+    if (token === 'לא' || token === 'שלילי' || token === 'no' || token === 'n' || token === 'false') return false;
+  }
+
+  // 2) Numeric prefixes: treat 0 as "no", any positive integer as "yes".
+  // This is especially useful for answers like "3" (meaning: 3 employees) on boolean gating questions.
+  const n = head.match(/^(\d{1,9})(?=$|[\s,.:;!?()\[\]{}'"“”\-–—])/);
+  if (n) {
+    const asNum = Number(n[1]);
+    if (!Number.isFinite(asNum)) return null;
+    return asNum > 0;
+  }
+
   return null;
 }
 

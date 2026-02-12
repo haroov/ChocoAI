@@ -7,6 +7,91 @@ import { flowStore } from '../../../../../stores/flowStore';
 import { FieldDefinition, FlowDefinition } from '../../../../../types/flow';
 import { app } from '../../../../../helpers/app';
 
+type BuiltInValidationKind = 'email' | 'israeli_mobile' | 'israeli_id' | 'il_business_id';
+
+function getBuiltInValidationMeta(fieldSlug: string, fieldDefinition: FieldDefinition): null | {
+  kind: BuiltInValidationKind;
+  recommendedPattern: string;
+  recommendedMinLength?: number;
+  recommendedMaxLength?: number;
+} {
+  const slug = String(fieldSlug || '').toLowerCase();
+  const desc = String(fieldDefinition?.description || '');
+
+  const looksLikeEmail = slug === 'email'
+    || slug.endsWith('_email')
+    || slug.includes('email')
+    || /דואר\s*אלקטרוני|אימייל|מייל|\bemail\b/i.test(desc);
+  if (looksLikeEmail) {
+    return {
+      kind: 'email',
+      recommendedPattern: String.raw`^[^\s@]+@[^\s@]+\.[^\s@]{2,}$`,
+    };
+  }
+
+  const looksLikeMobile = slug === 'mobile_phone'
+    || slug === 'user_mobile_phone'
+    || slug === 'user_phone'
+    || slug === 'proposer_mobile_phone'
+    || /טלפון\s*נייד|נייד|\bmobile\b/i.test(desc);
+  if (looksLikeMobile) {
+    return {
+      kind: 'israeli_mobile',
+      recommendedPattern: String.raw`^05\d{8}$`,
+      recommendedMinLength: 10,
+      recommendedMaxLength: 10,
+    };
+  }
+
+  const looksLikeIsraeliId = slug === 'user_id'
+    || slug === 'legal_id'
+    || slug === 'israeli_id'
+    || slug === 'id_number'
+    || slug === 'tz'
+    || /ת[\"״׳']?ז|תעודת\s*זהות|מספר\s*זהות/i.test(desc);
+  if (looksLikeIsraeliId) {
+    return {
+      kind: 'israeli_id',
+      recommendedPattern: String.raw`^\d{9}$`,
+      recommendedMinLength: 9,
+      recommendedMaxLength: 9,
+    };
+  }
+
+  const looksLikeBusinessRegistrationId = slug === 'business_registration_id'
+    || slug === 'regnum'
+    || /ח[\"״׳']?פ|ע[\"״׳']?מ|מספר\s*רישום|vat|company\s*id/i.test(desc);
+  const looksLikeEntityTaxIdIl = slug === 'entity_tax_id'
+    && /ח[\"״׳']?פ|ע[\"״׳']?מ|מספר\s*רישום/i.test(desc);
+  if (looksLikeBusinessRegistrationId) {
+    return {
+      kind: 'il_business_id',
+      recommendedPattern: String.raw`^\d{9}$`,
+      recommendedMinLength: 9,
+      recommendedMaxLength: 9,
+    };
+  }
+  if (looksLikeEntityTaxIdIl) {
+    return {
+      kind: 'il_business_id',
+      recommendedPattern: String.raw`^\d{9}$`,
+      recommendedMinLength: 9,
+      recommendedMaxLength: 9,
+    };
+  }
+
+  return null;
+}
+
+function getSelectedKeyFromSelection(selection: unknown): string | null {
+  if (typeof selection === 'string') return selection;
+  if (!selection || typeof selection !== 'object') return null;
+
+  const sel = selection as { currentKey?: unknown; anchorKey?: unknown };
+  const raw = sel.currentKey ?? sel.anchorKey;
+  return typeof raw === 'string' && raw ? raw : null;
+}
+
 export const FieldsTab: React.FC = observer(() => {
   const t = useTranslations('FlowEditor');
   const tCommon = useTranslations('Common');
@@ -113,8 +198,8 @@ export const FieldsTab: React.FC = observer(() => {
   const baseEntries = Object.entries(fields);
   const sortedEntries = (uiConfig.fieldsSort === 'priorityAsc')
     ? [...baseEntries].sort(([aSlug, aDef], [bSlug, bDef]) => {
-      const aPr = typeof (aDef as any)?.priority === 'number' ? (aDef as any).priority : Number.POSITIVE_INFINITY;
-      const bPr = typeof (bDef as any)?.priority === 'number' ? (bDef as any).priority : Number.POSITIVE_INFINITY;
+      const aPr = typeof aDef.priority === 'number' ? aDef.priority : Number.POSITIVE_INFINITY;
+      const bPr = typeof bDef.priority === 'number' ? bDef.priority : Number.POSITIVE_INFINITY;
       if (aPr !== bPr) return aPr - bPr;
       return aSlug.localeCompare(bSlug);
     })
@@ -193,7 +278,7 @@ export const FieldsTab: React.FC = observer(() => {
               size="sm"
               selectedKeys={Array.isArray(fieldDefinition.enum) ? ['enum'] : [fieldDefinition.type]}
               onSelectionChange={(selection) => {
-                const selectedKey = (selection as any)?.currentKey ?? (selection as any)?.anchorKey;
+                const selectedKey = getSelectedKeyFromSelection(selection);
                 if (!selectedKey) return;
                 const isEnum = selectedKey === 'enum';
                 const type = isEnum ? 'string' : selectedKey as FieldDefinition['type'];
@@ -235,26 +320,101 @@ export const FieldsTab: React.FC = observer(() => {
               />
             )}
             {!Array.isArray(fieldDefinition.enum) && fieldDefinition.type === 'string' && (
-              <div className="col-span-full grid grid-cols-3 gap-3">
-                <Input
-                  size="sm"
-                  label={t('patternRegex')}
-                  value={fieldDefinition.pattern || ''}
-                  onValueChange={(pattern) => setFields(fieldSlug, { pattern })}
-                />
-                <Input
-                  size="sm"
-                  label={t('minLength')}
-                  value={String(fieldDefinition.minLength || '')}
-                  onValueChange={(minLength) => setFields(fieldSlug, { minLength: Number(minLength) || undefined })}
-                />
-                <Input
-                  size="sm"
-                  label={t('maxLength')}
-                  value={String(fieldDefinition.maxLength || '')}
-                  onValueChange={(maxLength) => setFields(fieldSlug, { maxLength: Number(maxLength) || undefined })}
-                />
-              </div>
+              (() => {
+                const meta = getBuiltInValidationMeta(fieldSlug, fieldDefinition);
+                const kindLabel = (() => {
+                  if (!meta) return '';
+                  switch (meta.kind) {
+                    case 'email': return t('validationEmail');
+                    case 'israeli_mobile': return t('validationIsraeliMobile');
+                    case 'israeli_id': return t('validationIsraeliId');
+                    case 'il_business_id': return t('validationIlBusinessId');
+                    default: return '';
+                  }
+                })();
+
+                const canApply = !!meta && (
+                  (fieldDefinition.pattern || '') !== meta.recommendedPattern
+                  || (meta.recommendedMinLength !== undefined
+                    && fieldDefinition.minLength !== meta.recommendedMinLength)
+                  || (meta.recommendedMaxLength !== undefined
+                    && fieldDefinition.maxLength !== meta.recommendedMaxLength)
+                );
+
+                return (
+                  <div className="col-span-full grid gap-2">
+                    {meta && (
+                      <div className="text-tiny text-default-500">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <span className="font-medium">{t('serverValidation')}</span>
+                            {' '}
+                            {kindLabel}
+                            <span className="opacity-80">
+                              {' '}
+                              {t('serverValidationEnforcedEvenIfEmpty')}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            isDisabled={!canApply}
+                            onPress={() => setFields(fieldSlug, {
+                              pattern: meta.recommendedPattern,
+                              minLength: meta.recommendedMinLength ?? fieldDefinition.minLength,
+                              maxLength: meta.recommendedMaxLength ?? fieldDefinition.maxLength,
+                            })}
+                          >
+                            {t('applyRecommended')}
+                          </Button>
+                        </div>
+                        <div className="mt-1">
+                          <span className="font-medium">{t('recommendedPattern')}</span>
+                          {' '}
+                          <span className="font-mono select-all">{meta.recommendedPattern}</span>
+                          {meta.recommendedMinLength !== undefined
+                            && meta.recommendedMaxLength !== undefined
+                            && (
+                              <span className="opacity-80">
+                                {' '}
+                                {t('recommendedMinMax', {
+                                  min: meta.recommendedMinLength,
+                                  max: meta.recommendedMaxLength,
+                                })}
+                              </span>
+                            )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <Input
+                        size="sm"
+                        label={t('patternRegex')}
+                        value={fieldDefinition.pattern || ''}
+                        placeholder={meta?.recommendedPattern || ''}
+                        onValueChange={(pattern) => setFields(fieldSlug, { pattern })}
+                      />
+                      <Input
+                        size="sm"
+                        label={t('minLength')}
+                        value={String(fieldDefinition.minLength || '')}
+                        placeholder={String(meta?.recommendedMinLength ?? '')}
+                        onValueChange={(minLength) =>
+                          setFields(fieldSlug, { minLength: Number(minLength) || undefined })}
+                      />
+                      <Input
+                        size="sm"
+                        label={t('maxLength')}
+                        value={String(fieldDefinition.maxLength || '')}
+                        placeholder={String(meta?.recommendedMaxLength ?? '')}
+                        onValueChange={(maxLength) =>
+                          setFields(fieldSlug, { maxLength: Number(maxLength) || undefined })}
+                      />
+                    </div>
+                  </div>
+                );
+              })()
             )}
             <Textarea
               className="col-span-4"

@@ -56,6 +56,13 @@ const builtInLoaders: Record<string, BuiltInLoader> = {
     const m = await import('./executors/insuranceResolveSegmentTool');
     return { executor: m.insuranceResolveSegmentTool, meta: { name: 'insurance.resolveSegment', description: 'Resolve segment from text', builtIn: true } };
   },
+  'insurance.prefillCoveragesFromSegmentDefaults': async () => {
+    const m = await import('./executors/insurancePrefillCoveragesFromSegmentDefaultsTool');
+    return {
+      executor: m.insurancePrefillCoveragesFromSegmentDefaultsTool,
+      meta: { name: 'insurance.prefillCoveragesFromSegmentDefaults', description: 'Prefill coverage toggles from segment defaults', builtIn: true },
+    };
+  },
   'insurance.markProcessComplete': async () => {
     const m = await import('./executors/insuranceMarkProcessCompleteTool');
     return { executor: m.insuranceMarkProcessCompleteTool, meta: { name: 'insurance.markProcessComplete', description: 'Mark modular process complete and route', builtIn: true } };

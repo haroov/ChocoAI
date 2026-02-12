@@ -337,6 +337,239 @@ export async function formatCampaignDate(
   return '';
 }
 
+function isValidIsoYmd(s: string): boolean {
+  const v = String(s ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime());
+}
+
+function ymdFromDateInTimezone(date: Date, timezone: string): string | null {
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = fmt.formatToParts(date);
+    const y = parts.find((p) => p.type === 'year')?.value;
+    const m = parts.find((p) => p.type === 'month')?.value;
+    const d = parts.find((p) => p.type === 'day')?.value;
+    if (!y || !m || !d) return null;
+    const ymd = `${y}-${m}-${d}`;
+    return isValidIsoYmd(ymd) ? ymd : null;
+  } catch {
+    return null;
+  }
+}
+
+function addDaysToYmd(ymd: string, days: number): string | null {
+  if (!isValidIsoYmd(ymd)) return null;
+  if (!Number.isFinite(days)) return null;
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  const out = `${y}-${m}-${dd}`;
+  return isValidIsoYmd(out) ? out : null;
+}
+
+function weekdayIndexInTimezone(ymd: string, timezone: string): number | null {
+  if (!isValidIsoYmd(ymd)) return null;
+  try {
+    // Noon UTC avoids DST edge cases (still the same local date).
+    const dt = new Date(`${ymd}T12:00:00Z`);
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+    const w = fmt.format(dt).toLowerCase(); // sun/mon/tue/...
+    const map: Record<string, number> = {
+      sun: 0,
+      mon: 1,
+      tue: 2,
+      wed: 3,
+      thu: 4,
+      fri: 5,
+      sat: 6,
+    };
+    return map[w] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function toIsoYmd(y: number, m: number, d: number): string | null {
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  if (y < 1900 || y > 2100) return null;
+  if (m < 1 || m > 12) return null;
+  if (d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || (dt.getUTCMonth() + 1) !== m || dt.getUTCDate() !== d) return null;
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+}
+
+/**
+ * Parse user-provided policy start date text and normalize it to YYYY-MM-DD.
+ *
+ * Rules:
+ * - min: today (in the provided timezone)
+ * - max: today + 45 days (in the provided timezone)
+ * - If invalid/out-of-range, return null (caller should re-ask).
+ */
+export async function parsePolicyStartDateToYmd(
+  dateInput: string | null | undefined,
+  timezone: string = 'Asia/Jerusalem',
+): Promise<string | null> {
+  const raw = String(dateInput ?? '').trim();
+  if (!raw) return null;
+
+  const todayYmd = ymdFromDateInTimezone(new Date(), timezone);
+  if (!todayYmd) return null;
+  const maxYmd = addDaysToYmd(todayYmd, 45);
+  if (!maxYmd) return null;
+
+  const inRange = (ymd: string): boolean => (
+    isValidIsoYmd(ymd) && ymd >= todayYmd && ymd <= maxYmd
+  );
+
+  // Hebrew: "תחילת החודש הבא/הקרוב" -> first day of next month.
+  // Examples: "תחילת החודש הבא", "בתחילת החודש הבא".
+  {
+    const s = raw.replace(/^[\s"“”'׳״]+|[\s"“”'׳״]+$/g, '').trim();
+    const m = s.match(/^(?:ב)?תחילת\s+החודש\s+(הבא|הקרוב)$/);
+    if (m) {
+      const y = Number(todayYmd.slice(0, 4));
+      const mon = Number(todayYmd.slice(5, 7));
+      const nextMon = mon === 12 ? 1 : (mon + 1);
+      const nextY = mon === 12 ? (y + 1) : y;
+      const ymd = toIsoYmd(nextY, nextMon, 1);
+      return ymd && inRange(ymd) ? ymd : null;
+    }
+  }
+
+  // Hebrew: "אמצע החודש הבא/הקרוב" -> 15th of next month.
+  // Examples: "אמצע החודש הבא", "באמצע החודש הבא".
+  {
+    const s = raw.replace(/^[\s"“”'׳״]+|[\s"“”'׳״]+$/g, '').trim();
+    const m = s.match(/^(?:ב)?אמצע\s+החודש\s+(הבא|הקרוב)$/);
+    if (m) {
+      const y = Number(todayYmd.slice(0, 4));
+      const mon = Number(todayYmd.slice(5, 7));
+      const nextMon = mon === 12 ? 1 : (mon + 1);
+      const nextY = mon === 12 ? (y + 1) : y;
+      const ymd = toIsoYmd(nextY, nextMon, 15);
+      return ymd && inRange(ymd) ? ymd : null;
+    }
+  }
+
+  // Hebrew: "תחילת השבוע הבא/הקרוב" -> next week start (Israel: Sunday).
+  // Example (today Wed 2026-02-11): "תחילת השבוע הבא" -> Sun 2026-02-15.
+  {
+    const s = raw.replace(/^[\s"“”'׳״]+|[\s"“”'׳״]+$/g, '').trim();
+    const m = s.match(/^(?:ב)?תחילת\s+(?:השבוע|שבוע)\s+(הבא|הקרוב)$/);
+    if (m) {
+      const wd = weekdayIndexInTimezone(todayYmd, timezone);
+      if (wd === null) return null;
+      // Sunday=0. "Next week" start should always be the NEXT Sunday (>= 1 day ahead).
+      const daysUntilNextSunday = wd === 0 ? 7 : (7 - wd);
+      const ymd = addDaysToYmd(todayYmd, daysUntilNextSunday);
+      return ymd && inRange(ymd) ? ymd : null;
+    }
+  }
+
+  // Direct ISO
+  if (isValidIsoYmd(raw)) {
+    return inRange(raw) ? raw : null;
+  }
+
+  const token = raw.toLowerCase().trim();
+  if (token === 'today' || token === 'היום') {
+    return inRange(todayYmd) ? todayYmd : null;
+  }
+  if (token === 'tomorrow' || token === 'מחר' || token === 'ממחר') {
+    const t = addDaysToYmd(todayYmd, 1);
+    return t && inRange(t) ? t : null;
+  }
+  if (token === 'day after tomorrow' || token === 'מחרתיים') {
+    const t = addDaysToYmd(todayYmd, 2);
+    return t && inRange(t) ? t : null;
+  }
+
+  // dd/mm[/yyyy] (Israel default)
+  // If year omitted and date is before today, roll forward to next year.
+  {
+    const m = raw.match(/^(\d{1,2})\s*[\/.\-]\s*(\d{1,2})(?:\s*[\/.\-]\s*(\d{2,4}))?\s*$/);
+    if (m) {
+      const day = Number(m[1]);
+      const month = Number(m[2]);
+      const yearRaw = m[3];
+      const yearProvided = Boolean(yearRaw);
+
+      const tzYear = Number(todayYmd.slice(0, 4));
+      let year = yearProvided ? Number(yearRaw) : tzYear;
+      if (yearProvided && String(yearRaw).length === 2) year = 2000 + Number(yearRaw);
+
+      let iso = toIsoYmd(year, month, day);
+      if (!iso) return null;
+
+      if (!yearProvided && iso < todayYmd) {
+        iso = toIsoYmd(year + 1, month, day);
+      }
+      return iso && inRange(iso) ? iso : null;
+    }
+  }
+
+  // dd <monthNameHe> [yyyy]
+  {
+    const monthNamesHe: Record<string, number> = {
+      'ינואר': 1,
+      'פברואר': 2,
+      'מרץ': 3,
+      'אפריל': 4,
+      'מאי': 5,
+      'יוני': 6,
+      'יולי': 7,
+      'אוגוסט': 8,
+      'ספטמבר': 9,
+      'אוקטובר': 10,
+      'נובמבר': 11,
+      'דצמבר': 12,
+    };
+    const m = raw.match(/^(\d{1,2})\s*(?:ב|ל)?\s*(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)(?:\s*(\d{2,4}))?\s*$/);
+    if (m) {
+      const day = Number(m[1]);
+      const month = monthNamesHe[m[2]] || 0;
+      const yearRaw = m[3];
+      const yearProvided = Boolean(yearRaw);
+
+      const tzYear = Number(todayYmd.slice(0, 4));
+      let year = yearProvided ? Number(yearRaw) : tzYear;
+      if (yearProvided && String(yearRaw).length === 2) year = 2000 + Number(yearRaw);
+
+      let iso = toIsoYmd(year, month, day);
+      if (!iso) return null;
+      if (!yearProvided && iso < todayYmd) {
+        iso = toIsoYmd(year + 1, month, day);
+      }
+      return iso && inRange(iso) ? iso : null;
+    }
+  }
+
+  // Fallback to the broad date parser (Gregorian + Hebrew calendar + relative).
+  try {
+    const formatted = await formatCampaignDate(raw, timezone);
+    if (!formatted) return null;
+    const dt = new Date(formatted);
+    if (Number.isNaN(dt.getTime())) return null;
+    const ymd = ymdFromDateInTimezone(dt, timezone);
+    return ymd && inRange(ymd) ? ymd : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Parses Hebrew calendar date strings like "תשרי", "ט״ו תשרי", "כ״ה תשרי תשפ״ה"
  * Returns a Promise since it uses async Hebrew calendar conversion
@@ -577,7 +810,7 @@ function parseDate(input: string, timezone: string): Date | null {
   }
 
   // Handle "tomorrow", "today", "next week", etc.
-  if (inputLower === 'tomorrow' || inputLower === 'מחר') {
+  if (inputLower === 'tomorrow' || inputLower === 'מחר' || inputLower === 'ממחר') {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow;

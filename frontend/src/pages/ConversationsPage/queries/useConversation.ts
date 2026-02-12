@@ -36,6 +36,14 @@ export type ConversationDetails = {
   user?: User;
   conversation: Omit<ConversationListItem, 'messages' | 'user'> & { messages: Message[] };
   userData?: Record<string, unknown>;
+  fieldProvenance?: Record<string, {
+    ts: string | null;
+    contributor: 'user' | 'system';
+    flowSlug?: string;
+    stageSlug?: string;
+    traceId?: string;
+    method: 'fieldsCollected' | 'snapshot';
+  }>;
   activeFlow: {
     name: string;
     slug: string;

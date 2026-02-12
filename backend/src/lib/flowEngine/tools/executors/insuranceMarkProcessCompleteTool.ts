@@ -207,8 +207,11 @@ export const insuranceMarkProcessCompleteTool: ToolExecutor = async (
       const allowedLE = new Set([
         'חברה פרטית',
         'עוסק מורשה',
+        'עוסק פטור',
         'עוסק זעיר',
-        'שותפות רשומה',
+        'שותפות',
+        'אגודה',
+        'עמותה',
         'חברה ציבורית',
       ]);
       if (!le || !allowedLE.has(le)) {
@@ -232,7 +235,13 @@ export const insuranceMarkProcessCompleteTool: ToolExecutor = async (
       }
       for (const k of ['business_house_number', 'business_zip', 'business_po_box'] as const) {
         const v = String(ud[k] ?? '').trim();
-        if (v && looksLikeMostlyDigits(v) && v.replace(/\D/g, '').length >= 7) {
+        if (!v) continue;
+        if (!looksLikeMostlyDigits(v)) continue;
+        const digitsLen = v.replace(/\D/g, '').length;
+        // ZIP (Israel) is commonly 7 digits; PO box can also be up to 7 digits.
+        // We only treat longer digit strings as "ID-like" pollution.
+        const minIdLikeLen = k === 'business_house_number' ? 7 : 8;
+        if (digitsLen >= minIdLikeLen) {
           invalidReasons.push(`${k}_looks_like_id`);
           invalidKeys.add(k);
         }
@@ -372,6 +381,30 @@ export const insuranceMarkProcessCompleteTool: ToolExecutor = async (
     }
 
     const targetInitialStage = String((targetFlow.definition as any)?.config?.initialStage || '').trim() || 'main';
+
+    // Preserve segment context across modular process flows.
+    // This is critical so Flow 02 can prefill/disable non-relevant coverages based on segment defaults.
+    try {
+      const toPreserve: Record<string, unknown> = {};
+      const pick = (k: string) => (mergedUserData as any)?.[k];
+      for (const k of [
+        'segment_id',
+        'segment_group_id',
+        'segment_name_he',
+        'segment_group_name_he',
+        'default_package_key',
+        'business_segment',
+        'business_site_type',
+      ]) {
+        const v = pick(k);
+        if (v !== undefined && v !== null && String(v).trim() !== '') toPreserve[k] = v;
+      }
+      if (Object.keys(toPreserve).length > 0) {
+        await flowHelpers.setUserData(convo.userId, targetFlow.id, toPreserve, conversationId);
+      }
+    } catch {
+      // best-effort; never block routing
+    }
 
     await prisma.userFlow.update({
       where: { id: userFlow.id },

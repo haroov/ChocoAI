@@ -10,7 +10,7 @@ import { useConversation } from './queries/useConversation';
 import { getConversationTitle } from './helpers/getConversationTitle';
 import { ConversationDetailsPanel } from './ConversationDetailsPanel';
 
-export const ConversationChat: React.FC<{ conversationId: string}> = observer(({ conversationId }) => {
+export const ConversationChat: React.FC<{ conversationId: string }> = observer(({ conversationId }) => {
   const t = useTranslations('ConversationsPage');
   const tCommon = useTranslations('Common');
 
@@ -23,6 +23,30 @@ export const ConversationChat: React.FC<{ conversationId: string}> = observer(({
   React.useEffect(() => () => {
     conversationStore.cancelMessage(conversationId);
   }, [conversationId]);
+
+  // IMPORTANT: Hooks must be called unconditionally.
+  // Keep any hook (effects/memos) above conditional returns, and gate logic inside the hook.
+  const apiMessages = data?.conversation?.messages ?? [];
+  const storeMessages = conversationStore.messages[conversationId] || [];
+  const pendingUserMessage = storeMessages.length === 1 && storeMessages[0]?.role === 'user'
+    ? storeMessages[0]
+    : null;
+
+  // If the server already persisted a newer assistant message (via polling),
+  // but SSE didn't deliver tokens/done (tab suspend/network hiccup),
+  // stop showing "typing" and clear the pending local message.
+  React.useEffect(() => {
+    if (!pendingUserMessage) return;
+    if (!apiMessages || apiMessages.length === 0) return;
+
+    const pendingAt = new Date(pendingUserMessage.createdAt).getTime();
+    const lastAssistant = [...apiMessages].reverse().find((m) => m.role === 'assistant');
+    const lastAssistantAt = lastAssistant ? new Date(lastAssistant.createdAt).getTime() : 0;
+    if (lastAssistantAt > pendingAt) {
+      conversationStore.cancelMessage(conversationId);
+      conversationStore.resetMessages(conversationId);
+    }
+  }, [conversationId, apiMessages.length, pendingUserMessage?.createdAt]);
 
   if (isPending) {
     return (
@@ -43,8 +67,6 @@ export const ConversationChat: React.FC<{ conversationId: string}> = observer(({
 
   // Deduplicate messages: filter out store messages that already exist in API messages
   // Match by content and role (timestamp may differ slightly due to auto-refresh timing)
-  const apiMessages = data.conversation.messages;
-  const storeMessages = conversationStore.messages[conversationId] || [];
   const apiMessageKeys = new Set(
     apiMessages.map((m) => `${m.content.trim()}|${m.role}`),
   );
@@ -89,7 +111,7 @@ export const ConversationChat: React.FC<{ conversationId: string}> = observer(({
               conversationStore.resetMessages(conversationId);
             }));
         }}
-        isTyping={conversationStore.messages[conversationId] && conversationStore.messages[conversationId].length === 1}
+        isTyping={!!conversationStore.activeConnections[conversationId] && storeMessages.length === 1}
         isSendingDisabled={conversationStore.messages[conversationId]?.length > 0}
       />
 

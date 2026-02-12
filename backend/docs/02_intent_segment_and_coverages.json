@@ -43,6 +43,7 @@
       },
       "defaults": {
         "ch1_contents_selected": false,
+        "ch1_stock_selected": false,
         "ch2_building_selected": false,
         "ch3a_selected": false,
         "ch3b_selected": false,
@@ -84,6 +85,18 @@
           "set_when": "business_interruption_type != 'אובדן תוצאתי (רווח גולמי)'",
           "value": false,
           "maps_to_q_id": "Q111"
+        },
+        {
+          "target_field": "ch8_employers_selected",
+          "set_when": "has_employees = true",
+          "value": true,
+          "maps_to_q_id": "Q132"
+        },
+        {
+          "target_field": "ch8_employers_selected",
+          "set_when": "has_employees = false",
+          "value": false,
+          "maps_to_q_id": "Q132"
         }
       ],
       "attachments_strategy": "אסינכרוני: לא לעצור את השיחה בגלל מסמך. לצבור checklist ולבקש בסוף או כשחובה.",
@@ -209,6 +222,7 @@
       "module_key": "needs_gating",
       "audience": "customer",
       "stage_key": "02_needs_discovery",
+      "ask_if": "(__present(ch9_product_selected) = false) OR (ch9_product_selected = true)",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "האם אתה מייצר / מייבא / משווק (מפיץ) מוצרים פיזיים?",
@@ -249,7 +263,7 @@
       "field_key_en": "business_interruption_type",
       "data_type": "enum",
       "input_type": "select",
-      "options_he": "לא, אובדן הכנסה (פיצוי יומי)",
+      "options_he": "אובדן הכנסה (פיצוי יומי)",
       "required": "Y",
       "required_mode": "required",
       "notes_logic": "בחירה אחת בלבד.",
@@ -357,11 +371,11 @@
       "subsection": "B. Business details",
       "stage_title_he": "חלק א — פרטי בית העסק",
       "question_he": "סוג העסק",
-      "prompt_he": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה/זעיר, שותפות רשומה, חברה ציבורית)",
+      "prompt_he": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית (ח״פ), עוסק מורשה (ע״מ), עוסק פטור, עוסק זעיר, שותפות, אגודה, עמותה, חברה ציבורית (ח״צ))",
       "field_key_en": "business_legal_entity_type",
       "data_type": "enum",
       "input_type": "select",
-      "options_he": "חברה פרטית, עוסק מורשה, עוסק זעיר, שותפות רשומה, חברה ציבורית",
+      "options_he": "חברה פרטית, עוסק מורשה, עוסק פטור, עוסק זעיר, שותפות, אגודה, עמותה, חברה ציבורית",
       "required": "Y",
       "required_mode": "required",
       "json_path": "business.legal_entity_type",
@@ -370,8 +384,8 @@
       "stage_key": "01_identification",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה/זעיר, שותפות רשומה, חברה ציבורית)",
-        "whatsapp": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית, עוסק מורשה/זעיר, שותפות רשומה, חברה ציבורית)"
+        "web_chat": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית (ח״פ), עוסק מורשה (ע״מ), עוסק פטור, עוסק זעיר, שותפות, אגודה, עמותה, חברה ציבורית (ח״צ))",
+        "whatsapp": "נא לבחור סוג העסק: (אפשרויות: חברה פרטית (ח״פ), עוסק מורשה (ע״מ), עוסק פטור, עוסק זעיר, שותפות, אגודה, עמותה, חברה ציבורית (ח״צ))"
       },
       "priority": 12,
       "whatsapp_rendering": {
@@ -387,14 +401,26 @@
           },
           {
             "n": 3,
-            "label_he": "עוסק זעיר"
+            "label_he": "עוסק פטור"
           },
           {
             "n": 4,
-            "label_he": "שותפות רשומה"
+            "label_he": "עוסק זעיר"
           },
           {
             "n": 5,
+            "label_he": "שותפות"
+          },
+          {
+            "n": 6,
+            "label_he": "אגודה"
+          },
+          {
+            "n": 7,
+            "label_he": "עמותה"
+          },
+          {
+            "n": 8,
             "label_he": "חברה ציבורית"
           }
         ],
@@ -434,8 +460,8 @@
       "section": "Part A",
       "subsection": "B. Business address",
       "stage_title_he": "חלק א — כתובת בית העסק",
-      "question_he": "רחוב",
-      "prompt_he": "נא לציין רחוב.",
+      "question_he": "רחוב ומספר בניין",
+      "prompt_he": "נא לציין רחוב ומספר בניין (למשל: הרצל 10).",
       "field_key_en": "business_street",
       "data_type": "string",
       "input_type": "text",
@@ -447,8 +473,8 @@
       "stage_key": "01_identification",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "נא לציין רחוב.",
-        "whatsapp": "נא לציין רחוב."
+        "web_chat": "נא לציין רחוב ומספר בניין (למשל: הרצל 10).",
+        "whatsapp": "נא לציין רחוב ומספר בניין (למשל: הרצל 10)."
       },
       "priority": 15,
       "whatsapp_rendering": {
@@ -461,8 +487,8 @@
       "section": "Part A",
       "subsection": "B. Business address",
       "stage_title_he": "חלק א — כתובת בית העסק",
-      "question_he": "מס' בית",
-      "prompt_he": "נא לציין מס' בית.",
+      "question_he": "מספר בניין (אם חסר)",
+      "prompt_he": "אם לא ציינת מספר בניין — מה מספר הבניין?",
       "field_key_en": "business_house_number",
       "data_type": "string",
       "input_type": "text",
@@ -472,12 +498,13 @@
       "module_key": "core_business_address",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(__present(business_house_number) = false)",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "נא לציין מס' בית.",
-        "whatsapp": "נא לציין מס' בית."
+        "web_chat": "אם לא ציינת מספר בניין — מה מספר הבניין?",
+        "whatsapp": "אם לא ציינת מספר בניין — מה מספר הבניין?"
       },
-      "priority": 15,
+      "priority": 16,
       "whatsapp_rendering": {
         "type": "free_text"
       }
@@ -489,20 +516,21 @@
       "subsection": "B. Business address",
       "stage_title_he": "חלק א — כתובת בית העסק",
       "question_he": "ת.ד.",
-      "prompt_he": "נא לציין ת.ד..",
+      "prompt_he": "האם יש לעסק ת.ד? אם כן — כתוב/י את מספר הת.ד. אם לא — כתוב/י \"אין\".",
       "field_key_en": "business_po_box",
       "data_type": "string",
       "input_type": "text",
-      "required": "N",
-      "required_mode": "optional",
+      "required": "Y",
+      "required_mode": "required",
       "json_path": "locations[0].address.pobox",
       "module_key": "core_business_address",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(__present(business_po_box) = false)",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "נא לציין ת.ד..",
-        "whatsapp": "נא לציין ת.ד.."
+        "web_chat": "האם יש לעסק ת.ד? אם כן — כתוב/י את מספר הת.ד. אם לא — כתוב/י \"אין\".",
+        "whatsapp": "האם יש לעסק ת.ד? אם כן — כתוב/י את מספר הת.ד. אם לא — כתוב/י \"אין\"."
       },
       "priority": 20,
       "whatsapp_rendering": {
@@ -516,7 +544,7 @@
       "subsection": "B. Business address",
       "stage_title_he": "חלק א — כתובת בית העסק",
       "question_he": "מיקוד",
-      "prompt_he": "נא לציין מיקוד.",
+      "prompt_he": "אם ידוע — נא לציין מיקוד (5 או 7 ספרות, לא מתחיל ב-0). אם לא ידוע — כתוב/י \"לא ידוע\".",
       "field_key_en": "business_zip",
       "data_type": "string",
       "input_type": "text",
@@ -528,8 +556,8 @@
       "stage_key": "01_identification",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "נא לציין מיקוד.",
-        "whatsapp": "נא לציין מיקוד."
+        "web_chat": "אם ידוע — נא לציין מיקוד (5 או 7 ספרות, לא מתחיל ב-0). אם לא ידוע — כתוב/י \"לא ידוע\".",
+        "whatsapp": "אם ידוע — נא לציין מיקוד (5 או 7 ספרות, לא מתחיל ב-0). אם לא ידוע — כתוב/י \"לא ידוע\"."
       },
       "priority": 30,
       "whatsapp_rendering": {
@@ -615,7 +643,7 @@
       "subsection": "C. Requested insurance period",
       "stage_title_he": "חלק א — תקופת ביטוח מבוקשת",
       "question_he": "מתאריך",
-      "prompt_he": "מאיזה תאריך תרצה שהביטוח יתחיל? (מינימום = היום)",
+      "prompt_he": "מאיזה תאריך תרצה שהביטוח יתחיל?",
       "field_key_en": "policy_start_date",
       "data_type": "date",
       "input_type": "date",
@@ -627,8 +655,8 @@
       "stage_key": "01_identification",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "מאיזה תאריך תרצה שהביטוח יתחיל? (מינימום = היום)",
-        "whatsapp": "מאיזה תאריך תרצה שהביטוח יתחיל? (מינימום = היום)"
+        "web_chat": "מאיזה תאריך תרצה שהביטוח יתחיל?",
+        "whatsapp": "מאיזה תאריך תרצה שהביטוח יתחיל?"
       },
       "priority": 50,
       "whatsapp_rendering": {
@@ -670,8 +698,8 @@
       "subsection": "Chapter 1: Fire extended - contents",
       "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולת בית העסק",
       "chapter": "1",
-      "question_he": "ביטוח תכולת בית העסק",
-      "prompt_he": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)",
+      "question_he": "ביטוח תכולה וציוד משרדי",
+      "prompt_he": "האם יש לך תכולה/ציוד משרדי שתרצה לבטח? (לא/כן)",
       "field_key_en": "ch1_contents_selected",
       "data_type": "boolean",
       "input_type": "select",
@@ -685,10 +713,50 @@
       "ask_if": "has_physical_premises = true",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)",
-        "whatsapp": "האם יש לך תכולה/ציוד/מלאי שתרצה לבטח? (לא/כן)"
+        "web_chat": "האם יש לך תכולה/ציוד משרדי שתרצה לבטח? (לא/כן)",
+        "whatsapp": "האם יש לך תכולה/ציוד משרדי שתרצה לבטח? (לא/כן)"
       },
       "priority": 80,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q095S",
+      "page": 3,
+      "section": "Part B",
+      "subsection": "Chapter 1: Fire extended - stock",
+      "stage_title_he": "חלק ב — פרק 1: אש מורחב לתכולה ולמלאי",
+      "chapter": "1",
+      "question_he": "ביטוח מלאי",
+      "prompt_he": "האם יש מלאי שתרצה לבטח? (לא/כן)",
+      "field_key_en": "ch1_stock_selected",
+      "data_type": "boolean",
+      "input_type": "select",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "coverages.property.by_location[0].chapter_1_contents.stock_selected",
+      "module_key": "cov_property_contents",
+      "audience": "customer",
+      "stage_key": "02_needs_discovery",
+      "ask_if": "has_physical_premises = true AND (ch1_contents_selected = true)",
+      "required_if": null,
+      "prompt_variants": {
+        "web_chat": "האם יש מלאי שתרצה לבטח? (לא/כן)",
+        "whatsapp": "האם יש מלאי שתרצה לבטח? (לא/כן)"
+      },
+      "priority": 83,
       "whatsapp_rendering": {
         "type": "yes_no",
         "accepted_values": [
@@ -762,7 +830,7 @@
       "module_key": "cov_burglary",
       "audience": "customer",
       "stage_key": "02_needs_discovery",
-      "ask_if": "has_physical_premises = true",
+      "ask_if": "has_physical_premises = true AND ((ch1_contents_selected = true) OR (ch1_stock_selected = true))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "האם תרצה גם כיסוי פריצה/שוד לתכולה? (לא/כן)",
@@ -1026,8 +1094,8 @@
       "subsection": "Cyber coverage",
       "stage_title_he": "נספח א — כיסוי סייבר",
       "chapter": "A",
-      "question_he": "כיסוי סייבר",
-      "prompt_he": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)",
+      "question_he": "כיסוי סייבר ודלף מידע",
+      "prompt_he": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)",
       "field_key_en": "cyber_selected",
       "data_type": "boolean",
       "input_type": "select",
@@ -1041,8 +1109,8 @@
       "stage_key": "02_needs_discovery",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)",
-        "whatsapp": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)"
+        "web_chat": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)",
+        "whatsapp": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)"
       },
       "priority": 160,
       "whatsapp_rendering": {
@@ -1189,12 +1257,12 @@
     },
     "business_house_number": {
       "type": "string",
-      "description": "מס' בית",
+      "description": "מספר בנין",
       "priority": 15
     },
     "ch1_contents_selected": {
       "type": "boolean",
-      "description": "ביטוח תכולת בית העסק",
+      "description": "ביטוח תכולה וציוד משרדי",
       "priority": 80
     },
     "ch2_building_selected": {
@@ -1245,12 +1313,26 @@
     "business_interruption_type": {
       "type": "string",
       "description": "כיסוי לאובדן הכנסה במקרה של סגירה זמנית בגלל נזק (אש/מים/פריצה)",
-      "priority": 90
+      "priority": 90,
+      "enum": [
+        "לא",
+        "אובדן הכנסה (פיצוי יומי)"
+      ]
     },
     "business_legal_entity_type": {
       "type": "string",
       "description": "יישות משפטית",
-      "priority": 12
+      "priority": 12,
+      "enum": [
+        "חברה פרטית",
+        "עוסק מורשה",
+        "עוסק פטור",
+        "עוסק זעיר",
+        "שותפות",
+        "אגודה",
+        "עמותה",
+        "חברה ציבורית"
+      ]
     },
     "business_activity_and_products": {
       "type": "string",
@@ -1263,9 +1345,19 @@
       "priority": 35
     },
     "business_additional_locations_count": {
-      "type": "string",
-      "description": "אם כן - מה הכתובות הנוספות",
+      "type": "number",
+      "description": "אם כן – מספר הכתובות הנוספות",
       "priority": 36
+    },
+    "current_policy": {
+      "type": "string",
+      "description": "האם יש לך פוליסת ביטוח לעסק? במידה וכן אנא העלה",
+      "priority": 14
+    },
+    "ch1_stock_selected": {
+      "type": "boolean",
+      "description": "ביטוח מלאי",
+      "priority": 83
     }
   }
 }

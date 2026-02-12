@@ -22,6 +22,7 @@ class ConversationStore {
 
   sendMessage(conversationId: string, message: string) {
     return new Promise((resolve, reject) => {
+      const idleTimeoutMs = 45_000;
       // Close any existing connection for this conversation
       if (this.activeConnections[conversationId]) {
         try {
@@ -42,6 +43,21 @@ class ConversationStore {
       // Track if we've resolved/rejected to prevent multiple calls
       let isResolved = false;
       let isCleanedUp = false;
+      let idleTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const armIdleTimer = () => {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          if (isResolved || isCleanedUp) return;
+          isResolved = true;
+          runInAction(() => {
+            this.errors[conversationId] = 'Stream timed out waiting for a response';
+          });
+          cleanup();
+          // Soft-resolve: allow UI to refresh conversation via polling without showing a hard error.
+          resolve({ conversationId, finalText: '', timedOut: true });
+        }, idleTimeoutMs);
+      };
 
       this.messages[conversationId] = [{
         id: crypto.randomUUID(),
@@ -54,6 +70,11 @@ class ConversationStore {
         if (isCleanedUp) return;
         isCleanedUp = true;
 
+        if (idleTimer) {
+          clearTimeout(idleTimer);
+          idleTimer = null;
+        }
+
         // Only cleanup if this is still the active connection
         if (this.activeConnections[conversationId] !== source) {
           return; // Another connection has replaced this one
@@ -64,6 +85,7 @@ class ConversationStore {
           source.removeEventListener('token', tokenHandler);
           source.removeEventListener('done', doneHandler);
           source.removeEventListener('debug', debugHandler);
+          source.removeEventListener('ping', pingHandler);
         } catch {
           // Ignore errors removing listeners
         }
@@ -82,8 +104,14 @@ class ConversationStore {
         }
       };
 
+      const pingHandler = () => {
+        if (isResolved || isCleanedUp) return;
+        armIdleTimer();
+      };
+
       const tokenHandler = (event: MessageEvent) => {
         if (isResolved || isCleanedUp) return;
+        armIdleTimer();
 
         try {
           const data = JSON.parse(event.data);
@@ -145,6 +173,7 @@ class ConversationStore {
 
       const debugHandler = (event: MessageEvent) => {
         if (isCleanedUp) return;
+        armIdleTimer();
         try {
           const data = JSON.parse(event.data);
           const { level, message, data: debugData, timestamp } = data;
@@ -183,6 +212,7 @@ class ConversationStore {
       source.addEventListener('token', tokenHandler);
       source.addEventListener('done', doneHandler);
       source.addEventListener('debug', debugHandler);
+      source.addEventListener('ping', pingHandler);
 
       // Use only onerror to avoid duplicate handlers
       // The 'error' event listener can conflict with onerror
@@ -198,11 +228,15 @@ class ConversationStore {
         }
 
         isResolved = true;
+        runInAction(() => {
+          this.errors[conversationId] = 'Connection failed';
+        });
         // Remove all listeners before cleanup to prevent channel errors
         try {
           source.removeEventListener('token', tokenHandler);
           source.removeEventListener('done', doneHandler);
           source.removeEventListener('debug', debugHandler);
+          source.removeEventListener('ping', pingHandler);
         } catch {
           // Ignore errors removing listeners
         }
@@ -210,6 +244,13 @@ class ConversationStore {
         reject(new Error('Connection failed'));
       };
 
+      // Arm the idle timer immediately, and re-arm on open/events.
+      // This prevents the UI from staying in "typing" forever if SSE stalls silently.
+      armIdleTimer();
+      source.onopen = () => {
+        if (isResolved || isCleanedUp) return;
+        armIdleTimer();
+      };
       source.onerror = errorHandler;
     });
   }

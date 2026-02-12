@@ -151,6 +151,20 @@ export function repairNameFieldsFromInference(options: {
   const inferLast = inferred.last ? String(inferred.last).trim() : '';
   const hasPair = Boolean(inferFirst && inferLast);
 
+  // If the caller explicitly set a multi-word name in the canonical keys (first_name/last_name),
+  // do NOT infer/repair other alias groups (user_/proposer_) in this turn.
+  // Otherwise, we can accidentally overwrite the explicit value via alias writes later in setUserData().
+  const explicitMainFirst = hasExplicitGoodValue(augmented, 'first_name') ? String(augmented.first_name ?? '').trim() : '';
+  const explicitMainLast = hasExplicitGoodValue(augmented, 'last_name') ? String(augmented.last_name ?? '').trim() : '';
+  const existingMainFirst = String(pickNonEmpty(augmented.first_name, current.first_name) ?? '').trim();
+  const existingMainLast = String(pickNonEmpty(augmented.last_name, current.last_name) ?? '').trim();
+  const mainLastMissingOrBad = !existingMainLast || isBadNameValue(existingMainLast);
+  const mainFirstMissingOrBad = !existingMainFirst || isBadNameValue(existingMainFirst);
+  const skipAliasGroupsDueToMultiwordCanonical = (
+    (explicitMainFirst && explicitMainFirst.includes(' ') && mainLastMissingOrBad)
+    || (explicitMainLast && explicitMainLast.includes(' ') && mainFirstMissingOrBad)
+  );
+
   const repairGroup = (firstKey: string, lastKey: string) => {
     const existingFirst = String(pickNonEmpty(augmented[firstKey], current[firstKey]) ?? '').trim();
     const existingLast = String(pickNonEmpty(augmented[lastKey], current[lastKey]) ?? '').trim();
@@ -172,7 +186,53 @@ export function repairNameFieldsFromInference(options: {
       const explicitLastGood = hasExplicitGoodValue(augmented, lastKey);
       const protectPair = explicitFirstGood && explicitLastGood && !swapDetected && !firstMissingOrBad && !lastMissingOrBad;
 
+      // IMPORTANT:
+      // In Israel it's common for first/last names to contain 2+ words (e.g., "ניצן אריאלה", "שפרלינג גפן").
+      // If the caller explicitly provided a multi-word name in this update, do NOT auto-split it into first+last
+      // just because inference found a pair in the same string.
+      const explicitFirst = explicitFirstGood ? String(augmented[firstKey] ?? '').trim() : '';
+      const explicitLast = explicitLastGood ? String(augmented[lastKey] ?? '').trim() : '';
+      const explicitFirstHasSpace = explicitFirst.includes(' ');
+      const explicitLastHasSpace = explicitLast.includes(' ');
+
       if (!protectPair) {
+        // Case A: Explicit multi-word first name (no explicit last) → keep as-is, don't infer last.
+        if (explicitFirstGood && !explicitLastGood && explicitFirstHasSpace && lastMissingOrBad && !swapDetected) return;
+        // Case B: Explicit multi-word last name (no explicit first) → keep as-is, don't infer first.
+        if (explicitLastGood && !explicitFirstGood && explicitLastHasSpace && firstMissingOrBad && !swapDetected) return;
+
+        // Case C: Explicit single-token first name (no explicit last) → only fill last if it matches inference.
+        if (explicitFirstGood && !explicitLastGood && lastMissingOrBad && !swapDetected) {
+          // If the explicit first token is actually the inferred last, treat it as misplacement and repair both.
+          if (explicitFirst && explicitFirst === inferLast) {
+            out[firstKey] = inferFirst;
+            out[lastKey] = inferLast;
+            return;
+          }
+          // If explicit first matches inferred first, fill missing last but do not overwrite first.
+          if (explicitFirst && explicitFirst === inferFirst) {
+            out[lastKey] = inferLast;
+            return;
+          }
+          // Otherwise, don't guess (avoid false positives).
+          return;
+        }
+
+        // Case D: Explicit single-token last name (no explicit first) → only fill first if it matches inference.
+        if (explicitLastGood && !explicitFirstGood && firstMissingOrBad && !swapDetected) {
+          if (explicitLast && explicitLast === inferFirst) {
+            out[firstKey] = inferFirst;
+            out[lastKey] = inferLast;
+            return;
+          }
+          if (explicitLast && explicitLast === inferLast) {
+            out[firstKey] = inferFirst;
+            return;
+          }
+          return;
+        }
+
+        // Default behavior: no explicit good single-side input, or swap detected → repair both.
         out[firstKey] = inferFirst;
         out[lastKey] = inferLast;
       }
@@ -188,15 +248,19 @@ export function repairNameFieldsFromInference(options: {
     }
   };
 
-  repairGroup('proposer_first_name', 'proposer_last_name');
   repairGroup('first_name', 'last_name');
-  repairGroup('user_first_name', 'user_last_name');
+  if (!skipAliasGroupsDueToMultiwordCanonical) {
+    repairGroup('proposer_first_name', 'proposer_last_name');
+    repairGroup('user_first_name', 'user_last_name');
+  }
 
   // Compatibility: if proposer_first_name contains a full name and proposer_last_name is missing/bad, split.
   try {
+    if (skipAliasGroupsDueToMultiwordCanonical) return out;
     const pf = String(out.proposer_first_name ?? '').replace(/\s+/g, ' ').trim();
     const pl = String(out.proposer_last_name ?? '').replace(/\s+/g, ' ').trim();
-    if (pf && (!pl || isBadNameValue(pl)) && pf.split(' ').length >= 2) {
+    // Only split when it's EXACTLY 2 tokens; multi-word first names are common.
+    if (pf && (!pl || isBadNameValue(pl)) && pf.split(' ').length === 2) {
       const parts = pf.split(' ');
       out.proposer_first_name = parts[0];
       out.proposer_last_name = parts.slice(1).join(' ');

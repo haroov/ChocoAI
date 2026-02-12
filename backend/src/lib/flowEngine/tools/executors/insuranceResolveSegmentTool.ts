@@ -3,6 +3,7 @@ import { flowHelpers } from '../../flowHelpers';
 import { ToolExecutor, ToolResult } from '../types';
 import { resolveSegmentFromText } from '../../../insurance/segments/resolveSegmentFromText';
 import { buildQuestionnaireDefaultsFromResolution } from '../../../insurance/segments/buildQuestionnaireDefaults';
+import { formatBusinessSegmentLabelHe, looksLikeNoiseBusinessSegmentHe } from '../../../insurance/segments/formatBusinessSegmentLabelHe';
 
 function isEmpty(v: unknown): boolean {
   if (v === undefined || v === null) return true;
@@ -64,15 +65,36 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
     // Apply non-destructively (fill only if missing)
     const saveResults: Record<string, unknown> = {};
 
+    const existingSegmentId = String(payload.segment_id || '').trim();
+    const existingConf = Number(payload.segment_resolution_confidence);
+    const existingConfOk = Number.isFinite(existingConf) ? existingConf : null;
+
+    const resolvedSegmentId = String(resolution.segment_id || '').trim();
+    const resolvedConf = Number.isFinite(resolution.match_confidence) ? resolution.match_confidence : 0;
+
     // Always keep a human-readable segment label for UI/search/debug.
-    const desiredBusinessSegment = String(resolution.segment_name_he || resolution.group_name_he || '').trim();
+    const desiredBusinessSegment = formatBusinessSegmentLabelHe({
+      segment_name_he: resolution.segment_name_he,
+      group_name_he: resolution.group_name_he,
+      segment_group_id: resolution.segment_group_id,
+    });
     if (desiredBusinessSegment) {
       const existing = String(payload.business_segment || '').trim();
       const shouldOverride = !existing
+        || looksLikeNoiseBusinessSegmentHe(existing)
         || existing.length < desiredBusinessSegment.length
         || desiredBusinessSegment.includes(existing);
       if (shouldOverride) saveResults.business_segment = desiredBusinessSegment;
     }
+
+    // If we already have a segment_id but it was low-confidence, allow upgrading it.
+    // This fixes early misclassifications such as "הצעת ביטוח למשרד עו״ד" accidentally matching insurance-agent.
+    const allowUpgradeSegmentId = Boolean(
+      resolvedSegmentId
+      && resolvedSegmentId !== existingSegmentId
+      && resolvedConf >= 0.75
+      && (!existingSegmentId || existingConfOk === null || existingConfOk < 0.7),
+    );
 
     for (const [k, v] of Object.entries(defaults.userData)) {
       // Always refresh resolution telemetry (source/confidence), even if a segment was resolved earlier.
@@ -81,9 +103,22 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
         continue;
       }
 
-      // Segment identifiers & names should be non-destructive (set only if missing).
+      // Segment identifiers & names should be non-destructive (set only if missing),
+      // unless we are explicitly upgrading the segment_id.
+      if (allowUpgradeSegmentId && ['segment_id', 'segment_name_he', 'segment_group_id', 'segment_group_name_he', 'default_package_key'].includes(k)) {
+        saveResults[k] = v;
+        continue;
+      }
       if (isEmpty(payload[k])) saveResults[k] = v;
     }
+
+    if (allowUpgradeSegmentId) {
+      // Ensure the UI label aligns immediately with the upgraded segment.
+      if (desiredBusinessSegment) saveResults.business_segment = desiredBusinessSegment;
+      // Re-run segment coverages prefill on the next Flow02 pass with the corrected segment_id.
+      saveResults.segment_coverages_prefilled_v1 = false;
+    }
+
     for (const [k, v] of Object.entries(defaults.prefill)) {
       if (isEmpty(payload[k])) saveResults[k] = v;
     }

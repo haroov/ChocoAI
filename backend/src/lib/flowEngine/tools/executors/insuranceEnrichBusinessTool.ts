@@ -26,16 +26,16 @@ function legalIdTypeToHeLabel(t: 'HP' | 'AM' | 'TZ' | 'EIN'): string {
   }
 }
 
-function mapCompanyCorporationTypeToLegalEntityType(corporationTypeHe?: string): string | undefined {
+function mapCompanyCorporationTypeToLegalEntityType(corporationTypeHe?: string): { heLabel: string; code: string } | undefined {
   const s = String(corporationTypeHe || '').trim();
   if (!s) return undefined;
 
   // Examples from the dataset:
   // "ישראלית חברה פרטית", "ישראלית חברה ציבורית", "שותפות רשומה" (may vary)
-  if (/פרטית/.test(s)) return 'private_company';
-  if (/ציבורית/.test(s)) return 'public_company';
-  if (/שותפ/.test(s)) return 'registered_partnership';
-  return 'other';
+  if (/פרטית/.test(s)) return { heLabel: 'חברה פרטית', code: 'private_company' };
+  if (/ציבורית/.test(s)) return { heLabel: 'חברה ציבורית', code: 'public_company' };
+  if (/שותפ/.test(s)) return { heLabel: 'שותפות', code: 'registered_partnership' };
+  return undefined;
 }
 
 /**
@@ -76,7 +76,9 @@ export const insuranceEnrichBusinessTool: ToolExecutor = async (
 
     // AM (ע"מ / עוסק מורשה) → authorized_dealer (internal enum in proposalForm)
     if (legalIdType === 'AM' && !currentLegalEntityType) {
-      saveResults.business_legal_entity_type = 'authorized_dealer';
+      // Keep the user-facing flow enum value in Hebrew, and store the integration code separately.
+      saveResults.business_legal_entity_type = 'עוסק מורשה';
+      saveResults.business_legal_entity_type_code = 'authorized_dealer';
       saveResults.business_legal_entity_type_source = 'legal_id_type_am';
     }
 
@@ -110,7 +112,8 @@ export const insuranceEnrichBusinessTool: ToolExecutor = async (
         if (!currentLegalEntityType) {
           const mapped = mapCompanyCorporationTypeToLegalEntityType(c.corporationTypeHe);
           if (mapped) {
-            saveResults.business_legal_entity_type = mapped;
+            saveResults.business_legal_entity_type = mapped.heLabel;
+            saveResults.business_legal_entity_type_code = mapped.code;
             saveResults.business_legal_entity_type_source = 'companies_registry';
           }
         }

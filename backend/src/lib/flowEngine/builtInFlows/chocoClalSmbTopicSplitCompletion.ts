@@ -193,8 +193,16 @@ export function buildProcessCompletionExpression(procFile: RawProcessFileLike): 
     if (k === 'insured_relation_to_business') {
       // Must be one of the known options (Hebrew or English fallbacks).
       const TOKENS = '["בעלים","מורשה חתימה","מנהל","אחר","owner","authorized signer","manager","other"]';
+      // Normalize common wrappers (quotes/punctuation), because WhatsApp/web users often reply with: ״בעלים״ / "1." / "(מנהל)".
+      const CLEAN = '(String(userData.insured_relation_to_business ?? \'\')'
+        + '.trim()'
+        + '.toLowerCase()'
+        + '.replace(/[“”"׳״\']/g, \'\')'
+        + '.replace(/^[\\s\\-–—.,;:!?()\\[\\]{}]+/g, \'\')'
+        + '.replace(/[\\s\\-–—.,;:!?()\\[\\]{}]+$/g, \'\')'
+        + '.trim())';
       return '(__present(userData.insured_relation_to_business)'
-        + ` && __includes(${TOKENS}, String(userData.insured_relation_to_business).trim().toLowerCase()))`;
+        + ` && __includes(${TOKENS}, ${CLEAN}))`;
     }
     if (k === 'referral_source') {
       // Require a non-trivial string (avoid single-char / placeholders).

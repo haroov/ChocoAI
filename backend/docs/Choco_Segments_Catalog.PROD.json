@@ -138,869 +138,6 @@
       }
     }
   ],
-  "packages": {
-    "clal_express_shops_v1": {
-      "package_key": "clal_express_shops_v1",
-      "package_name_he": "כלל אקספרס – חנויות – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "shops",
-      "default_limits": {
-        "building": 3000000,
-        "contents_and_stock": 1600000,
-        "burglary": {
-          "closed_mall": 1600000,
-          "other_sites": 500000
-        },
-        "business_interruption": {
-          "option_daily": {
-            "daily_limit": 7500,
-            "max_days": 120
-          },
-          "option_consequential": {
-            "sum_insured": 3800000
-          }
-        },
-        "earthquake_and_natural_perils": "included",
-        "electronic_equipment": {
-          "basis": "residual",
-          "limit": 100000
-        },
-        "money": {
-          "in_safe": 50000,
-          "in_transit": 50000
-        },
-        "goods_in_transit": {
-          "limit": 50000,
-          "data_quality": {
-            "source_text": "50,0000",
-            "normalized": true,
-            "needs_review": true
-          }
-        },
-        "third_party": {
-          "limit_per_occurrence": 10000000,
-          "limit_aggregate": 10000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 50,
-          "wage_basis_max": 3000000
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {
-        "building": [
-          {
-            "name": "דמי שכירות חלופיים",
-            "limit_type": "percentage_of_sum_insured",
-            "value": 0.1
-          },
-          {
-            "name": "שבר זכוכית",
-            "limit_type": "percentage_of_sum_insured",
-            "value": 0.05
-          },
-          {
-            "name": "נזק ללוחות חשמל",
-            "limit": 200000
-          },
-          {
-            "name": "השלמת 'כל הסיכונים'",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 200000
-              }
-            ]
-          },
-          {
-            "name": "הוצאות לפינוי הריסות",
-            "limit_type": "percentage_of_indemnity",
-            "value": 0.1
-          },
-          {
-            "name": "הוצאות בגין דרישות רשויות",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_indemnity",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 100000
-              }
-            ]
-          },
-          {
-            "name": "הוצאות שכר אדריכלים ואחרים",
-            "limit_type": "percentage_of_indemnity",
-            "value": 0.1
-          }
-        ],
-        "contents": [
-          {
-            "name": "עליה עונתית בערך המלאי",
-            "limit_type": "percentage_extra",
-            "value": 0.2,
-            "period_note": "30 יום לפני ראש השנה/פסח/רמדאן"
-          },
-          {
-            "name": "דמי שכירות חלופיים (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 15000
-              }
-            ]
-          },
-          {
-            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.05
-              },
-              {
-                "type": "fixed",
-                "amount": 25000
-              }
-            ]
-          },
-          {
-            "name": "התמוטטות מדפים",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 100000
-              }
-            ]
-          },
-          {
-            "name": "השלמת 'כל הסיכונים' לתכולה",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 500000
-              }
-            ]
-          },
-          {
-            "name": "הוצאות שמירה נוספות",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.05
-              },
-              {
-                "type": "fixed",
-                "amount": 10000
-              }
-            ]
-          },
-          {
-            "name": "חפצים אישיים",
-            "limit": 2500
-          },
-          {
-            "name": "קלקול תכולת מקרר",
-            "limit": 5000,
-            "upgrade_available_to": 25000
-          },
-          {
-            "name": "שחזור מסמכים",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 100000
-              }
-            ]
-          }
-        ],
-        "third_party": [
-          {
-            "name": "ביטול חריג חבות מוצר",
-            "limit_note": "עד 50% מגבול האחריות לפרק, מקסימום 1,000,000 ₪; קיימים חריגים למוצרים מסוימים"
-          }
-        ]
-      },
-      "available_extensions": {},
-      "eligibility": {
-        "description": "חנויות בקניון סגור, מרכזי קניות פתוחים או חנויות רחוב",
-        "risk_code_groups": [
-          {
-            "group_code": 69,
-            "description": "חנויות בקניון סגור/בנין משרדים"
-          },
-          {
-            "group_code": 70,
-            "description": "חנויות בקניון או מרכז מסחרי פתוח/רחוב"
-          }
-        ]
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "clal_express_clinics_v1": {
-      "package_key": "clal_express_clinics_v1",
-      "package_name_he": "כלל אקספרס – מרפאות – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "clinics",
-      "default_limits": {
-        "building": 2500000,
-        "contents_and_stock": 1200000,
-        "burglary": {
-          "closed_mall_or_office_building": 1200000,
-          "other_sites": 1000000
-        },
-        "business_interruption": {
-          "daily_limit": 7500,
-          "max_days": 120
-        },
-        "earthquake_and_natural_perils": "included",
-        "electronic_equipment": {
-          "basis": "residual",
-          "limit": 100000
-        },
-        "money": {
-          "in_safe": 50000,
-          "in_transit": 50000
-        },
-        "third_party": {
-          "limit_per_occurrence": 10000000,
-          "limit_aggregate": 10000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 50,
-          "wage_basis_max": 3000000
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {
-        "building": [
-          {
-            "name": "דמי שכירות חלופיים",
-            "limit_type": "percentage_of_sum_insured",
-            "value": 0.1
-          },
-          {
-            "name": "שבר זכוכית",
-            "limit_type": "percentage_of_sum_insured",
-            "value": 0.05
-          },
-          {
-            "name": "נזק ללוחות חשמל",
-            "limit": 200000
-          },
-          {
-            "name": "השלמת 'כל הסיכונים'",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 200000
-              }
-            ]
-          }
-        ],
-        "contents": [
-          {
-            "name": "דמי שכירות מרפאה חלופית (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 15000
-              }
-            ]
-          },
-          {
-            "name": "תיק רופא גם מחוץ למרפאה",
-            "limit": 5000
-          },
-          {
-            "name": "חפצים אישיים",
-            "limit": 2500
-          },
-          {
-            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.05
-              },
-              {
-                "type": "fixed",
-                "amount": 25000
-              }
-            ]
-          }
-        ]
-      },
-      "available_extensions": {},
-      "eligibility": {
-        "description": "מרפאות פרטיות לייעוץ/אבחון/טיפול (למעט פעולות המוגדרות כהתערבות כירורגית)",
-        "risk_code_collective": 557,
-        "risk_codes_example": [
-          {
-            "code": 295465,
-            "description": "מרפאה וטרינרית - לחיות מחמד ביתיות"
-          },
-          {
-            "code": 295518,
-            "description": "מרפאה לרפואה משלימה / אלטרנטיבית"
-          },
-          {
-            "code": 295524,
-            "description": "מרפאה פסיכולוג/ית / פסיכיאטר/ית"
-          }
-        ]
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "clal_express_beauty_and_hair_v1": {
-      "package_key": "clal_express_beauty_and_hair_v1",
-      "package_name_he": "כלל אקספרס – מכוני קוסמטיקה ומספרות – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "beauty_and_hair",
-      "default_limits": {
-        "building": 2500000,
-        "contents_and_stock": 1500000,
-        "burglary": 1000000,
-        "business_interruption": {
-          "option_daily": {
-            "daily_limit": 7500,
-            "max_days": 120
-          },
-          "option_consequential": {
-            "sum_insured": 3800000
-          }
-        },
-        "earthquake_and_natural_perils": "included",
-        "electronic_equipment": {
-          "basis": "residual",
-          "limit": 100000
-        },
-        "money": {
-          "in_safe": 50000,
-          "in_transit": 50000
-        },
-        "goods_in_transit": {
-          "limit": 50000
-        },
-        "third_party": {
-          "limit_per_occurrence": 4000000,
-          "limit_aggregate": 4000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 10,
-          "wage_basis_max": 3000000
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {
-        "contents": [
-          {
-            "name": "אבדן לכספי בית העסק",
-            "limit": 5000
-          },
-          {
-            "name": "כיסוי למכשירים אלקטרוניים במסגרת ביטוח ציוד אלקטרוני (ברכישה)",
-            "limit": 7500
-          }
-        ]
-      },
-      "available_extensions": {},
-      "eligibility": {
-        "description": "מכוני קוסמטיקה ומספרות",
-        "risk_code_collective": 469,
-        "risk_codes": [
-          {
-            "code": 285469,
-            "description": "מכון קוסמטיקה"
-          },
-          {
-            "code": 90516,
-            "description": "מספרה"
-          },
-          {
-            "code": 285970,
-            "description": "מספרה לבעלי חיים"
-          },
-          {
-            "code": 285969,
-            "description": "מכון קוסמטיקה ומספרה"
-          }
-        ]
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "clal_express_food_v1": {
-      "package_key": "clal_express_food_v1",
-      "package_name_he": "כלל אקספרס – מזון – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "food",
-      "default_limits": {
-        "building": {
-          "closed_mall_or_office_building": 4000000,
-          "other_sites": 2000000
-        },
-        "contents_and_stock": 1500000,
-        "burglary": {
-          "closed_mall_or_office_building": 1500000,
-          "other_sites": 500000
-        },
-        "business_interruption": {
-          "option_daily": {
-            "daily_limit": 7500,
-            "max_days": 120
-          },
-          "option_consequential": {
-            "sum_insured": 2000000
-          }
-        },
-        "earthquake_and_natural_perils": "included",
-        "electronic_equipment": {
-          "basis": "residual",
-          "limit": 100000
-        },
-        "money": {
-          "in_safe": 50000,
-          "in_transit": 50000
-        },
-        "goods_in_transit": {
-          "limit": 50000
-        },
-        "third_party": {
-          "limit_per_occurrence": 10000000,
-          "limit_aggregate": 10000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 50,
-          "wage_basis_max": 6000000
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {
-        "contents": [
-          {
-            "name": "קלקול תכולת מקרר",
-            "limit": 25000,
-            "upgrade_available_to": 50000
-          },
-          {
-            "name": "דמי שכירות חלופיים (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 15000
-              }
-            ]
-          },
-          {
-            "name": "לוחות זכוכית ושלטים (גם ללא מבנה)",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.05
-              },
-              {
-                "type": "fixed",
-                "amount": 25000
-              }
-            ]
-          },
-          {
-            "name": "שחזור מסמכים",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 100000
-              }
-            ]
-          },
-          {
-            "name": "השלמה ל'כל הסיכונים' לתכולה",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 500000
-              }
-            ]
-          },
-          {
-            "name": "חפצים אישיים",
-            "limit": 2500
-          }
-        ],
-        "third_party": [
-          {
-            "name": "ביטול חריג חבות המוצר",
-            "limit_note": "עד 50% מגבול האחריות לפרק, מקסימום 1,000,000 ₪; קיימים חריגים למוצרים מסוימים"
-          }
-        ]
-      },
-      "available_extensions": {},
-      "eligibility": {
-        "description": "עסקי מזון וענף המסעדנות",
-        "risk_code_collective": 160,
-        "risk_codes_example": [
-          {
-            "code": 160973,
-            "description": "קונדיטוריה"
-          },
-          {
-            "code": 160868,
-            "description": "בית קפה"
-          },
-          {
-            "code": 160975,
-            "description": "פלאפל/שווארמה"
-          }
-        ]
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "clal_express_synagogue_v1": {
-      "package_key": "clal_express_synagogue_v1",
-      "package_name_he": "כלל אקספרס – בתי כנסת – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "synagogue",
-      "default_limits": {
-        "building": 2500000,
-        "contents_excluding_torah_and_sacred_objects": 1500000,
-        "burglary_excluding_torah_and_sacred_objects": 1000000,
-        "all_risks_torah_and_sacred_objects": {
-          "per_scroll": 100000,
-          "aggregate": 800000
-        },
-        "business_interruption": {
-          "daily_limit": 7500,
-          "max_days": 120
-        },
-        "earthquake_and_natural_perils": "included",
-        "money": {
-          "in_safe": 25000,
-          "in_transit": 25000
-        },
-        "third_party": {
-          "limit_per_occurrence": 5000000,
-          "limit_aggregate": 5000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 50
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {},
-      "available_extensions": {},
-      "eligibility": {
-        "description": "בתי כנסת עד 500 מתפללים (לפי החוברת)",
-        "risk_code_collective": 216,
-        "risk_codes": [
-          {
-            "code": 150216,
-            "description": "בית כנסת"
-          }
-        ],
-        "max_locations_override": 1
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "clal_express_buildings_owners_v1": {
-      "package_key": "clal_express_buildings_owners_v1",
-      "package_name_he": "כלל אקספרס – מבנים (בעלי מבנים) – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_express_business",
-      "currency": "ILS",
-      "defaults_source": "clal_express_brochure_13-2933",
-      "segment_id": "buildings_owners",
-      "default_limits": {
-        "building": 2500000,
-        "contents_and_stock": 100000,
-        "burglary": 100000,
-        "business_interruption": {
-          "option_daily": {
-            "daily_limit": 7500,
-            "max_days": 120
-          },
-          "option_consequential": {
-            "sum_insured": 1000000
-          }
-        },
-        "earthquake_and_natural_perils": "included",
-        "electronic_equipment": {
-          "basis": "residual",
-          "limit": 100000
-        },
-        "money": {
-          "in_safe": 50000,
-          "in_transit": 50000
-        },
-        "goods_in_transit": {
-          "limit": 50000
-        },
-        "third_party": {
-          "limit_per_occurrence": 4000000,
-          "limit_aggregate": 4000000
-        },
-        "employers_liability": {
-          "limit_per_occurrence": 20000000,
-          "limit_aggregate": 20000000,
-          "max_employees": 50,
-          "wage_basis_max": 3000000
-        }
-      },
-      "default_deductibles": {},
-      "included_extensions": {
-        "property": [
-          {
-            "name": "רכוש בבניה/בהקמה/בשיפוץ",
-            "limit": 250000
-          },
-          {
-            "name": "שבר זכוכית",
-            "limit_type": "percentage_of_sum_insured",
-            "value": 0.05
-          },
-          {
-            "name": "נזק ללוחות חשמל",
-            "limit": 200000
-          },
-          {
-            "name": "התמוטטות מבנים",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 250000
-              }
-            ]
-          },
-          {
-            "name": "השלמת 'כל הסיכונים' למבנה",
-            "limit_type": "min_of",
-            "options": [
-              {
-                "type": "percentage_of_sum_insured",
-                "value": 0.1
-              },
-              {
-                "type": "fixed",
-                "amount": 200000
-              }
-            ]
-          }
-        ]
-      },
-      "available_extensions": {},
-      "eligibility": {
-        "description": "בעלי מבנים המושכרים לאחרים (משרדים/חנויות) – לפי סמלי סיכון",
-        "risk_code_collective": 145,
-        "risk_codes_example": [
-          {
-            "code": 145776,
-            "description": "בעל מבנה המושכר לאחרים ומשמש למשרדים"
-          },
-          {
-            "code": 145779,
-            "description": "בעל מבנה המושכר לאחרים ומשמש לחנות"
-          }
-        ]
-      },
-      "notes_he": "",
-      "important_logic_he": []
-    },
-    "choco_clal_professional_office_base_v1": {
-      "package_key": "choco_clal_professional_office_base_v1",
-      "package_name_he": "שוקו × כלל – משרד מקצועי – ברירת מחדל (טופס הצעה מלא)",
-      "insurer_code": "CLAL",
-      "product_key": "clal_smb_business",
-      "currency": "ILS",
-      "defaults_source": "choco_internal_defaults_2026-02",
-      "default_limits": {
-        "building": {
-          "selected": false,
-          "sum_insured_ils": null
-        },
-        "contents_and_stock": {
-          "selected": true,
-          "sum_insured_ils": 250000,
-          "stock_sum_insured_ils": 0
-        },
-        "burglary": {
-          "selected": true,
-          "basis": "first_loss",
-          "sum_insured_ils": 100000
-        },
-        "business_interruption": {
-          "selected": false
-        },
-        "earthquake_and_natural_perils": {
-          "selected": true
-        },
-        "electronic_equipment": {
-          "selected": true,
-          "hardware_coverage_type": "full",
-          "hardware_sum_insured_ils": 150000,
-          "mobile_selected": true,
-          "mobile_sum_insured_ils": 50000
-        },
-        "money": {
-          "selected": true,
-          "in_safe_sum_insured_ils": 20000,
-          "in_transit_sum_insured_ils": 20000
-        },
-        "third_party": {
-          "selected": true,
-          "limit_ils": 1000000
-        },
-        "employers_liability": {
-          "selected": true,
-          "limit_ils": 20000000
-        },
-        "product_liability": {
-          "selected": false
-        },
-        "cyber": {
-          "selected": false
-        }
-      },
-      "default_deductibles": {
-        "property_each_and_every_claim_ils": 2500,
-        "burglary_each_and_every_claim_ils": 2500,
-        "third_party_each_and_every_claim_ils": 2500
-      },
-      "notes_he": "ברירת מחדל פנימית לשוקו עבור עסקים משרדיים (ללא ייצור/שיווק מוצרים). מיועד כנקודת פתיחה לשיחה ולמילוי טופס ההצעה; אינו מחליף חיתום.",
-      "important_logic_he": [
-        "ביטוח מבנה: נבחר רק אם הלקוח בעלים/חוכר של המבנה או נדרש שיעבוד/בנק.",
-        "אחריות מעבידים: תופעל רק אם יש עובדים בפועל.",
-        "סייבר: מומלץ במיוחד אם קיימים מאגרי מידע, מידע רגיש, או פעילות מקוונת משמעותית."
-      ]
-    },
-    "choco_clal_online_business_base_v1": {
-      "package_key": "choco_clal_online_business_base_v1",
-      "package_name_he": "שוקו × כלל – עסק דיגיטלי ללא מקום פיזי – ברירת מחדל",
-      "insurer_code": "CLAL",
-      "product_key": "clal_cyber",
-      "currency": "ILS",
-      "defaults_source": "choco_internal_defaults_2026-02",
-      "default_limits": {
-        "building": {
-          "selected": false
-        },
-        "contents_and_stock": {
-          "selected": false
-        },
-        "burglary": {
-          "selected": false
-        },
-        "business_interruption": {
-          "selected": false
-        },
-        "third_party": {
-          "selected": true,
-          "limit_ils": 1000000
-        },
-        "employers_liability": {
-          "selected": false
-        },
-        "cyber": {
-          "selected": true,
-          "limit_ils": null
-        }
-      },
-      "notes_he": "ברירת מחדל פנימית לשוקו לעסקים ללא מיקום פיזי משמעותי. הדגש הוא על סייבר וחבות כלפי צד שלישי. גבולות אחריות/פרטי כיסוי סייבר יוגדרו לפי הצעת כלל.",
-      "important_logic_he": [
-        "אם קיימת תכולה/משרד בפועל – יש לעבור למסלול משרד מקצועי/טופס עסק.",
-        "אם יש עובדים – לשקול גם אחריות מעבידים."
-      ]
-    }
-  },
   "segments": [
     {
       "segment_id": "clal_shops_45273",
@@ -5333,6 +4470,159 @@
         }
       ],
       "notes_he": null
+    },
+    {
+      "segment_id": "insurance_agent",
+      "segment_name_he": "סוכן ביטוח",
+      "segment_group_id": "professional_offices",
+      "keywords": [
+        "סוכן ביטוח",
+        "סוכנות ביטוח",
+        "סוכנות",
+        "משרד ביטוח",
+        "סוכני ביטוח",
+        "פנסיה",
+        "ביטוח חיים",
+        "ביטוח בריאות",
+        "ביטוח רכב",
+        "ביטוח דירה"
+      ],
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "לתווך בעסקאות ביטוח",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "סגמנט שוקו: סוכן/סוכנות ביטוח. נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "real_estate_brokerage",
+      "segment_name_he": "תיווך נדל\"ן / משרד תיווך",
+      "segment_group_id": "professional_offices",
+      "keywords": [
+        "תיווך",
+        "תיווך נדל\"ן",
+        "נדל\"ן",
+        "נדלן",
+        "משרד תיווך",
+        "מתווך",
+        "מתווכת",
+        "מתווכים",
+        "השכרת דירות",
+        "מכירת דירות",
+        "תיווך מסחרי"
+      ],
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "תיווך בעסקאות נדל\"ן (מכירה/השכרה) ושירותי שיווק נכסים",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "סגמנט שוקו: תיווך נדל\"ן. נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": null
+    },
+    {
+      "segment_id": "architecture_engineering_office",
+      "segment_name_he": "משרד אדריכלים / מהנדסים",
+      "segment_group_id": "professional_offices",
+      "keywords": [
+        "אדריכל",
+        "אדריכלית",
+        "אדריכלים",
+        "אדריכלות",
+        "משרד אדריכלים",
+        "מהנדס",
+        "מהנדסת",
+        "מהנדסים",
+        "הנדסה",
+        "קונסטרוקטור",
+        "תכנון",
+        "תכנון מבנים"
+      ],
+      "business_profile_defaults": {
+        "segment_group_he": "משרדים ושירותים מקצועיים",
+        "site_type_he": "משרד",
+        "primary_activity_he": "שירותי תכנון, אדריכלות והנדסה (כולל ייעוץ ותכנון מבנים)",
+        "has_physical_location": true
+      },
+      "clal_mapping": {
+        "mapping_status": "unmapped",
+        "insurer_code": "CLAL",
+        "product_key": "clal_smb_business",
+        "risk_symbol_code": null,
+        "collective_code": null,
+        "collective_code_rules": null,
+        "notes_he": "סגמנט שוקו: אדריכלות/הנדסה. נדרש מיפוי סמלי סיכון/קולקטיב מול כלל לצורך הפקה אוטומטית."
+      },
+      "default_package_key": "choco_clal_professional_office_base_v1",
+      "relevant_insurance_types": [
+        "business_combined",
+        "professional_indemnity",
+        "cyber_optional"
+      ],
+      "recommended_products": [
+        {
+          "product_key": "clal_smb_business",
+          "package_key": "choco_clal_professional_office_base_v1",
+          "priority": "core"
+        },
+        {
+          "product_key": "clal_cyber",
+          "priority": "optional"
+        }
+      ],
+      "notes_he": "לעיתים יידרש כיסוי אחריות מקצועית ייעודית (אדריכלים/מהנדסים) בהתאם לחיתום/מוצרי כלל."
     },
     {
       "segment_id": "it_services_office",

@@ -329,6 +329,11 @@ export type FieldDefinition = {
   maxLength?: number;
   /** Regex pattern for validation (string fields only) */
   pattern?: string;
+  /**
+   * Optional prohibited-words list identifier (engine-defined).
+   * When provided, `validateFieldValue` will reject values containing prohibited words (substring match).
+   */
+  prohibitedWordsList?: string;
   /** Allowed values for string fields */
   enum?: string[];
 };

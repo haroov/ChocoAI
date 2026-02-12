@@ -21,9 +21,16 @@ import { prisma } from '../../core';
 import { logger } from '../../utils/logger';
 import { flowTracer } from '../observability/flowTracer';
 import { executeTool } from './tools';
-import { FlowDefinition, FlowStageDefinition } from './types';
+import { FieldDefinition, FlowDefinition, FlowStageDefinition } from './types';
 import { llmService } from './llmService';
 import { flowHelpers } from './flowHelpers';
+import {
+  getFieldDisplayNameHe,
+  inferBusinessLegalEntityTypeFromBusinessRegistrationId,
+  isPresentNonPlaceholder,
+  validateFieldValue,
+} from './fieldValidation';
+import { enrichBusinessAddressInPlace } from './businessAddressEnrichment';
 
 class FlowRouter {
   async determineFlowAndCollectData(conversation: Conversation, message: Message): Promise<DeterminedFlow | null> {
@@ -122,6 +129,110 @@ class FlowRouter {
         flowId: res.flow.id,
         context: flowHelpers.generateExtractionContext(extractionFields, stage.description),
       });
+
+      // Deterministic fallback: if the stage is asking for an Israeli ID and the user replies with digits,
+      // accept it even if the LLM extraction missed it. This prevents stuck loops.
+      try {
+        const collected: any = res.collectedData || {};
+        const msgRaw = String(message.content || '').trim();
+        const digits = msgRaw.replace(/\D/g, '');
+        const msgIsMostlyDigits = digits.length >= 8 && digits.length <= 9
+          && digits.length === msgRaw.replace(/\s+/g, '').replace(/[-–—]/g, '').length;
+        if (msgIsMostlyDigits) {
+          const candidate = digits.padStart(9, '0');
+          const userIdDef = (flowDefinition.fields as any)?.user_id as FieldDefinition | undefined;
+          const legalIdDef = (flowDefinition.fields as any)?.legal_id as FieldDefinition | undefined;
+          const wantsUserId = Object.prototype.hasOwnProperty.call(stageFields, 'user_id');
+          const wantsLegalId = Object.prototype.hasOwnProperty.call(stageFields, 'legal_id');
+
+          if (wantsUserId && !isPresentNonPlaceholder(collected.user_id)) {
+            const vr = validateFieldValue('user_id', userIdDef, candidate);
+            if (vr.ok) collected.user_id = vr.normalizedValue;
+          }
+          if (wantsLegalId && !isPresentNonPlaceholder(collected.legal_id)) {
+            const vr = validateFieldValue('legal_id', legalIdDef, candidate);
+            if (vr.ok) collected.legal_id = vr.normalizedValue;
+          }
+          res.collectedData = collected;
+        }
+      } catch {
+        // best-effort
+      }
+
+      // Best-effort: early segment resolution for Flow01 (lock-once).
+      // This enables Flow01 to infer segment_id from the initial user prompt or from the occupation answer,
+      // without waiting for the post-stage tool runner.
+      try {
+        const isFlow01 = String(res.flow?.slug || '') === 'flow_01_welcome_user';
+        if (isFlow01) {
+          // Use a short window of recent user messages (not just the current one).
+          // This allows segment resolution even when the user's follow-up answer is short (e.g., "חדש"),
+          // while the occupation was provided in the first message.
+          const recentUserMsgs = await prisma.message.findMany({
+            where: { conversationId: conversation.id, role: 'user' },
+            orderBy: { createdAt: 'desc' },
+            take: 6,
+            select: { content: true },
+          });
+          const combinedText = recentUserMsgs
+            .map((m) => String(m.content || '').trim())
+            .filter(Boolean)
+            .reverse() // chronological
+            .join(' | ')
+            .slice(0, 900);
+
+          if (combinedText.length < 3) return res;
+
+          const collected: any = res.collectedData || {};
+          const alreadyInPayload = String(collected.segment_id || '').trim();
+          const alreadyInDb = await (async (): Promise<string> => {
+            try {
+              if (!conversation.userId) return '';
+              const existing = await flowHelpers.getUserData(conversation.userId, res.flow.id);
+              return String((existing as any)?.segment_id || '').trim();
+            } catch {
+              return '';
+            }
+          })();
+
+          if (!alreadyInPayload && !alreadyInDb) {
+            const { resolveSegmentFromText } = await import('../insurance/segments/resolveSegmentFromText');
+            const resolved = await resolveSegmentFromText(combinedText);
+            if (resolved?.source !== 'none' && Number(resolved.match_confidence || 0) >= 0.45 && resolved.segment_id) {
+              const { buildQuestionnaireDefaultsFromResolution } = await import('../insurance/segments/buildQuestionnaireDefaults');
+              const defaults = buildQuestionnaireDefaultsFromResolution(resolved);
+
+              // Apply identifiers + safe questionnaire prefills non-destructively into collectedData.
+              const merged = { ...(defaults.userData || {}), ...(defaults.prefill || {}) };
+              for (const [k, v] of Object.entries(merged)) {
+                if (collected[k] === undefined || collected[k] === null || collected[k] === '') collected[k] = v;
+              }
+
+              // Also set human-friendly fields used by UI + downstream orchestration.
+              // - `business_segment` is what the UI links to a segment page.
+              // - `business_site_type` improves phrasing + removes unnecessary follow-up questions.
+              const { formatBusinessSegmentLabelHe, looksLikeNoiseBusinessSegmentHe } = await import('../insurance/segments/formatBusinessSegmentLabelHe');
+              const desiredLabel = formatBusinessSegmentLabelHe({
+                segment_name_he: (defaults.userData as any)?.segment_name_he,
+                group_name_he: (defaults.userData as any)?.segment_group_name_he,
+                segment_group_id: (defaults.userData as any)?.segment_group_id,
+              });
+              const existingBs = String(collected.business_segment || '').trim();
+              if (desiredLabel && (!existingBs || looksLikeNoiseBusinessSegmentHe(existingBs))) {
+                collected.business_segment = desiredLabel;
+              }
+              const st = (defaults.prefill as any)?.business_site_type;
+              if (!String(collected.business_site_type || '').trim() && Array.isArray(st) && st.length > 0) {
+                collected.business_site_type = String(st[0] || '').trim();
+              }
+
+              res.collectedData = collected;
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
     }
 
     return res;
@@ -153,7 +264,7 @@ class FlowRouter {
     } else userId = conversation.userId;
 
     // Filter out empty strings and null values before saving - only save fields that were actually provided
-    const cleanedCollectedData = Object.fromEntries(
+    const cleanedCollectedData: Record<string, unknown> = Object.fromEntries(
       Object.entries(options.determinedFlow.collectedData).filter(([_, value]) =>
         value !== null
         && value !== undefined
@@ -165,7 +276,291 @@ class FlowRouter {
       ),
     );
 
-    await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, cleanedCollectedData, conversation.id);
+    // Validate + normalize collected data before persisting.
+    const flowDefinition = options.determinedFlow.flow.definition as FlowDefinition;
+    const fieldDefs = flowDefinition.fields || {};
+    const stageSlug = determinedFlow.stage;
+    const stageDef = flowDefinition.stages?.[stageSlug];
+    const stageFields = new Set<string>(Array.isArray(stageDef?.fieldsToCollect) ? stageDef!.fieldsToCollect : []);
+
+    const expandCanonicalAliases = (k: string): string[] => {
+      // Keep in sync (subset) with flowHelpers.setUserData aliasing rules.
+      switch (String(k || '').trim()) {
+        case 'email': return ['user_email', 'proposer_email'];
+        case 'user_email': return ['email', 'proposer_email'];
+        case 'proposer_email': return ['email', 'user_email'];
+
+        case 'phone': return ['user_phone', 'proposer_mobile_phone', 'mobile_phone', 'user_mobile_phone'];
+        case 'mobile_phone': return ['phone', 'user_phone', 'proposer_mobile_phone'];
+        case 'user_phone': return ['phone', 'proposer_mobile_phone', 'mobile_phone'];
+        case 'user_mobile_phone': return ['phone', 'proposer_mobile_phone', 'mobile_phone'];
+        case 'proposer_mobile_phone': return ['phone', 'user_phone', 'mobile_phone'];
+
+        case 'first_name': return ['user_first_name', 'proposer_first_name'];
+        case 'user_first_name': return ['first_name', 'proposer_first_name'];
+        case 'proposer_first_name': return ['first_name', 'user_first_name'];
+
+        case 'last_name': return ['user_last_name', 'proposer_last_name'];
+        case 'user_last_name': return ['last_name', 'proposer_last_name'];
+        case 'proposer_last_name': return ['last_name', 'user_last_name'];
+
+        // Israeli ID: flows sometimes use user_id vs legal_id interchangeably.
+        // Treat them as aliases to avoid stale invalid markers / missed corrections.
+        case 'user_id': return ['legal_id'];
+        case 'legal_id': return ['user_id'];
+
+        default: return [];
+      }
+    };
+
+    const parseBooleanish = (v: unknown): boolean | null => {
+      if (v === true) return true;
+      if (v === false) return false;
+      const s = String(v ?? '').trim().toLowerCase();
+      if (!s) return null;
+
+      // Explicit tokens + common Hebrew synonyms
+      if (['true', '1', 'כן', 'y', 'yes', 'יש', 'מעסיק', 'עם עובדים', 'עובדים', 'חיובי'].includes(s)) return true;
+      if (['false', '0', 'לא', 'n', 'no', 'אין', 'בלי', 'ללא', 'שלילי'].includes(s)) return false;
+
+      // Numeric prefixes: 0 => false, any positive integer => true (e.g., "3 עובדים", "1-999999")
+      const m = /^(\d{1,9})\b/.exec(s);
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n)) return n > 0;
+      }
+
+      return null;
+    };
+
+    const validatedCollectedData: Record<string, unknown> = {};
+    const invalidFieldSlugs: string[] = [];
+    const invalidHints: Record<string, string> = {};
+
+    for (const [fieldSlug, rawValue] of Object.entries(cleanedCollectedData)) {
+      const def = (fieldDefs as any)?.[fieldSlug] as FieldDefinition | undefined;
+      const res = validateFieldValue(fieldSlug, def, rawValue);
+      if (!res.ok) {
+        invalidFieldSlugs.push(fieldSlug);
+        if (typeof (res as any).suggestion === 'string' && String((res as any).suggestion).trim()) {
+          invalidHints[fieldSlug] = String((res as any).suggestion).trim();
+        }
+        continue;
+      }
+      validatedCollectedData[fieldSlug] = res.normalizedValue;
+    }
+
+    try {
+      const flowId = options.determinedFlow.flow.id;
+      const existing = await flowHelpers.getUserData(userId, flowId);
+      await enrichBusinessAddressInPlace({
+        validatedCollectedData,
+        existingUserData: existing as any,
+        conversationId: conversation.id,
+      });
+    } catch {
+      // best-effort (never block the flow on enrichment failures)
+    }
+
+    // Derivation: employers liability interest is fully determined by has_employees.
+    // If the business has employees -> ch8_employers_selected=true; otherwise false. Skip asking the question.
+    try {
+      const hasEmployees = parseBooleanish(validatedCollectedData.has_employees);
+      const hasCh8FieldDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch8_employers_selected');
+      const stageCollectsCh8 = stageFields.has('ch8_employers_selected');
+      if ((hasCh8FieldDef || stageCollectsCh8) && hasEmployees !== null) {
+        validatedCollectedData.ch8_employers_selected = hasEmployees;
+        validatedCollectedData.ch8_employers_selected_source = 'has_employees';
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Derivation (Flow 02): if the user explicitly does NOT need building coverage, default contents coverage to YES.
+    // Product rule: policy must include building and/or contents as foundational coverages.
+    // When building=false -> contents=true, and we should skip asking contents.
+    try {
+      const isFlow02 = String(options.determinedFlow.flow.slug || '').trim() === 'flow_02_intent_segment_and_coverages';
+      const hasBuildingDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch2_building_selected');
+      const hasContentsDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch1_contents_selected');
+      if (isFlow02 && hasBuildingDef && hasContentsDef) {
+        const building = parseBooleanish(validatedCollectedData.ch2_building_selected);
+        if (building === false) {
+          validatedCollectedData.ch1_contents_selected = true;
+          validatedCollectedData.ch1_contents_selected_source = 'building_false_default';
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Derivation (topic-split insurance): if the user selected Business Interruption daily coverage (ch3a),
+    // deterministically set the enum business_interruption_type so downstream routing is reliable.
+    //
+    // UX requirement: choosing "כן" for BI coverage must auto-map to:
+    // business_interruption_type = "אובדן הכנסה (פיצוי יומי)".
+    try {
+      const hasBiDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'business_interruption_type');
+      const hasCh3aDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch3a_selected');
+      const stageCollectsBi = stageFields.has('business_interruption_type');
+      const stageCollectsCh3a = stageFields.has('ch3a_selected');
+      if ((hasBiDef || stageCollectsBi) && (hasCh3aDef || stageCollectsCh3a)) {
+        const ch3a = parseBooleanish(validatedCollectedData.ch3a_selected);
+        if (ch3a === true) {
+          validatedCollectedData.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+        } else if (ch3a === false) {
+          validatedCollectedData.business_interruption_type = 'לא';
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Derivation: infer business_legal_entity_type from business_registration_id (when available and not already set).
+    try {
+      const flowId = options.determinedFlow.flow.id;
+      const hasFieldDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'business_legal_entity_type');
+      const reg = String(validatedCollectedData.business_registration_id || '').trim();
+      const providedEntityType = String(validatedCollectedData.business_legal_entity_type || '').trim();
+
+      if (hasFieldDef && reg && !providedEntityType) {
+        // Only overwrite if missing, or if it was previously derived by this same mechanism.
+        const existingType = await prisma.userData.findUnique({
+          where: { key_userId_flowId: { userId, flowId, key: 'business_legal_entity_type' } },
+          select: { value: true },
+        });
+        const existingSource = await prisma.userData.findUnique({
+          where: { key_userId_flowId: { userId, flowId, key: 'business_legal_entity_type_source' } },
+          select: { value: true },
+        });
+
+        const existingValue = String(existingType?.value || '').trim();
+        const existingSrc = String(existingSource?.value || '').trim();
+        const canOverwrite = !existingValue || existingSrc === 'business_registration_id_prefix';
+
+        if (canOverwrite) {
+          const inferred = inferBusinessLegalEntityTypeFromBusinessRegistrationId(reg);
+          const def = (fieldDefs as any)?.business_legal_entity_type as FieldDefinition | undefined;
+          const vr = validateFieldValue('business_legal_entity_type', def, inferred.heLabel);
+          if (vr.ok) {
+            validatedCollectedData.business_legal_entity_type = vr.normalizedValue;
+            validatedCollectedData.business_legal_entity_type_code = inferred.code;
+            validatedCollectedData.business_legal_entity_type_source = 'business_registration_id_prefix';
+            if (inferred.detailHe) validatedCollectedData.business_legal_entity_type_detail_he = inferred.detailHe;
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Persist invalid markers for prompt injection.
+    // IMPORTANT: Do NOT clear invalid markers unless the user actually provided a valid replacement.
+    try {
+      const flowId = options.determinedFlow.flow.id;
+      const prevRow = await prisma.userData.findUnique({
+        where: { key_userId_flowId: { userId, flowId, key: '__invalid_fields' } },
+        select: { value: true },
+      });
+      let prevInvalid: string[] = [];
+      try {
+        const parsed = prevRow?.value ? JSON.parse(prevRow.value) : [];
+        if (Array.isArray(parsed)) prevInvalid = parsed.map((x) => String(x || '').trim()).filter(Boolean);
+      } catch {
+        prevInvalid = [];
+      }
+
+      const merged = new Set<string>(prevInvalid);
+      // Persist hints alongside invalid markers (best-effort; never store raw invalid values).
+      const prevHintsRow = await prisma.userData.findUnique({
+        where: { key_userId_flowId: { userId, flowId, key: '__invalid_fields_hints' } },
+        select: { value: true },
+      });
+      let prevHints: Record<string, string> = {};
+      try {
+        const parsed = prevHintsRow?.value ? JSON.parse(prevHintsRow.value) : {};
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) prevHints = parsed as Record<string, string>;
+      } catch {
+        prevHints = {};
+      }
+
+      // Remove fields that were corrected in this message (valid values were saved).
+      const corrected = new Set<string>();
+      for (const k of Object.keys(validatedCollectedData)) {
+        corrected.add(k);
+        for (const a of expandCanonicalAliases(k)) corrected.add(a);
+      }
+      for (const k of corrected) merged.delete(k);
+      // Add newly invalid fields detected in this message.
+      for (const k of invalidFieldSlugs) merged.add(k);
+
+      const mergedList = Array.from(merged);
+      const invalidForStage = mergedList.filter((s) => stageFields.has(s));
+
+      // CRITICAL:
+      // If the user *attempted* to answer a stage-required field but the value is invalid,
+      // we must NOT keep an older valid value in DB; otherwise the stage can erroneously proceed
+      // (observed: user typed invalid business_registration_id, but an older valid value remained
+      // and the flow continued without showing an error / retry prompt).
+      //
+      // Therefore: for invalid fields detected in THIS message (not historical invalid markers),
+      // delete the stored value (and its canonical aliases) so the engine will re-ask.
+      try {
+        const invalidThisTurnForStage = invalidFieldSlugs.filter((s) => stageFields.has(s));
+        if (invalidThisTurnForStage.length > 0) {
+          const toDelete = new Set<string>();
+          for (const k of invalidThisTurnForStage) {
+            toDelete.add(k);
+            for (const a of expandCanonicalAliases(k)) toDelete.add(a);
+          }
+          // If business_registration_id is invalid, also clear derived legal entity type fields
+          // to avoid inconsistent UI/state.
+          if (toDelete.has('business_registration_id')) {
+            for (const k of [
+              'business_legal_entity_type',
+              'business_legal_entity_type_code',
+              'business_legal_entity_type_source',
+              'business_legal_entity_type_detail_he',
+            ]) toDelete.add(k);
+          }
+
+          await prisma.userData.deleteMany({
+            where: { userId, flowId, key: { in: Array.from(toDelete) } },
+          });
+        }
+      } catch {
+        // best-effort (never block the flow on cleanup failures)
+      }
+      // Always persist the merged list (including empty) so we can CLEAR stale invalid markers in DB.
+      validatedCollectedData.__invalid_fields = mergedList;
+      validatedCollectedData.__invalid_fields_at = mergedList.length > 0 ? String(Date.now()) : '';
+      validatedCollectedData.__invalid_fields_labels_he = invalidForStage.map((s) => (
+        getFieldDisplayNameHe(s, (fieldDefs as any)?.[s] as FieldDefinition | undefined)
+      ));
+
+      // Merge hints: remove corrected, add newly detected.
+      const mergedHints: Record<string, string> = { ...prevHints };
+      for (const k of corrected) delete mergedHints[k];
+      for (const [k, v] of Object.entries(invalidHints)) mergedHints[k] = v;
+      // Keep only hints for fields that are still invalid.
+      const stillInvalidSet = new Set<string>(mergedList);
+      for (const k of Object.keys(mergedHints)) {
+        if (!stillInvalidSet.has(k)) delete mergedHints[k];
+      }
+      validatedCollectedData.__invalid_fields_hints = mergedHints;
+    } catch {
+      // best-effort fallback: store only current invalids for this stage (legacy behavior)
+      const invalidForStage = invalidFieldSlugs.filter((s) => stageFields.has(s));
+      // Store full invalid list for clearing on next successful merge attempt.
+      validatedCollectedData.__invalid_fields = invalidFieldSlugs;
+      validatedCollectedData.__invalid_fields_at = invalidFieldSlugs.length > 0 ? String(Date.now()) : '';
+      validatedCollectedData.__invalid_fields_labels_he = invalidForStage.map((s) => (
+        getFieldDisplayNameHe(s, (fieldDefs as any)?.[s] as FieldDefinition | undefined)
+      ));
+      validatedCollectedData.__invalid_fields_hints = invalidHints;
+    }
+
+    await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, validatedCollectedData, conversation.id);
 
     const currentStage = determinedFlow.stage;
 
@@ -174,6 +569,94 @@ class FlowRouter {
     // CRITICAL: Reload userData after setUserData to ensure auto-populated fields (like PRIMARY_ORG entity fields) are included
     // Auto-population now saves directly to database synchronously, so fields should be available immediately
     let userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+
+    // Post-save prefill: if has_employees exists but ch8_employers_selected is missing/stale, set it so the question is skipped.
+    try {
+      const hasCh8FieldDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch8_employers_selected');
+      const stageCollectsCh8 = stageFields.has('ch8_employers_selected');
+      if (hasCh8FieldDef || stageCollectsCh8) {
+        const hasEmployees = parseBooleanish((userData as any).has_employees);
+        const cur = (userData as any).ch8_employers_selected;
+        const curSrc = String((userData as any).ch8_employers_selected_source || '').trim();
+        const hasCur = cur !== undefined && cur !== null && cur !== '';
+        const shouldSet = hasEmployees !== null && (!hasCur || curSrc === 'has_employees');
+        if (shouldSet) {
+          await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, {
+            ch8_employers_selected: hasEmployees,
+            ch8_employers_selected_source: 'has_employees',
+          }, conversation.id);
+          userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Post-save prefill (Flow 02): enforce foundational coverages rule.
+    // If building coverage is explicitly NO, force contents coverage to YES (even if userData is missing/stale).
+    try {
+      const isFlow02 = String(options.determinedFlow.flow.slug || '').trim() === 'flow_02_intent_segment_and_coverages';
+      if (isFlow02) {
+        const building = parseBooleanish((userData as any).ch2_building_selected);
+        if (building === false) {
+          const curContents = parseBooleanish((userData as any).ch1_contents_selected);
+          if (curContents !== true) {
+            await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, {
+              ch1_contents_selected: true,
+              ch1_contents_selected_source: 'building_false_default',
+            }, conversation.id);
+            userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Post-save cleanup: if invalid markers exist but values are now valid, clear them.
+    try {
+      const raw = (userData as any).__invalid_fields;
+      const invalidSlugs = Array.isArray(raw) ? raw.map((x) => String(x || '').trim()).filter(Boolean) : [];
+      if (invalidSlugs.length > 0) {
+        const stillInvalid = invalidSlugs.filter((fieldSlug) => {
+          const def = (fieldDefs as any)?.[fieldSlug] as FieldDefinition | undefined;
+          const v0 = (userData as any)[fieldSlug];
+          if (isPresentNonPlaceholder(v0)) {
+            return !validateFieldValue(fieldSlug, def, v0).ok;
+          }
+          // If the canonical slug isn't present, allow any alias value to satisfy it.
+          for (const alias of expandCanonicalAliases(fieldSlug)) {
+            const va = (userData as any)[alias];
+            if (!isPresentNonPlaceholder(va)) continue;
+            if (validateFieldValue(fieldSlug, def, va).ok) return false;
+          }
+          return true;
+        });
+        if (stillInvalid.length !== invalidSlugs.length) {
+          const hintsRaw = (userData as any).__invalid_fields_hints;
+          const currentHints = (hintsRaw && typeof hintsRaw === 'object' && !Array.isArray(hintsRaw))
+            ? (hintsRaw as Record<string, string>)
+            : {};
+          const hintsNext: Record<string, string> = {};
+          const stillSet = new Set<string>(stillInvalid);
+          for (const [k, v] of Object.entries(currentHints)) {
+            if (stillSet.has(k) && String(v || '').trim()) hintsNext[k] = String(v).trim();
+          }
+          await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, {
+            __invalid_fields: stillInvalid,
+            __invalid_fields_at: stillInvalid.length > 0 ? String(Date.now()) : '',
+            __invalid_fields_labels_he: stillInvalid
+              .filter((s) => stageFields.has(s))
+              .map((s) => getFieldDisplayNameHe(s, (fieldDefs as any)?.[s] as FieldDefinition | undefined)),
+            __invalid_fields_hints: hintsNext,
+          }, conversation.id);
+          // Refresh local snapshot
+          userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+        }
+      }
+    } catch {
+      // best-effort
+    }
 
     const sessionId = determinedFlow.sessionId
       ? determinedFlow.sessionId
@@ -221,18 +704,23 @@ class FlowRouter {
       }
 
       // Check if stage is completed (fields collected + completionCondition if present)
-      const isCompleted = this.isStageCompleted(stage, userData);
+      const isCompleted = this.isStageCompleted(
+        stage,
+        userData,
+        (options.determinedFlow.flow.definition as FlowDefinition).fields,
+      );
 
       if (!isCompleted) {
         // Handle custom logging on stage incomplete
         if (stage.orchestration?.onStageIncomplete) {
           const { logLevel = 'info', message, extraData = {} } = stage.orchestration.onStageIncomplete;
-          const missingFields = stage.fieldsToCollect.filter((fieldSlug) =>
-            !(fieldSlug in userData &&
-              userData[fieldSlug] !== undefined &&
-              userData[fieldSlug] !== null &&
-              userData[fieldSlug] !== ''),
-          );
+          const defs = (options.determinedFlow.flow.definition as FlowDefinition).fields || {};
+          const missingFields = stage.fieldsToCollect.filter((fieldSlug) => {
+            const v = (userData as any)[fieldSlug];
+            if (!isPresentNonPlaceholder(v)) return true;
+            const def = (defs as any)?.[fieldSlug] as FieldDefinition | undefined;
+            return !validateFieldValue(fieldSlug, def, v).ok;
+          });
 
           const logContext: Record<string, unknown> = {
             stageSlug,
@@ -1190,7 +1678,7 @@ class FlowRouter {
     });
   }
 
-  isStageCompleted(stage: FlowStageDefinition, data: Record<string, unknown>): boolean {
+  isStageCompleted(stage: FlowStageDefinition, data: Record<string, unknown>, fields?: FlowDefinition['fields']): boolean {
     /*
     try {
       if (stage.fieldsToCollect && stage.fieldsToCollect.length > 0) {
@@ -1219,20 +1707,13 @@ class FlowRouter {
       const { condition, requiredFields } = stage.orchestration.customCompletionCheck;
       try {
         if (kseval.native) {
-          const isPresentValue = (v: unknown): boolean => {
-            if (v === undefined || v === null) return false;
-            if (typeof v === 'string') {
-              const s = v.trim();
-              if (!s) return false;
-              // Treat common LLM placeholders as missing values.
-              // We've observed values like ":null" being extracted and persisted, which must NOT count as "present".
-              const lowered = s.toLowerCase();
-              if (lowered === 'null' || lowered === ':null' || lowered === 'undefined' || lowered === ':undefined') return false;
-              return true;
-            }
-            if (Array.isArray(v)) return v.length > 0;
-            // boolean false is a valid answer
-            return true;
+          const defs = fields || {};
+          const isPresentValue = (v: unknown): boolean => isPresentNonPlaceholder(v);
+          const isFieldPresentAndValid = (fieldSlug: string): boolean => {
+            const v = (data as any)[fieldSlug];
+            if (!isPresentValue(v)) return false;
+            const def = (defs as any)?.[fieldSlug] as FieldDefinition | undefined;
+            return validateFieldValue(fieldSlug, def, v).ok;
           };
           const __present = isPresentValue;
           const __includes = (container: unknown, needle: unknown): boolean => {
@@ -1254,20 +1735,23 @@ class FlowRouter {
             customConditionResult = kseval.native.evaluate(condition, data);
           }
 
-          if (customConditionResult) {
-            // Mode A: requiredFields gate (legacy behavior)
-            if (Array.isArray(requiredFields) && requiredFields.length > 0) {
-              const allRequiredFieldsCollected = requiredFields.every((fieldSlug) =>
-                isPresentValue((data as any)[fieldSlug]),
-              );
-              if (allRequiredFieldsCollected) {
-                return true;
-              }
-            } else {
-              // Mode B: condition-only completion (condition expression fully determines completion)
-              return true;
-            }
+          const ok = Boolean(customConditionResult);
+
+          // IMPORTANT:
+          // When a stage defines a customCompletionCheck, it must be the source of truth for completion.
+          // Otherwise, we can get stuck in loops where:
+          // - the stage "completes" due to naive presence checks (allFieldsCollected),
+          // - but routing/tools re-evaluate stricter completion and bounce back.
+          //
+          // Mode A: requiredFields gate (legacy behavior)
+          if (Array.isArray(requiredFields) && requiredFields.length > 0) {
+            if (!ok) return false;
+            const allRequiredFieldsCollected = requiredFields.every((fieldSlug) => isFieldPresentAndValid(fieldSlug));
+            return allRequiredFieldsCollected;
           }
+
+          // Mode B: condition-only completion (condition expression fully determines completion)
+          return ok;
         }
       } catch (error) {
         logger.error(`Error evaluating customCompletionCheck: ${condition}`, error);
@@ -1275,18 +1759,12 @@ class FlowRouter {
     }
 
     // Check that all required fields are collected
+    const defs = fields || {};
     const allFieldsCollected = stage.fieldsToCollect.every((fieldSlug) => {
-      if (!(fieldSlug in data)) return false;
       const v = (data as any)[fieldSlug];
-      if (v === undefined || v === null) return false;
-      if (typeof v === 'string') {
-        const s = v.trim();
-        if (!s) return false;
-        const lowered = s.toLowerCase();
-        if (lowered === 'null' || lowered === ':null' || lowered === 'undefined' || lowered === ':undefined') return false;
-      }
-      if (Array.isArray(v)) return v.length > 0;
-      return true;
+      if (!isPresentNonPlaceholder(v)) return false;
+      const def = (defs as any)?.[fieldSlug] as FieldDefinition | undefined;
+      return validateFieldValue(fieldSlug, def, v).ok;
     });
 
     // If completionCondition is defined and passes, still need all fields (unless customCompletionCheck handled it)

@@ -35,7 +35,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
     expect((res.data as any)?.targetFlowSlug).toBe('flow_21_history_and_disclosures');
   });
 
-  test('if contents selected, routes to premises characteristics (03)', async () => {
+  test('if contents selected (and building not selected), routes directly to contents flow (07)', async () => {
     const res = await insuranceRouterNextTool.execute(
       {
         completed_processes: ['01_welcome_user', '02_intent_segment_and_coverages'],
@@ -45,10 +45,22 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
+    expect((res.data as any)?.targetFlowSlug).toBe('flow_07_property_contents');
+  });
+
+  test('if building selected, routes to premises characteristics (03)', async () => {
+    const res = await insuranceRouterNextTool.execute(
+      {
+        completed_processes: ['01_welcome_user', '02_intent_segment_and_coverages'],
+        ch2_building_selected: true,
+      },
+      { conversationId: 'test' },
+    );
+    expect(res.success).toBe(true);
     expect((res.data as any)?.targetFlowSlug).toBe('flow_03_premises_building_characteristics');
   });
 
-  test('if 03 is completed and premises/contents still relevant, routes to 04', async () => {
+  test('if 03 is completed and building is still relevant, routes to 04', async () => {
     const res = await insuranceRouterNextTool.execute(
       {
         completed_processes: [
@@ -57,6 +69,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
           '03_premises_building_characteristics',
         ],
         has_physical_premises: true,
+        ch2_building_selected: true,
       },
       { conversationId: 'test' },
     );
@@ -64,7 +77,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
     expect((res.data as any)?.targetFlowSlug).toBe('flow_04_premises_environment_and_water');
   });
 
-  test('if 03-04 are completed and premises/contents still relevant, routes to 05', async () => {
+  test('if 03-04 are completed and building is still relevant, routes to 05', async () => {
     const res = await insuranceRouterNextTool.execute(
       {
         completed_processes: [
@@ -74,6 +87,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
           '04_premises_environment_and_water',
         ],
         has_physical_premises: true,
+        ch2_building_selected: true,
       },
       { conversationId: 'test' },
     );
@@ -81,7 +95,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
     expect((res.data as any)?.targetFlowSlug).toBe('flow_05_premises_security_fire_and_burglary');
   });
 
-  test('if 03-05 are completed and premises/contents still relevant, routes to 06', async () => {
+  test('if 03-05 are completed and building is still relevant, routes to 06', async () => {
     const res = await insuranceRouterNextTool.execute(
       {
         completed_processes: [
@@ -92,6 +106,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
           '05_premises_security_fire_and_burglary',
         ],
         has_physical_premises: true,
+        ch2_building_selected: true,
       },
       { conversationId: 'test' },
     );

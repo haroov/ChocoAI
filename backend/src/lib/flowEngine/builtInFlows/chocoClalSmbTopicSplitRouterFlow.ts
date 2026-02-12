@@ -13,18 +13,28 @@
 
 import fs from 'fs';
 import path from 'path';
-import SEGMENT_CATALOG from '../../../../docs/Choco_Segments_Catalog.PROD.json';
 import MANIFEST_JSON from './chocoClalSmbTopicSplit/MANIFEST.PROD.json';
 import { buildProcessCompletionExpression } from './chocoClalSmbTopicSplitCompletion';
+import { getSegmentsCatalogProd } from '../../insurance/segments/loadSegmentsCatalog';
 
 const MANIFEST: any = MANIFEST_JSON as any;
 
-// Keep segment context compact: segment groups only (not full segment catalog).
-const SEGMENT_GROUP_CONTEXT = (SEGMENT_CATALOG.segment_groups || [])
-  .map((g: any) => `- ${g.group_name_he} (ברירת מחדל: ${g.default_site_type_he})`)
-  .join('\n');
+function buildSegmentGroupContext(): string {
+  try {
+    const catalog = getSegmentsCatalogProd();
+    const groups = Array.isArray((catalog as any)?.segment_groups) ? (catalog as any).segment_groups : [];
+    const lines = groups
+      .map((g: any) => `- ${String(g?.group_name_he || '').trim()} (ברירת מחדל: ${String(g?.default_site_type_he || '').trim()})`)
+      .filter((l: string) => !l.includes('-  (ברירת מחדל: )'));
+    return lines.length ? lines.join('\n') : '(none)';
+  } catch {
+    return '(segments catalog not loaded)';
+  }
+}
 
-const GLOBAL_RULES_HE = `את/ה ChocoAI — סוכן/ת ביטוח דיגיטלי/ת (SMB) עבור כלל ביטוח.
+function buildGlobalRulesHe(): string {
+  const SEGMENT_GROUP_CONTEXT = buildSegmentGroupContext();
+  return `את/ה ChocoAI — סוכן/ת ביטוח דיגיטלי/ת (SMB) עבור כלל ביטוח.
 
 *** חוקים קריטיים (לא ניתן לעבור עליהם) ***
 1. הודעת פתיחה: אם מוגדרת הודעת פתיחה לשלב, חובה להתחיל איתה בדיוק, מילה במילה.
@@ -63,6 +73,7 @@ ${SEGMENT_GROUP_CONTEXT}
 
 אבטחה/ציות:
 - לא לאסוף פרטי כרטיס אשראי בצ׳אט. רק בטופס תשלום ייעודי/מאובטח.`;
+}
 
 type RawProcessFile = {
   meta?: any;
@@ -172,7 +183,7 @@ function buildProcessPrompt(procFile: RawProcessFile): string {
   const attachments = procFile.attachments_checklist || [];
 
   return [
-    GLOBAL_RULES_HE,
+    buildGlobalRulesHe(),
     '',
     `תהליך: ${p.title_he} (${p.process_key})`,
     p.description_he ? `מטרה: ${p.description_he}` : '',
@@ -288,6 +299,59 @@ function buildFlowComponents() {
           maxQuestionsPerTurn: { whatsapp: 1, web: 2 },
           disableBulkCollectionRule: true,
           suppressCoreMissingFieldsSection: true,
+        },
+        systemPromptHooks: {
+          beforePrompt: [
+            ...(procKey === '02_intent_segment_and_coverages' ? [{
+              condition: 'userData.segment_coverages_prefilled_v1 === true',
+              promptLines: [
+                '',
+                'Flow02 — כיסויים דינאמיים לפי סגמנט (קריטי):',
+                '- אם segment_coverages_prefilled_v1=true, הכיסויים כבר הוגדרו לפי קטלוג הסגמנטים.',
+                '- אל תשאל/י על כיסוי אם השדה כבר קיים ב-userData והוא false. התייחס/י לזה כ״לא רלוונטי לפי הסגמנט״.',
+                '- שדות כיסוי רלוונטיים בשלב זה:',
+                '  - ch1_contents_selected, ch1_stock_selected, ch2_building_selected, ch4_burglary_selected, ch5_money_selected, ch6_transit_selected, ch7_third_party_selected, ch8_employers_selected, ch9_product_selected, ch10_electronic_selected, cyber_selected, terror_selected',
+                '  - business_interruption_type: אם כבר "לא" — אל תשאל/י על אובדן הכנסה.',
+                '- חריג (מותר): אם הלקוח מבקש במפורש כיסוי שסומן false לפי הסגמנט — אפשר לאפשר זאת:',
+                '  - שאל/י שאלה קצרה לאישור ואז שמור/י את השדה ל-true (או עבור אובדן הכנסה: business_interruption_type="אובדן הכנסה (פיצוי יומי)").',
+                '  - אל תציע/י את הכיסוי מיוזמתך אם הוא false; רק בתגובה לבקשה מפורשת של הלקוח.',
+              ],
+            }] : []),
+            {
+              // Segment-aware phrasing (generic): if we know the segment/occupation/site type, adapt wording.
+              // Keep it non-binding for non-lawyers; we add a stricter hook below for lawyers.
+              condition: `(() => {
+                const seg = String(userData.segment_name_he || userData.business_segment || '').trim();
+                const occ = String(userData.business_occupation || '').trim();
+                const st = String(userData.business_site_type || '').trim();
+                return Boolean(seg || occ || st);
+              })()`,
+              promptLines: [
+                '',
+                'התאמה לסגמנט (חובה): אם זיהית סגמנט/עיסוק/סוג אתר (למשל: segment_name_he / business_segment / business_occupation / business_site_type) — התאם את הניסוח של השאלות לעולם המונחים של הלקוח.',
+                '- במקום ניסוחים כלליים כמו "העסק/בית העסק" נסח באופן מקצועי לפי התחום (משרד/קליניקה/סטודיו/חנות וכו׳) ושמור על אותו טמפרמנט ושפה מקצועית שהלקוח משתמש בה.',
+                '- הראה עניין אמיתי בתחום העיסוק (שאלה/הערה קצרה, בלי חפירות), אבל אל תסטה מהשדות שחסרים בשלב.',
+              ],
+            },
+            {
+              // Lawyer-specific strict phrasing: "business" => "law firm office", and address => physical office.
+              condition: `(() => {
+                const s = String(userData.segment_name_he || userData.business_segment || userData.business_occupation || '').trim();
+                return /עורכ/.test(s) && /דין/.test(s);
+              })()`,
+              promptLines: [
+                '',
+                'סגמנט זוהה: עורכי דין — התאמת ניסוח (קריטי):',
+                '- בכל שאלה שבה מופיע "עסק/בית העסק" חובה להשתמש ב-"משרד עורכי הדין" / "המשרד" (לפי טבעיות המשפט).',
+                '- להתייחס למיקום הפיזי כמיקום המשרד (לא "מיקום העסק" כללי).',
+                'דוגמאות ניסוח (להשראה, לא ציטוט חובה):',
+                '- במקום "מה שם העסק?" → "מה שם משרד עורכי הדין שלך?"',
+                '- במקום "נא לציין שם בית העסק." → "נא לציין את שם משרד עורכי הדין."',
+                '- במקום "ומה התפקיד שלך בעסק?" → "ומה התפקיד שלך במשרד עורכי הדין שלך?"',
+                '- במקום "נא לציין יישוב." → "באיזה יישוב נמצא משרד עורכי הדין?"',
+              ],
+            },
+          ],
         },
       },
       nextStage: nextStageSlug,

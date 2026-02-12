@@ -203,6 +203,13 @@ class FlowHelpers {
 
     const digitsOnly = cleaned.replace(/\D/g, '');
     const digitsWithoutIntl = digitsOnly.replace(/^00/, '');
+    const digitsCount = digitsWithoutIntl.length;
+
+    // Hard guardrail: reject obviously-too-short inputs.
+    // This prevents persisting partials like "03-6673" as "+036673".
+    if (digitsCount > 0 && digitsCount < 9) {
+      return '';
+    }
 
     const formatIsraeliNumber = (): string | null => {
       if (!digitsWithoutIntl) return null;
@@ -231,7 +238,7 @@ class FlowHelpers {
     }
 
     // If already in E.164 format (starts with + and valid digits), return as-is
-    if (cleaned.startsWith('+') && /^\+\d{6,15}$/.test(cleaned)) {
+    if (cleaned.startsWith('+') && /^\+\d{9,15}$/.test(cleaned)) {
       return cleaned;
     }
 
@@ -246,10 +253,15 @@ class FlowHelpers {
 
     // Return best-effort sanitized number with +
     if (cleaned.startsWith('+')) {
-      return cleaned;
+      // Keep only if plausibly long enough after sanitization.
+      const d = cleaned.replace(/\D/g, '');
+      return (d.length >= 9 && d.length <= 15) ? cleaned : '';
     }
 
-    return digitsWithoutIntl ? `+${digitsWithoutIntl}` : rawInput;
+    if (digitsWithoutIntl && digitsWithoutIntl.length >= 9 && digitsWithoutIntl.length <= 15) {
+      return `+${digitsWithoutIntl}`;
+    }
+    return '';
   }
 
   /**
@@ -288,6 +300,13 @@ class FlowHelpers {
     // Some fields are intentionally transient pointers/state and must be clearable to empty string.
     // By default we skip empty strings to avoid accidental overwrites, but these keys need explicit clearing.
     const allowEmptyStringKeys = new Set<string>([
+      // Insured/business fields occasionally require remediation (e.g. to clear polluted numeric values).
+      'business_city',
+      'business_street',
+      'business_house_number',
+      'business_zip',
+      'business_po_box',
+      'business_full_address',
       // Questionnaire transient answer + pointers
       'questionnaire_answer',
       'questionnaire_complete',
@@ -314,6 +333,8 @@ class FlowHelpers {
       '__last_action_error_message',
       '__last_action_error_code',
       '__last_action_error_at',
+      // Validation transient markers (must be clearable after correction)
+      '__invalid_fields_at',
     ]);
 
     // Get conversation context for phone normalization if needed
@@ -414,6 +435,13 @@ class FlowHelpers {
           return !isBadName(s);
         };
 
+        // If the extractor explicitly provided a good first+last name in this turn,
+        // do NOT infer/repair other name aliases (user_/proposer_). They will be populated
+        // deterministically by the aliasing logic below. This prevents contact-block texts like
+        // "הצעה למשרד רואי חשבון, ליאב גפן 050..." from incorrectly inferring "רואי/חשבון"
+        // and then overwriting the true name via alias writes.
+        const hasExplicitMainPair = isExplicitGood('first_name') && isExplicitGood('last_name');
+
         const needProposerFirst = !isExplicitGood('proposer_first_name')
           && isMissingOrBad(pickNonEmpty(augmentedData.proposer_first_name, current.proposer_first_name));
         const needProposerLast = !isExplicitGood('proposer_last_name')
@@ -429,7 +457,10 @@ class FlowHelpers {
         const needProposerEmail = !isValidEmail(current.proposer_email) && !isValidEmail(augmentedData.proposer_email);
         const needEmail = !isValidEmail(current.email) && !isValidEmail(augmentedData.email);
 
-        if (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast || needProposerEmail || needEmail) {
+        const doNameRepair = !hasExplicitMainPair && (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast);
+        const doEmailRepair = needProposerEmail || needEmail;
+
+        if (doNameRepair || doEmailRepair) {
           const lastUserMsg = await prisma.message.findFirst({
             where: { conversationId: conversationId!, role: 'user' },
             orderBy: { createdAt: 'desc' },
@@ -439,7 +470,7 @@ class FlowHelpers {
 
           // Infer names
           const inferred = inferFirstLastFromText(lastText);
-          if (needProposerFirst || needProposerLast || needFirst || needLast || needUserFirst || needUserLast) {
+          if (doNameRepair) {
             // Key fix: if *either* side of a name pair is missing/bad, repair BOTH together for that slot.
             // This prevents states like: user_first_name="גפן", user_last_name="נייד" after a contact-block paste.
             const repaired = repairNameFieldsFromInference({ current, augmented: augmentedData, inferred });
@@ -447,7 +478,7 @@ class FlowHelpers {
           }
 
           // Infer email if missing/invalid
-          if (needProposerEmail || needEmail) {
+          if (doEmailRepair) {
             const m = lastText.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
             const inferredEmail = m?.[0]?.trim();
             if (inferredEmail && isValidEmail(inferredEmail)) {
@@ -510,8 +541,8 @@ class FlowHelpers {
           const seg = catalog.segments.find((s: any) => s.segment_id === existingSegmentId);
           const segName = String(seg?.segment_name_he || '').trim();
           if (segName) {
-            const compact = segName.replace(/^משרד\s+/, '').trim();
-            augmentedData.business_segment = compact || segName;
+            const firstPart = segName.split('/')[0]?.trim();
+            augmentedData.business_segment = firstPart || segName;
           }
 
           // If site type is missing/placeholder, fill it from the defaults builder.
@@ -572,9 +603,8 @@ class FlowHelpers {
             const grpName = String((defaults.userData as any)?.segment_group_name_he || '').trim();
             const desiredLabel = segName || grpName;
             if (desiredLabel) {
-              const compact = desiredLabel.replace(/^משרד\s+/, '').trim();
-              // Prefer compact label for the business_segment field (occupation vs site).
-              augmentedData.business_segment = compact || desiredLabel;
+              const firstPart = desiredLabel.split('/')[0]?.trim();
+              augmentedData.business_segment = firstPart || desiredLabel;
             }
           }
         }
@@ -596,7 +626,13 @@ class FlowHelpers {
         'owner',
         'manager',
       ]);
-      const norm = (v: unknown) => String(v || '').trim().toLowerCase();
+      const norm = (v: unknown) => String(v || '')
+        .trim()
+        .replace(/[“”"׳״']/g, '')
+        .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+        .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+        .trim()
+        .toLowerCase();
       const current = await this.getUserData(userId, flowId);
       const existingRel = String((current as any).insured_relation_to_business || '').trim();
       const hasRelAlready = existingRel.length > 0;
@@ -607,8 +643,10 @@ class FlowHelpers {
         for (const k of nameKeys) {
           const raw = String((augmentedData as any)[k] || '').trim();
           if (!raw) continue;
-          if (relationWords.has(norm(raw))) {
-            (augmentedData as any).insured_relation_to_business = raw;
+          const normalized = norm(raw);
+          if (relationWords.has(normalized)) {
+            // Persist the clean label (prevents completion misses on values like: ״בעלים״)
+            (augmentedData as any).insured_relation_to_business = normalized === 'owner' ? 'בעלים' : normalized === 'manager' ? 'מנהל' : raw.replace(/[“”"׳״']/g, '').trim();
             delete (augmentedData as any)[k];
             break;
           }
@@ -650,6 +688,16 @@ class FlowHelpers {
       // best-effort
     }
 
+    // === Overwrite protection (high-signal fields) ===
+    // Prevent accidental overwrites from extraction pollution on later questions.
+    // Example observed in production: business_name shortened to "ושות׳ עורכי דין" after answering house number/PO box.
+    let currentForOverwriteProtection: Record<string, unknown> | null = null;
+    try {
+      currentForOverwriteProtection = await this.getUserData(userId, flowId);
+    } catch {
+      currentForOverwriteProtection = null;
+    }
+
     for (const entry of Object.entries(augmentedData)) {
       const [key, rawValue] = entry;
 
@@ -662,6 +710,20 @@ class FlowHelpers {
       }
 
       let value = rawValue;
+
+      // Guardrail: never overwrite an existing business_name with a shorter substring.
+      // This commonly happens when the extractor "re-extracts" part of the name from later answers.
+      if (key === 'business_name' && typeof value === 'string' && currentForOverwriteProtection) {
+        try {
+          const incoming = String(value ?? '').trim();
+          const existing = String((currentForOverwriteProtection as any).business_name ?? '').trim();
+          if (incoming && existing && incoming !== existing && incoming.length < existing.length && existing.includes(incoming)) {
+            continue;
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       // Normalize phone numbers
       const isPhoneKey = key === 'phone'
@@ -688,7 +750,7 @@ class FlowHelpers {
           await prisma.userData.upsert({
             where: { key_userId_flowId: { userId, flowId, key: 'raw_phone_country_hint' } },
             create: { userId, flowId, key: 'raw_phone_country_hint', value: hintPayload, type: 'string' },
-            update: { value: hintPayload },
+            update: { value: hintPayload, type: 'string' },
           });
         }
 
@@ -1003,7 +1065,7 @@ class FlowHelpers {
       await prisma.userData.upsert({
         where: { key_userId_flowId: { userId, flowId, key } },
         create: { userId, flowId, key, value: stringValue, type },
-        update: { value: stringValue },
+        update: { value: stringValue, type },
       });
 
       // Canonical aliases (keep internal topic-split keys, but also write canonical keys).
@@ -1035,7 +1097,7 @@ class FlowHelpers {
         await prisma.userData.upsert({
           where: { key_userId_flowId: { userId, flowId, key: aliasKey } },
           create: { userId, flowId, key: aliasKey, value: stringValue, type },
-          update: { value: stringValue },
+          update: { value: stringValue, type },
         });
       }
 
@@ -1149,8 +1211,31 @@ class FlowHelpers {
     // 1) If first_name accidentally contains a relation word (e.g., "בעלים"), move it to insured_relation_to_business.
     try {
       const relationWords = new Set(['בעלים', 'מנהל', 'מנהלת', 'שותף', 'שותפה', 'אחר']);
-      const first = String((merged as any).first_name || (merged as any).user_first_name || '').trim();
-      const rel = String((merged as any).insured_relation_to_business || '').trim();
+      const clean = (raw: unknown) => String(raw || '')
+        .trim()
+        .replace(/[“”"׳״']/g, '')
+        .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
+        .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
+        .trim();
+      const first = clean((merged as any).first_name || (merged as any).user_first_name || '');
+      const relRaw = String((merged as any).insured_relation_to_business || '').trim();
+      const rel = clean(relRaw);
+
+      // Also normalize existing relation values (common failure: saved with quotes, e.g. ״בעלים״).
+      if (rel) {
+        const relLower = rel.toLowerCase();
+        const map: Record<string, string> = {
+          owner: 'בעלים',
+          manager: 'מנהל',
+          'authorized signer': 'מורשה חתימה',
+          other: 'אחר',
+        };
+        const normalized = map[relLower] || rel;
+        if (normalized !== relRaw) {
+          (merged as any).insured_relation_to_business = normalized;
+        }
+      }
+
       if (!rel && first && relationWords.has(first)) {
         (merged as any).insured_relation_to_business = first;
         delete (merged as any).first_name;
@@ -1171,8 +1256,8 @@ class FlowHelpers {
         const seg = catalog.segments.find((s: any) => s.segment_id === segId);
         const segName = String(seg?.segment_name_he || '').trim();
         if (segName) {
-          const compact = segName.replace(/^משרד\s+/, '').trim();
-          (merged as any).business_segment = compact || segName;
+          const firstPart = segName.split('/')[0]?.trim();
+          (merged as any).business_segment = firstPart || segName;
         }
       }
     } catch {
@@ -1196,6 +1281,10 @@ class FlowHelpers {
     } catch {
       // ignore
     }
+
+    // 4) PO box "none" normalization:
+    // Keep boolean false (meaning: explicitly "no PO box").
+    // (We rely on completion checks treating boolean false as present.)
 
     return merged;
   }

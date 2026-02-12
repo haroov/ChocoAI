@@ -120,6 +120,34 @@ registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
     closed = true;
   });
 
+  // Heartbeat: keep intermediaries from buffering and allow clients to detect liveness.
+  // Some browsers/networks may appear "stuck" if no bytes are received for a while.
+  const heartbeatIntervalMs = 10_000;
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+  const startHeartbeat = () => {
+    if (heartbeatTimer) return;
+    heartbeatTimer = setInterval(() => {
+      if (closed || res.writableEnded) return;
+      try {
+        sendEvent('ping', { timestamp: new Date().toISOString() });
+      } catch {
+        // Ignore heartbeat write errors
+      }
+    }, heartbeatIntervalMs);
+  };
+  const stopHeartbeat = () => {
+    if (!heartbeatTimer) return;
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+  };
+  // Send first heartbeat immediately so the client gets bytes ASAP.
+  startHeartbeat();
+  try {
+    sendEvent('ping', { timestamp: new Date().toISOString() });
+  } catch {
+    // ignore
+  }
+
   let conversationIdResult: string | null = null;
   let finalTextResult: string | null = null;
 
@@ -151,11 +179,14 @@ registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
             // Final result
             conversationIdResult = chunk.conversationId;
             finalTextResult = chunk.finalText;
-            await persistClientTelemetry(chunk.conversationId, req.headers['user-agent'] as string | undefined);
             sendEvent('done', {
               conversationId: chunk.conversationId,
               finalText: chunk.finalText,
             });
+            // Persist telemetry best-effort without blocking the SSE "done" event.
+            // If the DB is locked/slow, awaiting here can leave the client stuck in "thinking".
+            void persistClientTelemetry(chunk.conversationId, req.headers['user-agent'] as string | undefined)
+              .catch((e) => logger.warn('Failed to persist client telemetry (async)', { error: (e as any)?.message }));
             // Final result received, stream is complete
             break;
           }
@@ -208,6 +239,7 @@ registerRoute('get', '/api/v1/agent/chat-stream', async (req, res) => {
       res.end();
     }
   } finally {
+    stopHeartbeat();
     // Ensure response is always closed
     if (!closed && !res.writableEnded) {
       try {
