@@ -189,6 +189,150 @@ class FlowRouter {
         // best-effort
       }
 
+      // Address verification UX:
+      // When Google can't validate street+house, we ask the user to confirm/correct.
+      // Persist the user's choice deterministically and route to the correction question when needed.
+      try {
+        const collected: any = res.collectedData || {};
+        const lastAssistant = await prisma.message.findFirst({
+          where: { conversationId: conversation.id, role: 'assistant', createdAt: { lt: message.createdAt } },
+          orderBy: { createdAt: 'desc' },
+          select: { content: true },
+        });
+        const lastQ = String(lastAssistant?.content || '').trim();
+
+        const askedForAddressConfirm = /לא\\s+הצלחתי\\s+לאמת\\s+בגוגל|אימות\\s+כתובת|האם\\s+זו\\s+הכתובת\\s+הנכונה/i.test(lastQ);
+        if (askedForAddressConfirm) {
+          const msgRaw = String(message.content || '').trim();
+          const token = msgRaw
+            .trim()
+            .toLowerCase()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/\\s+/g, ' ')
+            .replace(/^[\\s\\-–—.,;:!?()\\[\\]{}]+/g, '')
+            .replace(/[\\s\\-–—.,;:!?()\\[\\]{}]+$/g, '')
+            .trim();
+
+          const looksYes = token === 'כן'
+            || token === 'מאשר'
+            || token === 'אשר'
+            || token === 'ok'
+            || token === 'yes'
+            || token === 'y'
+            || token === 'true'
+            || token === '1';
+          const looksNo = token === 'לא'
+            || token === 'תקן'
+            || token === 'מתקן'
+            || token.startsWith('תקן ')
+            || token.startsWith('מתקן ')
+            || token === 'no'
+            || token === 'n'
+            || token === 'false'
+            || token === '0';
+
+          if (looksYes) {
+            collected.business_address_confirmed = true;
+            collected.business_address_needs_confirmation = false;
+            collected.business_address_needs_correction = 'N';
+            res.collectedData = collected;
+          } else if (looksNo) {
+            collected.business_address_needs_confirmation = true;
+            collected.business_address_needs_correction = 'Y';
+            // IMPORTANT: do not persist business_address_confirmed=false; keep it absent unless confirmed.
+            if (Object.prototype.hasOwnProperty.call(collected, 'business_address_confirmed')) {
+              delete collected.business_address_confirmed;
+            }
+            res.collectedData = collected;
+          }
+        }
+
+        const askedForAddressCorrection = /כתובת\\s+מלאה\\s+מתוקנת|תיקון\\s+כתובת/i.test(lastQ);
+        if (askedForAddressCorrection) {
+          const msgRaw = String(message.content || '').trim();
+          if (msgRaw) {
+            // Best-effort parse: "רחוב ומספר בית, יישוב"
+            const normalized = msgRaw.replace(/[“”"׳״']/g, '"');
+            const parts = normalized.split(',').map((p) => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+              const addrPart = parts.slice(0, -1).join(',').trim();
+              const cityPart = parts[parts.length - 1].trim();
+              if (cityPart) collected.business_city = cityPart;
+
+              const m = /^(.*?)(\\d+[A-Za-zא-ת]?)$/.exec(addrPart.replace(/\\s+/g, ' ').trim());
+              if (m) {
+                const st = String(m[1] || '').trim();
+                const hn = String(m[2] || '').trim();
+                if (st) collected.business_street = st;
+                if (hn) collected.business_house_number = hn;
+              } else if (addrPart) {
+                // If we can't split, at least override the street field so enrichment can try again.
+                collected.business_street = addrPart;
+              }
+
+              const full = [collected.business_street, collected.business_house_number].filter(Boolean).join(' ').trim();
+              const city = String(collected.business_city || '').trim();
+              const fullAddr = [full, city].filter(Boolean).join(', ').trim();
+              if (fullAddr) collected.business_full_address = fullAddr;
+            }
+
+            collected.business_address_needs_correction = 'N';
+            // Allow businessAddressEnrichment to recompute needs_confirmation after the new Google attempt.
+            if (Object.prototype.hasOwnProperty.call(collected, 'business_address_confirmed')) {
+              delete collected.business_address_confirmed;
+            }
+            res.collectedData = collected;
+          }
+        }
+      } catch {
+        // best-effort
+      }
+
+      // Deterministic fallback: if the assistant asked "האם יש לך ת״ז/תעודת זהות?"
+      // and the user replies "לא/אין", persist an explicit marker so it appears in Collected Data.
+      // (Do NOT write "לא" into user_id/legal_id.)
+      try {
+        const collected: any = res.collectedData || {};
+        const already = Object.prototype.hasOwnProperty.call(collected, 'user_has_israeli_id');
+        if (!already) {
+          const lastAssistant = await prisma.message.findFirst({
+            where: { conversationId: conversation.id, role: 'assistant', createdAt: { lt: message.createdAt } },
+            orderBy: { createdAt: 'desc' },
+            select: { content: true },
+          });
+          const lastQ = String(lastAssistant?.content || '').trim();
+          const askedAboutIsraeliId = /האם\\s+יש\\s+ל(?:ך|כם)\\s+ת[\"״׳']?ז|האם\\s+יש\\s+ל(?:ך|כם)\\s+תעודת\\s*זהות|מספר\\s*הזהות|תעודת\\s*זהות\\s*\\?|ת[\"״׳']?ז\\s*\\?/i.test(lastQ);
+          if (askedAboutIsraeliId) {
+            const msgRaw = String(message.content || '').trim();
+            const digits = msgRaw.replace(/\\D/g, '');
+            if (!digits) {
+              const token = msgRaw
+                .trim()
+                .toLowerCase()
+                .replace(/[“”"׳״']/g, '')
+                .replace(/\\s+/g, ' ')
+                .replace(/^[\\s\\-–—.,;:!?()\\[\\]{}]+/g, '')
+                .replace(/[\\s\\-–—.,;:!?()\\[\\]{}]+$/g, '')
+                .trim();
+              const looksLikeNo = token === 'אין'
+                || token === 'לא'
+                || token === 'ללא'
+                || token.startsWith('אין ')
+                || token.startsWith('אין לי')
+                || token.startsWith('אין לנו')
+                || token === 'none'
+                || token === 'no';
+              if (looksLikeNo) {
+                collected.user_has_israeli_id = false;
+                res.collectedData = collected;
+              }
+            }
+          }
+        }
+      } catch {
+        // best-effort
+      }
+
       // Deterministic fallback: if the stage is asking for an Israeli ID and the user replies with digits,
       // accept it even if the LLM extraction missed it. This prevents stuck loops.
       try {

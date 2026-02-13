@@ -31,7 +31,7 @@ beforeAll(() => {
         segment_id: 'architecture_engineering_office',
         segment_group_id: 'professional_offices',
         segment_name_he: 'משרד אדריכלים',
-        keywords: ['אדריכלים', 'אדריכלות'],
+        keywords: ['אדריכל', 'אדריכלים', 'אדריכלות'],
         business_profile_defaults: { primary_activity_he: 'שירותי אדריכלות והנדסה', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
       } as any,
@@ -67,6 +67,13 @@ describe('resolveSegmentFromText (deterministic catalog)', () => {
 
   test('matches architecture/engineering office from a longer request', async () => {
     const res = await resolveSegmentFromText('הי, אני רוצה הצעה לביטוח משרד אדריכלים. תודה, ליאב - 050-6806888');
+    expect(res.source).toBe('catalog');
+    expect(res.segment_id).toBe('architecture_engineering_office');
+    expect(res.match_confidence).toBeGreaterThanOrEqual(0.55);
+  });
+
+  test('matches architect when message uses prefixed form (לאדריכל)', async () => {
+    const res = await resolveSegmentFromText('הי, אני רוצה הצעת ביטוח לאדריכל');
     expect(res.source).toBe('catalog');
     expect(res.segment_id).toBe('architecture_engineering_office');
     expect(res.match_confidence).toBeGreaterThanOrEqual(0.55);

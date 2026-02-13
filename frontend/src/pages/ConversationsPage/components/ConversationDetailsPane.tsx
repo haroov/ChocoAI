@@ -208,6 +208,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   type FieldContributor = 'user' | 'system';
   type FieldProvenance = {
     ts: string | null;
+    // Optional ordering within the same timestamp (when provided by the API).
+    seq?: number;
     contributor: FieldContributor;
     traceId?: string;
     flowSlug?: string;
@@ -449,6 +451,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     business_segment: 'עיסוק',
     business_site_type: 'סוג העסק',
     user_id: 'תעודת זהות',
+    user_has_israeli_id: 'יש תעודת זהות?',
     insured_relation_to_business: 'תפקיד בעסק',
     referral_source: 'מקור הגעה',
   };
@@ -575,6 +578,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'is_new_customer',
     // identity
     'user_id',
+    'user_has_israeli_id',
     // required in Flow 01
     'insured_relation_to_business',
     'referral_source',
@@ -1554,6 +1558,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                     const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
                     const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
                     if (ta !== tb) return ta - tb; // oldest-first => newest ends up last
+                    const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
+                    const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
+                    if (sa !== sb) return sa - sb;
                     const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
                     const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
                     if (ra !== rb) return ra - rb;
@@ -1690,6 +1697,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                               const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
                               const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
                               if (ta !== tb) return ta - tb; // oldest-first
+                              const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
+                              const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
+                              if (sa !== sb) return sa - sb;
                               const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
                               const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
                               if (ra !== rb) return ra - rb;

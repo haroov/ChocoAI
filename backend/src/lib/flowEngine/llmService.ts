@@ -161,6 +161,19 @@ class LlmService {
     });
     const lastAssistantQuestion = String(lastAssistant?.content || '').trim();
 
+    // Greeting-only messages should never trigger validation errors.
+    // Avoid calling the extractor for trivial greetings (models sometimes emit placeholder strings like ": null,").
+    try {
+      const msgRaw = String(options.message || '').trim();
+      const isGreetingOnly = msgRaw.length <= 12
+        && !/@/.test(msgRaw)
+        && msgRaw.replace(/\D/g, '').length === 0
+        && /^(?:הי|היי|שלום|אהלן|הלו|hi|hello|hey)$/i.test(msgRaw.replace(/[“”"׳״'.,;:!?()[\]{}]/g, '').trim());
+      if (isGreetingOnly) return {};
+    } catch {
+      // best-effort
+    }
+
     // Deterministic first-message extraction (no prior assistant question).
     // This protects against early-stage "segment/name not detected" issues when the user provides
     // intent + full name in the first message, before any question/expected-set exists.
@@ -356,7 +369,15 @@ Example of empty fields:
         json[key] = cleanValue;
         // Treat common placeholder strings as missing values.
         // IMPORTANT: do NOT keep "null"/"none"/"undefined" as literal strings in userData.
-        if (['/', '//', '///', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined'].includes(cleanValue.toLowerCase())) {
+        const lowered = cleanValue.toLowerCase();
+        // Also catch variants like ": null," / ":undefined" that models sometimes output.
+        const placeholderToken = lowered
+          .replace(/[“”"׳״']/g, '')
+          .replace(/\s+/g, '')
+          .replace(/,+$/g, '')
+          .trim();
+        if (['/', '//', '///', '-', '.', 'n/a', 'na', 'none', 'null', 'undefined', ':null', ':undefined'].includes(lowered)
+          || ['null', 'undefined', ':null', ':undefined'].includes(placeholderToken)) {
           delete json[key];
         }
 
@@ -588,6 +609,56 @@ Example of empty fields:
             delete (json as any)[k];
           }
         }
+      }
+
+      // Guardrail: avoid extracting names from generic "I want an insurance quote" intents.
+      // Example failure observed: "הי, אני רוצה הצעת ביטוח לאדריכל" -> first_name="ביטוח", last_name="לאדריכל".
+      // Only keep name fields if the assistant asked for them now, or if the user clearly provided their name.
+      try {
+        const nameKeys = ['first_name', 'last_name', 'proposer_first_name', 'proposer_last_name', 'user_first_name', 'user_last_name'] as const;
+        const hasAnyName = nameKeys.some((k) => Object.prototype.hasOwnProperty.call(json, k));
+        const askedForNameNow = expected.has('first_name') || expected.has('last_name');
+
+        const looksLikeUserProvidedNameHe = (raw: string): boolean => {
+          const s = String(raw || '').normalize('NFKC').trim();
+          if (!s) return false;
+
+          // Explicit declarations
+          if (/(?:^|[\s,.;:!?()'"“”׳״-])(?:שמי|קוראים\s+לי)(?:[\s:–—-]+)([\u0590-\u05FF]{2,})/.test(s)) return true;
+
+          // "אני <name>" but NOT "אני רוצה/מבקש/צריך ..."
+          const m = s.match(/(?:^|[,\n|]\s*)אני\s+([\u0590-\u05FF]{2,})/);
+          if (m?.[1]) {
+            const w1 = String(m[1] || '').trim();
+            const badAfterAni = new Set(['רוצה', 'מבקש', 'צריך', 'מחפש', 'מעוניין', 'אשמח', 'ביקשתי']);
+            if (w1 && !badAfterAni.has(w1)) return true;
+          }
+
+          // Contact blocks: allow name extraction if the message contains clear contact signals.
+          const hasContactSignal = /@|\d{7,}/.test(s);
+          if (hasContactSignal) return true;
+
+          // Short name-like message: 1-3 Hebrew tokens, no quote/insurance intent keywords.
+          const hasInsuranceIntent = /(הצעת\s*ביטוח|ביטוח|הצעה|פוליסה|לעסק|למשרד|לביטוח)/.test(s);
+          if (!hasInsuranceIntent && s.length <= 40) {
+            const tokens = s
+              .replace(/[“”"׳״']/g, ' ')
+              .trim()
+              .split(/\s+/)
+              .map((t) => t.trim())
+              .filter(Boolean);
+            const heTokens = tokens.filter((t) => /^[\u0590-\u05FF]{2,}$/.test(t));
+            if (tokens.length === heTokens.length && heTokens.length >= 1 && heTokens.length <= 3) return true;
+          }
+
+          return false;
+        };
+
+        if (hasAnyName && !askedForNameNow && !looksLikeUserProvidedNameHe(msgRaw)) {
+          for (const k of nameKeys) delete (json as any)[k];
+        }
+      } catch {
+        // best-effort
       }
 
       // Deterministic overrides for critical single-field questions:

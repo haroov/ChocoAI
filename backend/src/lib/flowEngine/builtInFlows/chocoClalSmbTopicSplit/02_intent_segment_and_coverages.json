@@ -510,6 +510,65 @@
       }
     },
     {
+      "q_id": "Q025A",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business address",
+      "stage_title_he": "חלק א — כתובת בית העסק",
+      "question_he": "אימות כתובת",
+      "prompt_he": "לא הצלחתי לאמת בגוגל את הרחוב ומספר הבית עבור הכתובת \"{business_full_address}\". האם זו הכתובת הנכונה? (כן/לא)",
+      "field_key_en": "business_address_confirmed",
+      "data_type": "boolean",
+      "input_type": "select",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].address.confirmed",
+      "module_key": "core_business_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = true) AND (business_address_needs_correction = \"N\" OR (__present(business_address_needs_correction) = false))",
+      "required_if": null,
+      "priority": 18,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q025B",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business address",
+      "stage_title_he": "חלק א — כתובת בית העסק",
+      "question_he": "תיקון כתובת",
+      "prompt_he": "אוקיי — נא לכתוב כתובת מלאה מתוקנת: \"רחוב ומספר בית, יישוב\".",
+      "field_key_en": "business_address_correction_full",
+      "data_type": "string",
+      "input_type": "text",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].address.correction_full",
+      "module_key": "core_business_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = true) AND (business_address_needs_correction = \"Y\")",
+      "required_if": null,
+      "priority": 19,
+      "whatsapp_rendering": {
+        "type": "free_text"
+      }
+    },
+    {
       "q_id": "Q026",
       "page": 1,
       "section": "Part A",

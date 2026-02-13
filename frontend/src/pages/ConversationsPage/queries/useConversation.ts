@@ -43,6 +43,7 @@ export type ConversationDetails = {
     stageSlug?: string;
     traceId?: string;
     method: 'fieldsCollected' | 'snapshot';
+    seq?: number;
   }>;
   activeFlow: {
     name: string;

@@ -24,6 +24,8 @@ export async function enrichBusinessAddressInPlace(params: {
   const existingZip = String((existingUserData as any)?.business_zip || '').trim();
   const existingLat = (existingUserData as any)?.business_geo_lat;
   const existingLng = (existingUserData as any)?.business_geo_lng;
+  const existingAddressConfirmed = (existingUserData as any)?.business_address_confirmed === true;
+  const existingNeedsCorrection = String((existingUserData as any)?.business_address_needs_correction || '').trim();
 
   const city = String(validatedCollectedData.business_city ?? existingCity ?? '').trim();
   const street = String(validatedCollectedData.business_street ?? existingStreet ?? '').trim();
@@ -54,6 +56,25 @@ export async function enrichBusinessAddressInPlace(params: {
 
   const needsEnrichment = !zip || !hasCoords || !houseNumber;
   if (!needsEnrichment || !initialFull) return;
+
+  // If the user explicitly confirmed the address even though Google can't fully validate it,
+  // do not block the flow with repeated "confirm address" prompts.
+  try {
+    const confirmedNow = validatedCollectedData.business_address_confirmed === true;
+    const userConfirmed = existingAddressConfirmed || confirmedNow;
+    if (userConfirmed) {
+      validatedCollectedData.business_address_needs_confirmation = false;
+      validatedCollectedData.business_address_needs_correction = 'N';
+    } else if (!String(validatedCollectedData.business_address_needs_correction ?? '').trim() && existingNeedsCorrection) {
+      // Preserve correction state until the user submits a corrected address.
+      validatedCollectedData.business_address_needs_correction = existingNeedsCorrection;
+    } else if (!String(validatedCollectedData.business_address_needs_correction ?? '').trim()) {
+      // Default to "no correction in progress" so ask_if logic can be simple.
+      validatedCollectedData.business_address_needs_correction = 'N';
+    }
+  } catch {
+    // best-effort
+  }
 
   const diagnosticsEnabled = !params.resolveAddress; // keep unit-tests stable; enable diagnostics in prod
   const diag = diagnosticsEnabled
@@ -120,6 +141,24 @@ export async function enrichBusinessAddressInPlace(params: {
       // best-effort
     }
   }
+
+  // If Google couldn't resolve, mark that we need user confirmation/correction (unless already confirmed).
+  try {
+    const userConfirmed = validatedCollectedData.business_address_confirmed === true || existingAddressConfirmed;
+    if (!userConfirmed) {
+      const geoStatus = String((validatedCollectedData as any).business_google_geocode_status || '').trim();
+      const shouldConfirm = !geoStatus || geoStatus !== 'OK';
+      if (shouldConfirm) {
+        validatedCollectedData.business_address_needs_confirmation = true;
+        if (!String(validatedCollectedData.business_address_needs_correction ?? '').trim()) {
+          validatedCollectedData.business_address_needs_correction = existingNeedsCorrection || 'N';
+        }
+      }
+    }
+  } catch {
+    // best-effort
+  }
+
   if (!resolved) return;
 
   // Fill missing structured parts first (and allow Places to turn a place-name into street+number).
@@ -151,6 +190,30 @@ export async function enrichBusinessAddressInPlace(params: {
   if (resolved.googlePlusCodeGlobal) validatedCollectedData.business_google_plus_code_global = resolved.googlePlusCodeGlobal;
   if (resolved.googlePlusCodeCompound) validatedCollectedData.business_google_plus_code_compound = resolved.googlePlusCodeCompound;
 
+  // Address verification signal:
+  // If Google did NOT return street+house components, we consider it "not fully verified" and ask the user to confirm/correct,
+  // unless they already confirmed.
+  try {
+    const userConfirmed = validatedCollectedData.business_address_confirmed === true || existingAddressConfirmed;
+    if (userConfirmed) {
+      validatedCollectedData.business_address_needs_confirmation = false;
+      validatedCollectedData.business_address_needs_correction = 'N';
+    } else {
+      const googleHasStreetHouse = Boolean(resolved.street && resolved.houseNumber);
+      validatedCollectedData.business_address_needs_confirmation = !googleHasStreetHouse;
+      if (!googleHasStreetHouse) {
+        // Keep correction flag state (default N).
+        if (!String(validatedCollectedData.business_address_needs_correction ?? '').trim()) {
+          validatedCollectedData.business_address_needs_correction = existingNeedsCorrection || 'N';
+        }
+      } else {
+        validatedCollectedData.business_address_needs_correction = 'N';
+      }
+    }
+  } catch {
+    // best-effort
+  }
+
   // Recompute full address after any normalization.
   const finalCity = String(validatedCollectedData.business_city ?? city).trim();
   const finalStreet = String(validatedCollectedData.business_street ?? street).trim();
@@ -158,4 +221,3 @@ export async function enrichBusinessAddressInPlace(params: {
   const finalFull = buildBusinessFullAddress({ city: finalCity, street: finalStreet, houseNumber: finalHouse });
   if (finalFull) validatedCollectedData.business_full_address = finalFull;
 }
-

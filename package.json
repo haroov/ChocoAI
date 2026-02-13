@@ -1,7 +1,7 @@
 {
   "name": "chocoai",
   "private": true,
-  "version": "1.1.42",
+  "version": "1.1.43",
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend:vite": "cd frontend && npm run dev",

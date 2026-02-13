@@ -36,6 +36,9 @@ function tokenizeInputWithAliases(rawInput: string): Set<string> {
   // Input tokens: remove very common "quote request" noise words that cause false positives
   // (e.g. matching "סוכן ביטוח" just because the user asked for ביטוח).
   const stop = new Set([
+    // Pronouns / glue
+    'אני',
+    'אנחנו',
     'ביטוח',
     'מבוטח',
     'הצעה',
@@ -86,6 +89,24 @@ function tokenizeInputWithAliases(rawInput: string): Set<string> {
     out.add('סוכן');
     // Add "ביטוח" ONLY when explicitly in the phrase, to avoid generic insurance requests matching this segment.
     out.add('ביטוח');
+  }
+
+  // Hebrew prefix normalization for profession-like tokens.
+  // Example: "לאדריכל" -> "אדריכל" (the resolver catalog tokens are unprefixed).
+  // We ONLY do this for recognized profession roots to avoid harming words like "לוגיסטיקה".
+  const professionRootRe = /^(אדריכ|מהנדס|הנדס|רואי|רואה|עורכ|סוכן|רופא|רוקח)/i;
+  for (const t of [...out]) {
+    const s = String(t || '').trim();
+    if (!s) continue;
+    const stripped = ((): string => {
+      if (s.startsWith('ול') && s.length >= 4) return s.slice(2);
+      if (s.startsWith('ל') && s.length >= 3) return s.slice(1);
+      return '';
+    })();
+    if (!stripped) continue;
+    if (!professionRootRe.test(stripped)) continue;
+    out.delete(s);
+    out.add(stripped);
   }
 
   return out;

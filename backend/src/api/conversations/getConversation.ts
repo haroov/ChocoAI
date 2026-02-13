@@ -28,6 +28,7 @@ type UiFieldProvenance = {
   stageSlug?: string;
   traceId?: string;
   method: 'fieldsCollected' | 'snapshot';
+  seq?: number; // stable first-seen sequence for deterministic ordering
 };
 
 const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowStage[] => {
@@ -209,18 +210,22 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           const m = joined.match(/(?:^|[,\n|]\s*)([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})(?=\s*(?:[,\n|]|$))/);
           const inferredFirst = m ? String(m[1] || '').trim() : '';
           const inferredLast = m ? String(m[2] || '').trim() : '';
-          const shouldRepairMissingLast = missingLastName && inferredFirst && inferredLast && (
-            first === inferredLast || inferredFirst !== first
-          );
-          if ((needsRepair || shouldRepairMissingLast) && inferredFirst && inferredFirst !== first) {
+          // IMPORTANT:
+          // This endpoint runs for UI rendering and must NEVER corrupt canonical name fields.
+          // Only repair first_name if it is clearly garbage (needsRepair=true).
+          //
+          // For missing last name, be conservative: only set last_name when inferredFirst matches the existing first name.
+          // (In Israel, multi-word first/last names are common; do not guess/swap here.)
+          const canFillMissingLastConservatively = missingLastName && inferredFirst && inferredLast && inferredFirst === first;
+
+          if (needsRepair && inferredFirst && inferredFirst !== first) {
             await flowHelpers.setUserData(userId, overlayFlowId || activeUserFlow?.flow?.id || '', {
               first_name: inferredFirst,
               ...(inferredLast ? { last_name: inferredLast } : {}),
             }, conversation.id);
             // Refresh local snapshot for response
             userData = await flowHelpers.getUserData(userId, overlayFlowId);
-          } else if (shouldRepairMissingLast && inferredLast) {
-            // Only set missing last name if first name looks plausible but last name is missing.
+          } else if (canFillMissingLastConservatively) {
             await flowHelpers.setUserData(userId, overlayFlowId || activeUserFlow?.flow?.id || '', {
               last_name: inferredLast,
             }, conversation.id);
@@ -583,6 +588,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       const out: Record<string, UiFieldProvenance> = {};
       const userCollectedKeys = new Set<string>();
+      let seqCounter = 0;
 
       // Union of UI-visible "asked" keys (user stages only).
       const userFieldKeys = new Set<string>();
@@ -609,6 +615,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (/(^__|_code$|_source$|_confidence$|_reason$)/.test(k)) return true;
         if (k.startsWith('client_')) return true;
         if (/google|geo|place|registry|formattedaddress|plus_code/i.test(k)) return true;
+        if (k.startsWith('default_')) return true;
 
         // If company registry enrichment happened, legal-* business fields are system-derived.
         const hasRegistry = !!String((userData as any)?.business_registry_source || '').trim()
@@ -619,16 +626,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (k.startsWith('segment_')) return true;
         if (k === 'segment_id' || k === 'segment_group_id') return true;
 
-        // Segment-derived default site type (commonly prefilled before asking).
-        if (k === 'business_site_type') {
-          const src = String((userData as any)?.segment_resolution_source || '').trim().toLowerCase();
-          const segId = String((userData as any)?.segment_id || '').trim();
-          const grpId = String((userData as any)?.segment_group_id || '').trim();
-          // If we have a resolved segment already, treat business_site_type as system default unless user explicitly provided it later.
-          if (src || segId || grpId) return true;
-        }
-
         return false;
+      };
+
+      const systemOverrideTsForKey = (key: string): string | null => {
+        const k = String(key || '').trim();
+        if (!k) return null;
+        // Client/browser telemetry should be attributed to the start of the conversation (not the last update).
+        if (k.startsWith('client_')) return conversation.createdAt?.toISOString?.() || null;
+        return null;
       };
 
       const classifyContributor = (
@@ -636,6 +642,14 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         inferredFromStage: UiFieldProvenance['contributor'],
         ctx?: { userAnswerTs?: string | null; overrideUserTs?: string | null },
       ): UiFieldProvenance['contributor'] => {
+        // Segment-derived defaults should be system unless we have direct evidence the user provided them.
+        if (key === 'business_site_type') {
+          const src = String((userData as any)?.segment_resolution_source || '').trim().toLowerCase();
+          const segId = String((userData as any)?.segment_id || '').trim();
+          const grpId = String((userData as any)?.segment_group_id || '').trim();
+          const hasSegmentResolution = !!(src || segId || grpId);
+          if (hasSegmentResolution && !ctx?.overrideUserTs) return 'system';
+        }
         if (isSystemDefaultKey(key)) return 'system';
         if (ctx?.overrideUserTs) return 'user';
         // If we have evidence of a user answer in this trace window, and this key is part of the asked fields,
@@ -647,6 +661,13 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       const digitsOnly = (v: unknown): string => String(v ?? '').replace(/\D/g, '');
 
+      const normalizeForMatch = (s: string): string => s
+        .toLowerCase()
+        .replace(/[“”"׳״']/g, '')
+        .replace(/\s+/g, ' ')
+        .replace(/[^\p{L}\p{N}\s@.+-]/gu, '') // keep letters/numbers/basic email chars
+        .trim();
+
       const findUserMessageTsForValue = (value: unknown, mode: 'exact' | 'digits'): string | null => {
         const raw = String(value ?? '').trim();
         if (!raw) return null;
@@ -655,16 +676,18 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           if (!d || d.length < 7) return null;
           // Find first message that contains at least last 7 digits (robust to formatting).
           const needle = d.slice(-7);
-          for (const m of userMessages) {
+          for (let i = userMessages.length - 1; i >= 0; i -= 1) {
+            const m = userMessages[i];
             const msgDigits = digitsOnly(m.text);
             if (msgDigits.includes(needle)) return new Date(m.createdAt).toISOString();
           }
           return null;
         }
         // exact substring match (case-insensitive)
-        const needle = raw.toLowerCase();
-        for (const m of userMessages) {
-          if (m.text.toLowerCase().includes(needle)) return new Date(m.createdAt).toISOString();
+        const needle = normalizeForMatch(raw);
+        for (let i = userMessages.length - 1; i >= 0; i -= 1) {
+          const m = userMessages[i];
+          if (normalizeForMatch(m.text).includes(needle)) return new Date(m.createdAt).toISOString();
         }
         return null;
       };
@@ -750,13 +773,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
             : null;
           const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
           if (contributor === 'user') userCollectedKeys.add(k);
+          const overrideSystemTs = (contributor === 'system') ? systemOverrideTsForKey(k) : null;
           out[k] = {
-            ts: overrideUserTs || ts,
+            ts: overrideUserTs || overrideSystemTs || ts,
             contributor,
             flowSlug: trace.flowSlug,
             stageSlug: trace.stageSlug,
             traceId: trace.id,
             method: 'fieldsCollected',
+            seq: seqCounter++,
           };
         }
       }
@@ -781,13 +806,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
             : null;
           const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
           if (contributor === 'user') userCollectedKeys.add(k);
+          const overrideSystemTs = (contributor === 'system') ? systemOverrideTsForKey(k) : null;
           out[k] = {
-            ts: overrideUserTs || ts,
+            ts: overrideUserTs || overrideSystemTs || ts,
             contributor,
             flowSlug: trace.flowSlug,
             stageSlug: trace.stageSlug,
             traceId: trace.id,
             method: 'snapshot',
+            seq: seqCounter++,
           };
         }
       }
@@ -804,10 +831,14 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           ? findUserMessageTsForKeyValue(k, (userData as any)?.[k])
           : null;
         const contributor = classifyContributor(k, inferred, { userAnswerTs: inferred === 'user' ? fallbackUserTs : null, overrideUserTs });
+        const overrideSystemTs = (contributor === 'system') ? systemOverrideTsForKey(k) : null;
         out[k] = {
-          ts: contributor === 'user' ? (overrideUserTs || fallbackUserTs) : fallbackSystemTs,
+          ts: contributor === 'user'
+            ? (overrideUserTs || fallbackUserTs)
+            : (overrideSystemTs || fallbackSystemTs),
           contributor,
           method: 'snapshot',
+          seq: seqCounter++,
         };
       });
 
