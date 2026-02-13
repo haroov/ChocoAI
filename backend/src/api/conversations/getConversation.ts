@@ -610,6 +610,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (k.startsWith('client_')) return true;
         if (/google|geo|place|registry|formattedaddress|plus_code/i.test(k)) return true;
 
+        // If company registry enrichment happened, legal-* business fields are system-derived.
+        const hasRegistry = !!String((userData as any)?.business_registry_source || '').trim()
+          || !!String((userData as any)?.business_legal_entity_type_source || '').trim();
+        if (hasRegistry && (k.startsWith('business_legal_') || k === 'business_legal_entity_type')) return true;
+
         // Segment resolution + derived identifiers are system-generated.
         if (k.startsWith('segment_')) return true;
         if (k === 'segment_id' || k === 'segment_group_id') return true;
@@ -669,6 +674,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (!k) return null;
         if (value === null || value === undefined) return null;
 
+        // Name keys: if the extracted name appears in a user message, treat as user input.
+        if (/(^|_)(first_name|last_name)($|_)/.test(k)) {
+          const s = String(value ?? '').trim();
+          // Guardrails: avoid matching single letters / very long strings.
+          if (s.length >= 2 && s.length <= 40) {
+            return findUserMessageTsForValue(s, 'exact');
+          }
+        }
+
         // Email keys: match exact email substring.
         if (k.includes('email')) {
           const s = String(value ?? '').trim();
@@ -679,6 +693,17 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         // Phone keys: match digits.
         if (k.includes('phone') || k.includes('mobile')) {
           return findUserMessageTsForValue(value, 'digits');
+        }
+
+        // Generic asked string fields: if the exact value appears in a user message, treat as user.
+        // This captures cases like business_site_type="חנות פרחים" which the user provided.
+        if (userFieldKeys.has(String(key || '').trim())) {
+          if (typeof value === 'string') {
+            const s = String(value).trim();
+            if (s.length >= 2 && s.length <= 120) {
+              return findUserMessageTsForValue(s, 'exact');
+            }
+          }
         }
 
         return null;

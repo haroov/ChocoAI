@@ -1545,7 +1545,20 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                 {isFlattened ? (() => {
                   const instance = entityType.instances[0];
                   const containerId = `${entityKey}::${instance.id}`;
-                  const orderedKeys = fieldOrderByContainer[containerId] || Object.keys(instance.data || {});
+                  const firstSeenOrder = fieldOrderByContainer[containerId] || [];
+                  const firstSeenIndex = new Map<string, number>(firstSeenOrder.map((k, idx) => [k, idx]));
+                  const keys = Object.keys(instance.data || {});
+                  const orderedKeys = [...keys].sort((a, b) => {
+                    const pa = provenanceForField(a);
+                    const pb = provenanceForField(b);
+                    const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
+                    const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
+                    if (ta !== tb) return ta - tb; // oldest-first => newest ends up last
+                    const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
+                    const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
+                    if (ra !== rb) return ra - rb;
+                    return String(a).localeCompare(String(b));
+                  });
 
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -1668,7 +1681,20 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                         <div className="border-t border-gray-200 px-3 py-2 space-y-2">
                           {(() => {
                             const containerId = `${entityKey}::${instance.id}`;
-                            const orderedKeys = fieldOrderByContainer[containerId] || Object.keys(instance.data || {});
+                            const firstSeenOrder = fieldOrderByContainer[containerId] || [];
+                            const firstSeenIndex = new Map<string, number>(firstSeenOrder.map((k, idx) => [k, idx]));
+                            const keys = Object.keys(instance.data || {});
+                            const orderedKeys = [...keys].sort((a, b) => {
+                              const pa = provenanceForField(a);
+                              const pb = provenanceForField(b);
+                              const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
+                              const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
+                              if (ta !== tb) return ta - tb; // oldest-first
+                              const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
+                              const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
+                              if (ra !== rb) return ra - rb;
+                              return String(a).localeCompare(String(b));
+                            });
                             return orderedKeys.map((key) => {
                               const value = (instance.data || {})[key];
                               const prov = provenanceForField(key);

@@ -228,6 +228,29 @@ class LlmService {
       // best-effort
     }
 
+    // Deterministic role extraction in the first message:
+    // Users often include their role ("אני בעלים של ...") in the very first prompt.
+    // Persist it early so Flow 01 won't ask again.
+    try {
+      const msgRaw = String(options.message || '').trim();
+      const fields = options.context.fieldsDescription || {};
+      const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+      const noPriorQuestion = !lastAssistantQuestion;
+      if (noPriorQuestion && msgRaw && hasField('insured_relation_to_business')) {
+        const s = msgRaw
+          .replace(/[“”"׳״']/g, '')
+          .replace(/[.,;:!?()[\]{}]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        // Common phrasing: "אני בעלים של X" / "בעלת העסק" / "אני מנהלת"
+        if (/(^|\s)(בעלים|בעלת)(\s|$)/.test(s)) return { insured_relation_to_business: 'בעלים' };
+        if (/(^|\s)מורשה\s+חתימה(\s|$)/.test(s)) return { insured_relation_to_business: 'מורשה חתימה' };
+        if (/(^|\s)(מנהל|מנהלת)(\s|$)/.test(s)) return { insured_relation_to_business: 'מנהל' };
+      }
+    } catch {
+      // best-effort
+    }
+
     // Fast-path deterministic extraction for high-confidence single-field answers.
     // This avoids long/expensive LLM calls and prevents rare cases where the model emits huge garbage JSON
     // (observed: email answer triggered a max-token JSON output causing request timeouts and "stuck" UX).
@@ -417,7 +440,8 @@ Example of empty fields:
       if (/מקום\s*פיזי|פעילות\s*מתבצעת|הכל\s*אונליין|משרד\/חנות\/קליניקה/i.test(lastQ)) addIfExists('has_physical_premises');
       if (/עובדים\s*שכירים|יש\s*לעסק\s*עובדים|מעסיק/i.test(lastQ)) addIfExists('has_employees');
       if (/מייצר|מייבא|משווק|מפיץ|מוצרים\s*פיזיים/i.test(lastQ)) addIfExists('has_products_activity');
-      if (/הפסקת\s*פעילות|אובדן\s*הכנסה|אובדן\s*תוצאתי/i.test(lastQ)) addIfExists('business_interruption_type');
+      // Business interruption selection (sometimes phrased as "אובדן נזקים" in UX copy).
+      if (/הפסקת\s*פעילות|אובדן\s*(?:הכנסה|נזק(?:ים)?|תוצאתי)/i.test(lastQ)) addIfExists('business_interruption_type');
       if (/יישוב|עיר/i.test(lastQ)) addIfExists('business_city');
       if (/רחוב/i.test(lastQ)) addIfExists('business_street');
       // House number can be phrased as: "מס' בית", "מס' הבית", "מספר בית", "מספר הבית"
@@ -732,7 +756,7 @@ Example of empty fields:
 
       // - business_interruption_type: yes/no phrasing should map to the allowed enum values.
       // (Flow 02 asks a yes/no question but stores an enum: "לא" / "אובדן הכנסה (פיצוי יומי)".)
-      const askedAboutBusinessInterruption = /הפסקת\s*פעילות|אובדן\s*הכנסה|אובדן\s*תוצאתי/i.test(String(lastQ || ''));
+      const askedAboutBusinessInterruption = /הפסקת\s*פעילות|אובדן\s*(?:הכנסה|נזק(?:ים)?|תוצאתי)/i.test(String(lastQ || ''));
       if (askedAboutBusinessInterruption || (expected.has('business_interruption_type') && hasField('business_interruption_type'))) {
         const yn = parseYesNoToken(msgRaw);
         if (yn !== null) {
@@ -761,10 +785,19 @@ Example of empty fields:
           const mapNum: Record<string, string> = {
             1: 'לא',
             2: 'אובדן הכנסה (פיצוי יומי)',
+            // Some older questionnaires used a 3rd option for gross-profit BI.
+            // Product rule: we always map any BI selection to daily compensation.
+            3: 'אובדן הכנסה (פיצוי יומי)',
           };
           const allowed = new Map<string, string>([
             ['לא', 'לא'],
             ['אובדן הכנסה (פיצוי יומי)', 'אובדן הכנסה (פיצוי יומי)'],
+            // Product rule: normalize any other BI label to daily compensation.
+            ['אובדן תוצאתי (רווח גולמי)', 'אובדן הכנסה (פיצוי יומי)'],
+            ['אובדן תוצאתי', 'אובדן הכנסה (פיצוי יומי)'],
+            ['רווח גולמי', 'אובדן הכנסה (פיצוי יומי)'],
+            ['אובדן נזקים', 'אובדן הכנסה (פיצוי יומי)'],
+            ['אובדן נזק', 'אובדן הכנסה (פיצוי יומי)'],
             ['no', 'לא'],
             ['yes', 'אובדן הכנסה (פיצוי יומי)'],
           ]);

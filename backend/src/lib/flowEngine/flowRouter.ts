@@ -122,6 +122,9 @@ class FlowRouter {
         'user_phone',
         'proposer_mobile_phone',
         'proposer_phone',
+        // Israel SMB: users often mention their role in the first message ("אני בעלים...").
+        // Persist it early so we can skip asking again later in Flow 01.
+        'insured_relation_to_business',
         'meshulam_phone_local',
       ]);
       const globalFields = Object.fromEntries(
@@ -455,6 +458,22 @@ class FlowRouter {
       // best-effort
     }
 
+    // Derivation (Flow 02 + product dependencies):
+    // Without contents coverage, the user cannot buy Stock/Inventory (מלאי) or Burglary/Robbery (פריצה ושוד) extensions.
+    // Requirement: if ch1_contents_selected=false -> force ch1_stock_selected=false AND ch4_burglary_selected=false in DB.
+    try {
+      const hasContentsDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'ch1_contents_selected');
+      if (hasContentsDef) {
+        const contents = parseBooleanish(validatedCollectedData.ch1_contents_selected);
+        if (contents === false) {
+          validatedCollectedData.ch1_stock_selected = false;
+          validatedCollectedData.ch4_burglary_selected = false;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     // Derivation (topic-split insurance): if the user selected Business Interruption daily coverage (ch3a),
     // deterministically set the enum business_interruption_type so downstream routing is reliable.
     //
@@ -471,6 +490,29 @@ class FlowRouter {
           validatedCollectedData.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
         } else if (ch3a === false) {
           validatedCollectedData.business_interruption_type = 'לא';
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Normalization (topic-split insurance):
+    // Product rule: if business_interruption_type is selected (any value other than "לא"),
+    // it MUST be "אובדן הכנסה (פיצוי יומי)".
+    try {
+      const hasBiDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'business_interruption_type');
+      const stageCollectsBi = stageFields.has('business_interruption_type');
+      if (hasBiDef || stageCollectsBi) {
+        const biBool = parseBooleanish(validatedCollectedData.business_interruption_type);
+        if (biBool === true) {
+          validatedCollectedData.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+        } else if (biBool === false) {
+          validatedCollectedData.business_interruption_type = 'לא';
+        } else {
+          const s = String(validatedCollectedData.business_interruption_type ?? '').trim();
+          if (s && s !== 'לא') {
+            validatedCollectedData.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+          }
         }
       }
     } catch {
@@ -712,6 +754,40 @@ class FlowRouter {
             __invalid_fields_hints: hintsNext,
           }, conversation.id);
           // Refresh local snapshot
+          userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    // Post-save enforcement (Flow 02 product dependencies):
+    // - If contents coverage is explicitly false, force Stock + Burglary/Robbery extensions to false in DB.
+    // - If BI coverage was selected, normalize the enum to the single supported option: "אובדן הכנסה (פיצוי יומי)".
+    try {
+      const isFlow02 = String(options.determinedFlow.flow.slug || '').trim() === 'flow_02_intent_segment_and_coverages';
+      if (isFlow02) {
+        const updates: Record<string, unknown> = {};
+
+        const contents = parseBooleanish((userData as any).ch1_contents_selected);
+        if (contents === false) {
+          // Even if these keys were never asked, persist them as false to prevent downstream routing/extensions.
+          updates.ch1_stock_selected = false;
+          updates.ch4_burglary_selected = false;
+        }
+
+        const biRaw = (userData as any).business_interruption_type;
+        const bi = String(biRaw ?? '').trim();
+        if (bi && bi !== 'לא' && bi !== 'אובדן הכנסה (פיצוי יומי)') {
+          updates.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+        }
+        // Also handle boolean-ish pollution (rare): true => selected, false => not selected.
+        const biBool = parseBooleanish(biRaw);
+        if (biBool === true) updates.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+        if (biBool === false) updates.business_interruption_type = 'לא';
+
+        if (Object.keys(updates).length > 0) {
+          await flowHelpers.setUserData(userId, options.determinedFlow.flow.id, updates, conversation.id);
           userData = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
         }
       }

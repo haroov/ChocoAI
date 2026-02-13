@@ -125,6 +125,61 @@ function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+function meaningfulTokenSet(tokens: Set<string>): Set<string> {
+  // Remove extremely common Hebrew glue/business-type words that should not decide the segment.
+  // This helps break ties like "חנות X" where many segments share "חנות" in their name/keywords.
+  const generic = new Set([
+    'אני',
+    'אנחנו',
+    'את',
+    'אתה',
+    'אתם',
+    'הוא',
+    'היא',
+    'של',
+    'עם',
+    'על',
+    'בעל',
+    'בעלים',
+    'בעלת',
+    'בעלות',
+    'עוסק',
+    'עוסקת',
+    // Business place-type tokens (too generic across many segments)
+    'עסק',
+    'חנות',
+    'משרד',
+    'קליניקה',
+    'מסעדה',
+    'מפעל',
+    'מחסן',
+    'סוכנות',
+    // Politeness filler that may remain after stopword filtering
+    'רבה',
+  ]);
+
+  const out = new Set<string>();
+  for (const t of tokens) {
+    const s = String(t || '').trim();
+    if (!s) continue;
+    if (generic.has(s)) continue;
+    out.add(s);
+  }
+  return out;
+}
+
+function distinctTokenBonus(inputTokens: Set<string>, candidateTokens: Set<string>): number {
+  const inputMeaningful = meaningfulTokenSet(inputTokens);
+  const candMeaningful = meaningfulTokenSet(candidateTokens);
+  if (inputMeaningful.size === 0 || candMeaningful.size === 0) return 0;
+
+  let inter = 0;
+  for (const t of inputMeaningful) if (candMeaningful.has(t)) inter++;
+  // Small capped bonus per distinctive overlapping token.
+  // This is a stable tie-breaker in cases where generic tokens yield identical overlap ratios.
+  return Math.min(0.25, inter * 0.12);
+}
+
 function buildResolvedFromCatalog(params: {
   segment_id?: string;
   segment_group_id?: string;
@@ -191,7 +246,8 @@ export async function resolveSegmentFromText(
     // coming from groupName/primary_activity, preventing them from crossing the deterministic threshold.
     const exactName = Boolean(nameNorm && inputNorm === nameNorm);
     const bonus = exactName ? 0.6 : (nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0);
-    return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus);
+    const tieBreakBonus = distinctTokenBonus(inputTokens, nameTokens);
+    return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus + tieBreakBonus);
   });
 
   if (segMatch.item && segMatch.score >= 0.55) {
@@ -225,6 +281,8 @@ export async function resolveSegmentFromText(
       const hay = [name, primary].filter(Boolean).join(' | ');
       const tokens = new Set(tokenize(hay));
       const jac = jaccard(inputTokens, tokens);
+      const nameTokens = new Set(tokenize(name));
+      const nameOverlap = overlapRatio(inputTokens, nameTokens);
       const kwArr = Array.isArray((s as any).keywords)
         ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
         : [];
@@ -232,7 +290,8 @@ export async function resolveSegmentFromText(
       const kwOverlap = overlapRatio(inputTokens, kwTokens);
       const nameNorm = normalizeText(name);
       const bonus = nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0;
-      return clamp01(Math.max(jac, kwOverlap * 0.9) + bonus);
+      const tieBreakBonus = distinctTokenBonus(inputTokens, nameTokens);
+      return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus + tieBreakBonus);
     });
 
     const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.28 ? (segInGroup.item as any).segment_id : undefined;
