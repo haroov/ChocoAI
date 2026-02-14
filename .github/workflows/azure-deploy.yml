@@ -1,0 +1,125 @@
+name: Azure - Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - '.github/workflows/azure-deploy.yml'
+      - 'infra/azure/**'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: azure-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+      IMAGE_REPO: chocoai
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build backend (dist)
+        run: |
+          set -euo pipefail
+          npm ci --prefix backend
+          npm run build --prefix backend
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push Docker image to ACR
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            RG="${AZURE_RESOURCE_GROUP}"
+            ACR_NAME="${AZURE_ACR_NAME}"
+
+            if [ -z "$RG" ] || [ -z "$ACR_NAME" ]; then
+              echo "Missing GitHub variables: AZURE_RESOURCE_GROUP / AZURE_ACR_NAME"
+              exit 1
+            fi
+
+            ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR_NAME" --query loginServer -o tsv)"
+            az acr login -n "$ACR_NAME"
+
+            TAG="${GITHUB_SHA::7}"
+            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
+            IMAGE_LATEST="$ACR_LOGIN_SERVER/${IMAGE_REPO}:latest"
+
+            echo "Building image: $IMAGE"
+            docker build -t "$IMAGE" -t "$IMAGE_LATEST" .
+            docker push "$IMAGE"
+            docker push "$IMAGE_LATEST"
+
+            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
+            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Update Web App to new image
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            RG="${AZURE_RESOURCE_GROUP}"
+            WEBAPP="${AZURE_WEBAPP_NAME}"
+            ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
+            TAG="${IMAGE_TAG}"
+
+            if [ -z "$RG" ] || [ -z "$WEBAPP" ]; then
+              echo "Missing GitHub variables: AZURE_RESOURCE_GROUP / AZURE_WEBAPP_NAME"
+              exit 1
+            fi
+
+            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
+            echo "Deploying image: $IMAGE"
+
+            az webapp config container set \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
+              --docker-custom-image-name "$IMAGE" \
+              --docker-registry-server-url "https://$ACR_LOGIN_SERVER"
+
+            # App settings (non-secret defaults)
+            az webapp config appsettings set \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
+              --settings NODE_ENV=production PORT=8080 WEBSITES_PORT=8080
+
+            # App settings (secrets) - define these in GitHub Secrets
+            az webapp config appsettings set \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
+              --settings \
+                DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+                OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+                JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+                ROOT_URL="${{ secrets.ROOT_URL }}" \
+                GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}"
+
+            az webapp restart --resource-group "$RG" --name "$WEBAPP"
+

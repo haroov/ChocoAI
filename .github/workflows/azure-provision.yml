@@ -1,0 +1,63 @@
+name: Azure - Provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: Azure region (e.g. westeurope)
+        required: false
+        default: westeurope
+      resourceGroupName:
+        description: Resource group name
+        required: false
+        default: rg-chocoai-prod
+      webAppName:
+        description: Web App name (must be globally unique)
+        required: false
+        default: chocoai-prod
+      acrName:
+        description: ACR name (optional; leave empty to auto-generate)
+        required: false
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision infra (Bicep)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            LOCATION="${{ inputs.location }}"
+            RG="${{ inputs.resourceGroupName }}"
+            WEBAPP="${{ inputs.webAppName }}"
+            ACR="${{ inputs.acrName }}"
+
+            echo "Provisioning ChocoAI resources..."
+            echo "location=$LOCATION rg=$RG webApp=$WEBAPP acrName=$ACR"
+
+            az deployment sub create \
+              --name "chocoai-provision-${GITHUB_RUN_ID}" \
+              --location "$LOCATION" \
+              --template-file "infra/azure/main.bicep" \
+              --parameters location="$LOCATION" resourceGroupName="$RG" webAppName="$WEBAPP" acrName="$ACR"
+
+            echo "Done. Get outputs via:"
+            echo "az deployment sub show --name chocoai-provision-${GITHUB_RUN_ID} --query properties.outputs"
+
