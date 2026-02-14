@@ -44,6 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --prefix backend
+          # Ensure Prisma Client types are generated in CI (repo does not ship node_modules/.prisma).
+          DATABASE_URL="postgresql://user:pass@localhost:5432/chocoai?schema=public" npm run db:generate --prefix backend
           npm run build --prefix backend
 
       - name: Azure login (OIDC)

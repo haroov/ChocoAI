@@ -1,11 +1,15 @@
 import { Request, Response } from 'express';
-import type { Message } from '@prisma/client';
 import { registerRoute } from '../../utils/routesRegistry';
 import { prisma } from '../../core';
 import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 import { parsePolicyStartDateToYmd } from '../../lib/flowEngine/utils/dateTimeUtils';
 
-type ConversationMessage = Pick<Message, 'id' | 'content' | 'createdAt' | 'role'>;
+type ConversationMessage = {
+  id: string;
+  content: string;
+  createdAt: Date;
+  role: string;
+};
 
 type UiFlowStage = {
   slug: string;
