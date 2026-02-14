@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
+import type { Message } from '@prisma/client';
 import { registerRoute } from '../../utils/routesRegistry';
 import { prisma } from '../../core';
 import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 import { parsePolicyStartDateToYmd } from '../../lib/flowEngine/utils/dateTimeUtils';
+
+type ConversationMessage = Pick<Message, 'id' | 'content' | 'createdAt' | 'role'>;
 
 type UiFlowStage = {
   slug: string;
@@ -151,6 +154,10 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       return;
     }
 
+    const messages: ConversationMessage[] = Array.isArray((conversation as any).messages)
+      ? ((conversation as any).messages as ConversationMessage[])
+      : [];
+
     const userId = conversation.userId || null;
 
     // ---- userData (prefer active flow overlay if known) ----
@@ -181,12 +188,12 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       try {
         // Auto-clean: if name fields were polluted by intent/segment text BEFORE we ever asked for a name,
         // clear them to prevent UX like "שלום ביטוח!".
-        const assistantAskedForFirstOrLast = (conversation.messages || []).some((m) => {
+        const assistantAskedForFirstOrLast = messages.some((m: ConversationMessage) => {
           if (m.role !== 'assistant') return false;
           const t = String(m.content || '');
           return /מה\s+השם\s+הפרטי|שם\s*פרטי|מה\s+שם\s+(?:ה)?משפחה|שם\s*(?:ה)?משפחה/i.test(t);
         });
-        const userExplicitlyProvidedName = (conversation.messages || []).some((m) => {
+        const userExplicitlyProvidedName = messages.some((m: ConversationMessage) => {
           if (m.role !== 'user') return false;
           const t = String(m.content || '').normalize('NFKC').trim();
           if (!t) return false;
@@ -258,9 +265,9 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         const missingLastName = !!first && !last;
 
         if (needsRepair || missingLastName) {
-          const texts = (conversation.messages || [])
-            .filter((m) => m.role === 'user')
-            .map((m) => String(m.content || ''))
+          const texts = messages
+            .filter((m: ConversationMessage) => m.role === 'user')
+            .map((m: ConversationMessage) => String(m.content || ''))
             .filter(Boolean);
           const joined = texts.join(' | ');
           // Best-effort: infer name ONLY from explicit self-introduction patterns.
@@ -546,15 +553,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       // ---- active flow ----
       if (activeUserFlow?.flow) {
-        const completedStageRows = await prisma.flowHistory.findMany({
+        const completedStageRows: Array<{ stage: string }> = await prisma.flowHistory.findMany({
           where: {
             userId,
             flowId: activeUserFlow.flow.id,
             sessionId: activeUserFlow.id,
           },
           select: { stage: true },
-        });
-        const completedStageSlugs = new Set(completedStageRows.map((r) => r.stage));
+        }) as any;
+        const completedStageSlugs = new Set<string>(completedStageRows.map((r: { stage: string }) => r.stage));
 
         activeFlow = {
           name: activeUserFlow.flow.name,
@@ -632,23 +639,23 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
     // We prefer fieldsCollected (stage completion) and fall back to first-seen in userDataSnapshot.
     let fieldProvenance: Record<string, UiFieldProvenance> = {};
     try {
-      const msgsChrono = (conversation.messages || [])
-        .map((m) => ({
-          role: String((m as any).role || ''),
-          createdAt: new Date((m as any).createdAt).getTime(),
-          text: String((m as any).content || ''),
-        }))
-        .filter((m) => Number.isFinite(m.createdAt))
-        .sort((a, b) => a.createdAt - b.createdAt);
-
-      const userMessages = (conversation.messages || [])
-        .filter((m) => m.role === 'user')
-        .map((m) => ({
-          createdAt: new Date(m.createdAt).getTime(),
+      const msgsChrono = messages
+        .map((m: ConversationMessage) => ({
+          role: String(m.role || ''),
+          createdAt: new Date(m.createdAt as any).getTime(),
           text: String(m.content || ''),
         }))
-        .filter((m) => Number.isFinite(m.createdAt))
-        .sort((a, b) => a.createdAt - b.createdAt);
+        .filter((m: { createdAt: number }) => Number.isFinite(m.createdAt))
+        .sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
+
+      const userMessages = messages
+        .filter((m: ConversationMessage) => m.role === 'user')
+        .map((m: ConversationMessage) => ({
+          createdAt: new Date(m.createdAt as any).getTime(),
+          text: String(m.content || ''),
+        }))
+        .filter((m: { createdAt: number }) => Number.isFinite(m.createdAt))
+        .sort((a: { createdAt: number }, b: { createdAt: number }) => a.createdAt - b.createdAt);
       const firstUserMessageAtIso = userMessages.length > 0
         ? new Date(userMessages[0].createdAt).toISOString()
         : null;
@@ -678,8 +685,8 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       const userFieldKeys = new Set<string>();
       try {
         const flows: Array<UiFlow | null> = [activeFlow, ...completedFlows];
-        flows.forEach((flow) => {
-          flow?.stages?.forEach((s) => {
+        flows.forEach((flow: UiFlow | null) => {
+          flow?.stages?.forEach((s: UiFlowStage) => {
             const fields = Array.isArray((s as any).fieldsToCollect) ? (s as any).fieldsToCollect : [];
             fields.forEach((f: any) => {
               const k = String(f || '').trim();
@@ -956,7 +963,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       const pickLastUserMessageTsWithin = (startMs: number, endMs: number): string | null => {
         if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return null;
         // Find first user message in [startMs, endMs] (stable: doesn't drift as more answers arrive in same stage window).
-        for (const m of userMessages) {
+        for (const m of userMessages as Array<{ createdAt: number; text: string }>) {
           if (m.createdAt >= startMs && m.createdAt <= endMs) return new Date(m.createdAt).toISOString();
         }
         return null;

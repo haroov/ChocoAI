@@ -1,13 +1,13 @@
 targetScope = 'subscription'
 
 @description('Azure region for all resources.')
-param location string = 'westeurope'
+param location string = 'israelcentral'
 
 @description('Resource group name to create/use for ChocoAI.')
 param resourceGroupName string = 'rg-chocoai-prod'
 
-@description('Azure App Service Web App name (must be globally unique).')
-param webAppName string = 'chocoai-prod'
+@description('Azure App Service Web App name (must be globally unique). If empty, will be generated.')
+param webAppName string = ''
 
 @description('App Service plan name.')
 param appServicePlanName string = 'asp-chocoai-prod'
@@ -29,6 +29,9 @@ param appServiceSkuName string = 'B1'
 
 var generatedAcrName = toLower('chocoai${uniqueString(subscription().id, resourceGroupName)}')
 var acrFinalName = empty(acrName) ? generatedAcrName : toLower(acrName)
+var webAppFinalName = empty(webAppName)
+  ? toLower('chocoai-${uniqueString(subscription().id, resourceGroupName)}')
+  : toLower(webAppName)
 
 resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
   name: resourceGroupName
@@ -70,7 +73,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-01-01' = {
 
 resource web 'Microsoft.Web/sites@2023-01-01' = {
   scope: rg
-  name: webAppName
+  name: webAppFinalName
   location: location
   kind: 'app,linux,container'
   identity: {

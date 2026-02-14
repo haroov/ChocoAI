@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       location:
-        description: Azure region (e.g. westeurope)
+        description: Azure region (e.g. israelcentral)
         required: false
-        default: westeurope
+        default: israelcentral
       resourceGroupName:
         description: Resource group name
         required: false
         default: rg-chocoai-prod
       webAppName:
-        description: Web App name (must be globally unique)
+        description: Web App name (must be globally unique). Leave empty to auto-generate.
         required: false
-        default: chocoai-prod
+        default: ""
       acrName:
         description: ACR name (optional; leave empty to auto-generate)
         required: false

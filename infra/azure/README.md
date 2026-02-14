@@ -20,6 +20,19 @@ Configure GitHub → Repo → Settings → Secrets and variables → Actions →
 
 These are used by `azure/login` with **OpenID Connect** (no client secret).
 
+## One-time Azure setup (OIDC)
+
+In Azure (Entra ID):
+
+1. Create an **App Registration** dedicated to this repo.
+2. Create a **Federated Credential** for GitHub Actions:
+   - **Issuer**: `https://token.actions.githubusercontent.com`
+   - **Subject (branch main)**: `repo:<OWNER>/<REPO>:ref:refs/heads/main`
+   - **Audience**: `api://AzureADTokenExchange`
+3. Assign RBAC roles to the app’s **service principal**:
+   - **Subscription scope**: `Contributor`
+   - **If provisioning fails on role assignment** (`Microsoft.Authorization/roleAssignments/write`): also grant `User Access Administrator` (or use an Owner to provision once).
+
 ## Required GitHub Secrets (runtime)
 
 Add at least the required app runtime secrets:
@@ -40,15 +53,20 @@ Optional (if used):
 
 Configure GitHub → Repo → Settings → Secrets and variables → Actions → **Variables**:
 
-- `AZURE_LOCATION` (e.g. `westeurope`)
+- `AZURE_LOCATION` (e.g. `israelcentral`)
 - `AZURE_RESOURCE_GROUP` (e.g. `rg-chocoai-prod`)
-- `AZURE_WEBAPP_NAME` (e.g. `chocoai-prod`)
+- `AZURE_WEBAPP_NAME` (e.g. `chocoai-<suffix>` created by provisioning workflow output)
 - `AZURE_ACR_NAME` (e.g. `chocoai<suffix>` created by provisioning workflow output)
 
 ## Provision (one-time)
 
 Run the workflow **"Azure - Provision"** manually from GitHub Actions.
 It will create the resource group, ACR, identity, and App Service.
+
+After it finishes, copy the deployment outputs and set repo **Variables**:
+
+- `AZURE_WEBAPP_NAME` (from output `webApp`)
+- `AZURE_ACR_NAME` (ACR resource name; output includes `acrLoginServer` for reference)
 
 ## Deploy (on push)
 
