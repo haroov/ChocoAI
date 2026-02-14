@@ -145,9 +145,8 @@ class FlowRouter {
       // the assistant to re-ask later, even though the user already answered.
       try {
         const collected: any = res.collectedData || {};
-        const wantsPoBox = Object.prototype.hasOwnProperty.call(stageFields, 'business_po_box');
         const hasPoBox = isPresentNonPlaceholder(collected.business_po_box);
-        if (wantsPoBox && !hasPoBox) {
+        if (!hasPoBox) {
           const lastAssistant = await prisma.message.findFirst({
             where: { conversationId: conversation.id, role: 'assistant', createdAt: { lt: message.createdAt } },
             orderBy: { createdAt: 'desc' },
@@ -155,8 +154,9 @@ class FlowRouter {
           });
           const lastQ = String(lastAssistant?.content || '').trim();
           const askedForPoBox = /ת\\.?[\"״׳']?ד|תיבת\\s*דואר|תא\\s*דואר|po\\s*box/i.test(lastQ);
-          if (askedForPoBox) {
-            const msgRaw = String(message.content || '').trim();
+          const msgRaw = String(message.content || '').trim();
+          const messageMentionsPoBox = /ת\\.?[\"״׳']?ד|תיבת\\s*דואר|תא\\s*דואר|po\\s*box/i.test(msgRaw);
+          if (askedForPoBox || messageMentionsPoBox) {
             const digits = msgRaw.replace(/\\D/g, '');
             const token = msgRaw
               .trim()
@@ -185,6 +185,41 @@ class FlowRouter {
             }
           }
         }
+      } catch {
+        // best-effort
+      }
+
+      // Deterministic: preserve user-entered address values when they are explicitly asked.
+      // This prevents system enrichments (registry/Google) from being misinterpreted as "user typed it".
+      try {
+        const collected: any = res.collectedData || {};
+        const lastAssistant = await prisma.message.findFirst({
+          where: { conversationId: conversation.id, role: 'assistant', createdAt: { lt: message.createdAt } },
+          orderBy: { createdAt: 'desc' },
+          select: { content: true },
+        });
+        const lastQ = String(lastAssistant?.content || '').trim();
+
+        const askedCity = /באיזה\\s+יישוב|נא\\s+לציין\\s+יישוב|יישוב/i.test(lastQ);
+        const askedStreet = /רחוב/i.test(lastQ);
+        const askedHouse = /מס['\"״׳']?\\s*(?:ה)?בית|מספר\\s*(?:ה)?בית|מספר\\s*בניין|מס'\\s*בניין/i.test(lastQ);
+
+        if (askedCity && typeof collected.business_city === 'string' && String(collected.business_city).trim()) {
+          collected.business_user_entered_city = String(collected.business_city).trim();
+        }
+        if (askedStreet && typeof collected.business_street === 'string' && String(collected.business_street).trim()) {
+          collected.business_user_entered_street = String(collected.business_street).trim();
+        }
+        if ((askedStreet || askedHouse) && typeof collected.business_house_number === 'string' && String(collected.business_house_number).trim()) {
+          collected.business_user_entered_house_number = String(collected.business_house_number).trim();
+        }
+
+        const full = [collected.business_user_entered_street, collected.business_user_entered_house_number].filter(Boolean).join(' ').trim();
+        const city = String(collected.business_user_entered_city || '').trim();
+        const fullAddr = [full, city].filter(Boolean).join(', ').trim();
+        if (fullAddr) collected.business_user_entered_full_address = fullAddr;
+
+        res.collectedData = collected;
       } catch {
         // best-effort
       }
@@ -235,6 +270,11 @@ class FlowRouter {
             collected.business_address_confirmed = true;
             collected.business_address_needs_confirmation = false;
             collected.business_address_needs_correction = 'N';
+            // User insisted the address is correct "as-is" even if Google couldn't match.
+            if (String(collected.business_google_match_status || '').startsWith('no_match')) {
+              collected.business_google_match_status = 'no_match_user_confirmed_as_is';
+              collected.business_google_match_found = false;
+            }
             res.collectedData = collected;
           } else if (looksNo) {
             collected.business_address_needs_confirmation = true;
@@ -242,6 +282,90 @@ class FlowRouter {
             // IMPORTANT: do not persist business_address_confirmed=false; keep it absent unless confirmed.
             if (Object.prototype.hasOwnProperty.call(collected, 'business_address_confirmed')) {
               delete collected.business_address_confirmed;
+            }
+            res.collectedData = collected;
+          }
+        }
+
+        // Google suggestion acceptance:
+        // If Google suggested a different address and we asked "האם לעדכן...?"
+        // then "כן" should promote suggested fields into business_*; "לא" should keep user's values and continue.
+        const askedForGoogleSuggestion = /גוגל\\s+מצא\\s+התאמה\\s+שונה|האם\\s+לעדכן\\s+את\\s+הכתובת\\s+לכתובת\\s+שגוגל\\s+מצא/i.test(lastQ);
+        if (askedForGoogleSuggestion) {
+          const msgRaw = String(message.content || '').trim();
+          const token = msgRaw
+            .trim()
+            .toLowerCase()
+            .replace(/[“”"׳״']/g, '')
+            .replace(/\\s+/g, ' ')
+            .replace(/^[\\s\\-–—.,;:!?()\\[\\]{}]+/g, '')
+            .replace(/[\\s\\-–—.,;:!?()\\[\\]{}]+$/g, '')
+            .trim();
+
+          const looksYes = token === 'כן'
+            || token === 'מאשר'
+            || token === 'אשר'
+            || token === 'ok'
+            || token === 'yes'
+            || token === 'y'
+            || token === 'true'
+            || token === '1';
+          const looksNo = token === 'לא'
+            || token === 'no'
+            || token === 'n'
+            || token === 'false'
+            || token === '0';
+
+          if (looksYes || looksNo) {
+            collected.business_address_google_suggestion_accepted = looksYes;
+
+            if (looksYes) {
+              const sCity = String(collected.business_google_suggested_city || '').trim();
+              const sStreet = String(collected.business_google_suggested_street || '').trim();
+              const sHouse = String(collected.business_google_suggested_house_number || '').trim();
+              if (sCity) collected.business_city = sCity;
+              if (sStreet) collected.business_street = sStreet;
+              if (sHouse) collected.business_house_number = sHouse;
+
+              if (isPresentNonPlaceholder(collected.business_google_suggested_zip)) {
+                collected.business_zip = collected.business_google_suggested_zip;
+              }
+              if (typeof collected.business_google_suggested_geo_lat === 'number' && typeof collected.business_google_suggested_geo_lng === 'number') {
+                collected.business_geo_lat = collected.business_google_suggested_geo_lat;
+                collected.business_geo_lng = collected.business_google_suggested_geo_lng;
+              }
+              if (isPresentNonPlaceholder(collected.business_google_suggested_formatted_address)) {
+                collected.business_google_formatted_address = collected.business_google_suggested_formatted_address;
+              }
+              if (isPresentNonPlaceholder(collected.business_google_suggested_place_id)) {
+                collected.business_google_place_id = collected.business_google_suggested_place_id;
+              }
+              if (isPresentNonPlaceholder(collected.business_google_suggested_place_name)) {
+                collected.business_google_place_name = collected.business_google_suggested_place_name;
+              }
+              if (isPresentNonPlaceholder(collected.business_google_suggested_plus_code_global)) {
+                collected.business_google_plus_code_global = collected.business_google_suggested_plus_code_global;
+              }
+              if (isPresentNonPlaceholder(collected.business_google_suggested_plus_code_compound)) {
+                collected.business_google_plus_code_compound = collected.business_google_suggested_plus_code_compound;
+              }
+
+              const full = [collected.business_street, collected.business_house_number].filter(Boolean).join(' ').trim();
+              const cityNow = String(collected.business_city || '').trim();
+              const fullAddr = [full, cityNow].filter(Boolean).join(', ').trim();
+              if (fullAddr) collected.business_full_address = fullAddr;
+              collected.business_google_match_status = 'mismatch_user_accepted_google';
+              collected.business_google_match_found = true;
+            }
+
+            // In both cases, user made a decision — continue the flow.
+            collected.business_address_confirmed = true;
+            collected.business_address_needs_confirmation = false;
+            collected.business_address_needs_correction = 'N';
+            if (looksNo) {
+              // User rejected Google's suggested correction; proceed with user address as-is.
+              collected.business_google_match_status = 'mismatch_user_rejected_keep_as_is';
+              collected.business_google_match_found = false;
             }
             res.collectedData = collected;
           }
@@ -414,14 +538,14 @@ class FlowRouter {
               // Also set human-friendly fields used by UI + downstream orchestration.
               // - `business_segment` is what the UI links to a segment page.
               // - `business_site_type` improves phrasing + removes unnecessary follow-up questions.
-              const { formatBusinessSegmentLabelHe, looksLikeNoiseBusinessSegmentHe } = await import('../insurance/segments/formatBusinessSegmentLabelHe');
+              const { formatBusinessSegmentLabelHe, shouldOverrideBusinessSegmentHe } = await import('../insurance/segments/formatBusinessSegmentLabelHe');
               const desiredLabel = formatBusinessSegmentLabelHe({
                 segment_name_he: (defaults.userData as any)?.segment_name_he,
                 group_name_he: (defaults.userData as any)?.segment_group_name_he,
                 segment_group_id: (defaults.userData as any)?.segment_group_id,
               });
               const existingBs = String(collected.business_segment || '').trim();
-              if (desiredLabel && (!existingBs || looksLikeNoiseBusinessSegmentHe(existingBs))) {
+              if (desiredLabel && shouldOverrideBusinessSegmentHe(existingBs, desiredLabel)) {
                 collected.business_segment = desiredLabel;
               }
               const st = (defaults.prefill as any)?.business_site_type;

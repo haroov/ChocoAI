@@ -31,7 +31,7 @@ beforeAll(() => {
         segment_id: 'architecture_engineering_office',
         segment_group_id: 'professional_offices',
         segment_name_he: 'משרד אדריכלים',
-        keywords: ['אדריכל', 'אדריכלים', 'אדריכלות'],
+        keywords: ['משרד אדריכלים', 'אדריכל', 'אדריכלים', 'אדריכלות', 'הנדסאי', 'הנדסאים'],
         business_profile_defaults: { primary_activity_he: 'שירותי אדריכלות והנדסה', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
       } as any,
@@ -77,6 +77,20 @@ describe('resolveSegmentFromText (deterministic catalog)', () => {
     expect(res.source).toBe('catalog');
     expect(res.segment_id).toBe('architecture_engineering_office');
     expect(res.match_confidence).toBeGreaterThanOrEqual(0.55);
+  });
+
+  test('matches architect when message uses prefixed office token (למשרד אדריכלים)', async () => {
+    const res = await resolveSegmentFromText('הי, אשמח להצעת ביטוח למשרד אדריכלים');
+    expect(res.source).toBe('catalog');
+    expect(res.segment_id).toBe('architecture_engineering_office');
+    expect(res.match_confidence).toBeGreaterThanOrEqual(0.55);
+  });
+
+  test('confidence is high when keyword matches (משרד הנדסאים)', async () => {
+    const res = await resolveSegmentFromText('הי, אני רוצה ביטוח למשרד הנדסאים');
+    expect(res.source).toBe('catalog');
+    expect(res.segment_id).toBe('architecture_engineering_office');
+    expect(res.match_confidence).toBeGreaterThanOrEqual(0.85);
   });
 
   test('matches accounting firm from abbreviation (רו״ח)', async () => {

@@ -15,6 +15,17 @@ const DEFAULT_STOPWORDS = new Set<string>([
   'לקוח', 'חדש', 'קיים', 'ותיק',
 ]);
 
+const NON_NAME_TOKENS = new Set<string>([
+  // insurance / intent nouns
+  'ביטוח', 'הצעה', 'הצעת', 'פוליסה',
+  // segment nouns (common)
+  'אדריכל', 'אדריכלים', 'הנדסאי', 'הנדסאים',
+  'רואה', 'חשבון', 'חשבונאות', 'מתווך', 'תיווך', 'סוכן', 'ביטוח',
+  // business site nouns (often appear in intent prompts)
+  'משרד', 'חנות', 'מסעדה', 'קליניקה', 'סטודיו', 'מחסן', 'מרלוג',
+  // common first names that appear near phones; keep these OUT of NON_NAME_TOKENS
+]);
+
 export function isBadNameValue(v: unknown): boolean {
   const s = String(v ?? '').trim();
   if (!s) return false;
@@ -55,8 +66,63 @@ function normalizeChunk(s: string): string {
  * - "שמי ליאב גפן" -> {first:"ליאב", last:"גפן"}
  */
 export function inferFirstLastFromText(text: string): NamePair {
-  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  const raw = String(text || '').trim();
   if (!raw) return { first: null, last: null };
+  const rawFlat = raw.replace(/\s+/g, ' ').trim();
+
+  // Guardrail: do not infer names from generic intent/insurance messages.
+  // Example: "אני רוצה ביטוח לאדריכל" should not yield first="ביטוח" last="לאדריכל".
+  // Only infer in such cases if the user explicitly introduced themselves or provided contact signals.
+  const hasExplicitIntro = /(?:^|[\s,.;:!?()'"“”׳״-])(?:שמי|קוראים\s+לי)(?:[\s:–—-]+)[\u0590-\u05FF]{2,}/.test(rawFlat);
+  const hasContactSignal = /@|\d{7,}|\b(phone|email)\b/i.test(rawFlat) || /\b(נייד|טלפון|אימייל|מייל|דוא״ל|דואל)\b/.test(rawFlat);
+  const hasIntentKeywords = /(הצעת\s*ביטוח|ביטוח|הצעה|פוליסה|רוצה|מבקש|צריך|מחפש|מעוניין)/.test(rawFlat);
+  if (hasIntentKeywords && !hasExplicitIntro && !hasContactSignal) return { first: null, last: null };
+
+  // If a message contains a phone/email contact signal, users often include their name either:
+  // - as a dedicated name line (e.g. "ליאב גפן") in a contact block, OR
+  // - right before the phone number on the same line (e.g. "יעל 050-...") — in which case we should
+  //   extract a first-name chunk only (1-2 words) and not guess last name from unrelated text.
+  try {
+    if (hasContactSignal) {
+      const lines = raw
+        .split(/\r?\n/)
+        .map((l) => String(l || '').trim())
+        .filter(Boolean);
+
+      const parseHebrewTokens = (line: string): string[] => line
+        .replace(/[“”"׳״'’`´]/g, ' ')
+        .replace(/[.,;:!?()[\]{}]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .filter((t) => heToken(t))
+        .filter((t) => !DEFAULT_STOPWORDS.has(t))
+        .filter((t) => !NON_NAME_TOKENS.has(t))
+        // Drop Hebrew preposition prefixes (e.g. "למשרד", "לאדריכל") which are not names.
+        .filter((t) => !/^ל[\u0590-\u05FF]{2,}$/.test(t));
+
+      // Prefer a dedicated name line without digits/@ (high confidence).
+      for (const line of lines) {
+        if (/[@\d]/.test(line)) continue;
+        const toks = parseHebrewTokens(line);
+        if (toks.length === 2) return { first: toks[0], last: toks[1] };
+      }
+
+      // Fallback: name chunk right before phone/email on the same line.
+      for (const line of lines) {
+        if (!/[@\d]/.test(line)) continue;
+        const m = /^(.*?)(@|\d{7,})/.exec(line);
+        const before = String(m?.[1] || '').trim();
+        if (!before) continue;
+        const toks = parseHebrewTokens(before).slice(-2);
+        if (toks.length >= 1) return { first: toks.join(' '), last: null };
+      }
+    }
+  } catch {
+    // best-effort
+  }
 
   // Cut at common separators/labels (phone/email) so we keep just the name portion.
   const cutKeywords = /(,|\n|(?:\bנייד\b)|(?:\bטלפון\b)|(?:\bאימייל\b)|(?:\bמייל\b)|(?:\bemail\b)|(?:\bphone\b)|@|\d)/i;
@@ -88,9 +154,9 @@ export function inferFirstLastFromText(text: string): NamePair {
       .filter((t) => heToken(t))
       .filter((t) => !DEFAULT_STOPWORDS.has(t));
 
-    if (he.length >= 2) {
-      // Use last two Hebrew tokens as name (common: "<first> <last>")
-      return { first: he[he.length - 2], last: he[he.length - 1] };
+    if (he.length === 2) {
+      // High confidence only: exactly 2 Hebrew tokens.
+      return { first: he[0], last: he[1] };
     }
     if (he.length === 1) return { first: he[0], last: null };
     return { first: null, last: null };
@@ -119,9 +185,10 @@ export function inferFirstLastFromText(text: string): NamePair {
     .filter(Boolean)
     .filter((t) => !/^(נייד|טלפון|אימייל|מייל)$/i.test(t));
 
-  if (tokens.length < 2 || tokens.length > 5) return { first: null, last: null };
+  // Policy: only return a pair when there are EXACTLY 2 tokens.
+  if (tokens.length !== 2) return { first: null, last: null };
   const first = tokens[0];
-  const last = tokens.slice(1).join(' ').trim();
+  const last = tokens[1];
   if (!first || !last) return { first: null, last: null };
   return { first, last };
 }

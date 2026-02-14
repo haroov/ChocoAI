@@ -442,6 +442,23 @@ export const chocoClalSmbTopicSplitProcessFlows = (() => {
                       '- במקום "נא לציין יישוב." → "באיזה יישוב נמצא משרד רואי החשבון?"',
                     ],
                   },
+                  {
+                    condition: `(() => {
+                      const s = [
+                        userData.business_segment,
+                        userData.business_occupation,
+                        (templateContext && templateContext.__recent_user_text) || '',
+                      ].map((x) => String(x || '').trim()).filter(Boolean).join(' ');
+                      return /הנדסא/i.test(s);
+                    })()`,
+                    promptLines: [
+                      '',
+                      'טרמינולוגיה לקוח — הנדסאים (קריטי):',
+                      '- הלקוח/ה השתמש/ה בביטוי "משרד הנדסאים". חובה לשמור על אותו ניסוח בדיוק לאורך השיחה.',
+                      '- אל תחליף/י ל-"משרד אדריכלים" או ניסוח אחר, גם אם הסגמנט מזוהה כ-"משרד אדריכלים / מהנדסים".',
+                      '- בכל מקום שבו היית כותב/ת "העסק/בית העסק" השתמש/י ב-"משרד הנדסאים" / "המשרד" לפי טבעיות המשפט.',
+                    ],
+                  },
                 ],
               },
             },

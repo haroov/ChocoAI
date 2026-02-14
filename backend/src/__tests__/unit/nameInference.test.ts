@@ -13,6 +13,26 @@ describe('nameInference', () => {
     expect(inferFirstLastFromText(text)).toEqual({ first: 'ליאב', last: 'גפן' });
   });
 
+  test('inferFirstLastFromText does not infer names from insurance intent message', () => {
+    const text = 'הי, אני רוצה ביטוח לאדריכל';
+    expect(inferFirstLastFromText(text)).toEqual({ first: null, last: null });
+  });
+
+  test('inferFirstLastFromText extracts first name near phone without guessing last name', () => {
+    const text = 'הי, אני רוצה ביטוח למשרד הנדסאים.\nיעל 050-6806888';
+    expect(inferFirstLastFromText(text)).toEqual({ first: 'יעל', last: null });
+  });
+
+  test('inferFirstLastFromText keeps 1-2 word first name near phone', () => {
+    const text = 'מבקשת הצעת ביטוח.\nיעל שרה 050-6806888';
+    expect(inferFirstLastFromText(text)).toEqual({ first: 'יעל שרה', last: null });
+  });
+
+  test('inferFirstLastFromText extracts first+last after signature (2 tokens only)', () => {
+    const text = 'היי, אשמח להצעת ביטוח.\nתודה,\nיעל גפן\n050-6806888';
+    expect(inferFirstLastFromText(text)).toEqual({ first: 'יעל', last: 'גפן' });
+  });
+
   test('repairNameFieldsFromInference repairs both first+last when last is a contact label', () => {
     const text = [
       'ליאב גפן',

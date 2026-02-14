@@ -179,6 +179,63 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       // Auto-repair: if the stored first name is a greeting (e.g., "הי"),
       // infer the real name from the conversation's user messages and persist it.
       try {
+        // Auto-clean: if name fields were polluted by intent/segment text BEFORE we ever asked for a name,
+        // clear them to prevent UX like "שלום ביטוח!".
+        const assistantAskedForFirstOrLast = (conversation.messages || []).some((m) => {
+          if (m.role !== 'assistant') return false;
+          const t = String(m.content || '');
+          return /מה\s+השם\s+הפרטי|שם\s*פרטי|מה\s+שם\s+(?:ה)?משפחה|שם\s*(?:ה)?משפחה/i.test(t);
+        });
+        const userExplicitlyProvidedName = (conversation.messages || []).some((m) => {
+          if (m.role !== 'user') return false;
+          const t = String(m.content || '').normalize('NFKC').trim();
+          if (!t) return false;
+          // explicit introduction patterns
+          if (/(?:^|[\s,.;:!?()'"“”׳״-])(?:שמי|קוראים\s+לי)(?:[\s:–—-]+)[\u0590-\u05FF]{2,}/.test(t)) return true;
+          // short name-like messages (1-3 Hebrew tokens, no insurance intent words)
+          const hasIntent = /(הצעת\s*ביטוח|ביטוח|הצעה|פוליסה|רוצה|מבקש|צריך|מחפש|מעוניין|אשמח)/.test(t);
+          if (!hasIntent && t.length <= 40) {
+            const tokens = t
+              .replace(/[“”"׳״']/g, ' ')
+              .trim()
+              .split(/\s+/)
+              .map((x) => x.trim())
+              .filter(Boolean);
+            const he = tokens.filter((x) => /^[\u0590-\u05FF]{2,}$/.test(x));
+            if (tokens.length === he.length && he.length >= 1 && he.length <= 3) return true;
+          }
+          return false;
+        });
+
+        const first0 = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
+        const last0 = String((userData as any).user_last_name || (userData as any).last_name || '').trim();
+        const looksPolluted = Boolean(first0 && last0) && (
+          /ביטוח|הצעה|פוליסה/i.test(first0)
+          || /^ל[\u0590-\u05FF]{2,}$/.test(first0) // Hebrew preposition prefix (likely "למשרד", "לאדריכל", etc.)
+          || /^ל[\u0590-\u05FF]{2,}$/.test(last0)
+        );
+
+        if (!assistantAskedForFirstOrLast && !userExplicitlyProvidedName && looksPolluted && overlayFlowId) {
+          await prisma.userData.deleteMany({
+            where: {
+              userId,
+              flowId: overlayFlowId,
+              key: {
+                in: [
+                  'first_name',
+                  'last_name',
+                  'user_first_name',
+                  'user_last_name',
+                  'proposer_first_name',
+                  'proposer_last_name',
+                ],
+              },
+            },
+          });
+          // Refresh local snapshot for response
+          userData = await flowHelpers.getUserData(userId, overlayFlowId);
+        }
+
         const bad = new Set(['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey']);
         const first = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
         const last = String((userData as any).user_last_name || (userData as any).last_name || '').trim();
@@ -206,10 +263,25 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
             .map((m) => String(m.content || ''))
             .filter(Boolean);
           const joined = texts.join(' | ');
-          // Best-effort: find "<first> <last>" near phone or comma segments.
-          const m = joined.match(/(?:^|[,\n|]\s*)([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})(?=\s*(?:[,\n|]|$))/);
-          const inferredFirst = m ? String(m[1] || '').trim() : '';
-          const inferredLast = m ? String(m[2] || '').trim() : '';
+          // Best-effort: infer name ONLY from explicit self-introduction patterns.
+          // Do NOT guess names from generic intent/segment sentences (e.g., "רוצה ביטוח לאדריכל"),
+          // since Hebrew prepositions/occupations often look like "two tokens" and cause corruption.
+          const inferExplicitNamePair = (hay: string): { first: string; last: string } | null => {
+            const s = String(hay || '').replace(/\s+/g, ' ').trim();
+            if (!s) return null;
+            // "שמי <first> <last>" / "קוראים לי <first> <last>"
+            const mm = s.match(/(?:שמי|קוראים\s+לי)\s+([\u0590-\u05FF]{2,})\s+([\u0590-\u05FF]{2,})(?=\s*(?:[,\n|]|$))/);
+            if (!mm) return null;
+            const first = String(mm[1] || '').trim();
+            const last = String(mm[2] || '').trim();
+            if (!first || !last) return null;
+            // Never infer referral tokens as names.
+            if (referralTokens.has(first.toLowerCase()) || referralTokens.has(last.toLowerCase())) return null;
+            return { first, last };
+          };
+          const inferred = inferExplicitNamePair(joined);
+          const inferredFirst = inferred ? inferred.first : '';
+          const inferredLast = inferred ? inferred.last : '';
           // IMPORTANT:
           // This endpoint runs for UI rendering and must NEVER corrupt canonical name fields.
           // Only repair first_name if it is clearly garbage (needsRepair=true).
@@ -560,6 +632,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
     // We prefer fieldsCollected (stage completion) and fall back to first-seen in userDataSnapshot.
     let fieldProvenance: Record<string, UiFieldProvenance> = {};
     try {
+      const msgsChrono = (conversation.messages || [])
+        .map((m) => ({
+          role: String((m as any).role || ''),
+          createdAt: new Date((m as any).createdAt).getTime(),
+          text: String((m as any).content || ''),
+        }))
+        .filter((m) => Number.isFinite(m.createdAt))
+        .sort((a, b) => a.createdAt - b.createdAt);
+
       const userMessages = (conversation.messages || [])
         .filter((m) => m.role === 'user')
         .map((m) => ({
@@ -568,6 +649,9 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         }))
         .filter((m) => Number.isFinite(m.createdAt))
         .sort((a, b) => a.createdAt - b.createdAt);
+      const firstUserMessageAtIso = userMessages.length > 0
+        ? new Date(userMessages[0].createdAt).toISOString()
+        : null;
       const lastUserMessageAtIso = userMessages.length > 0
         ? new Date(userMessages[userMessages.length - 1].createdAt).toISOString()
         : null;
@@ -634,6 +718,28 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (!k) return null;
         // Client/browser telemetry should be attributed to the start of the conversation (not the last update).
         if (k.startsWith('client_')) return conversation.createdAt?.toISOString?.() || null;
+
+        // Israel Companies Registry enrichment keys should be anchored to the time we collected the company number,
+        // otherwise they drift to the end of "Collected Data" even though they conceptually belong with the reg number.
+        // We anchor them to the first user message that contains the business registration ID / company number digits.
+        if (k === 'il_companies_registry_red_flags' || k.startsWith('il_companies_registry_')) {
+          try {
+            const anchor = (userData as any)?.business_registration_id
+              || (userData as any)?.il_company_number
+              || (userData as any)?.entity_tax_id;
+            const digits = String(anchor ?? '').replace(/\D/g, '');
+            if (digits && digits.length >= 7) {
+              const needle = digits.slice(-7);
+              for (const m of userMessages) {
+                const msgDigits = String(m.text || '').replace(/\D/g, '');
+                if (msgDigits.includes(needle)) return new Date(m.createdAt).toISOString();
+              }
+            }
+          } catch {
+            // best-effort
+          }
+        }
+
         return null;
       };
 
@@ -668,7 +774,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         .replace(/[^\p{L}\p{N}\s@.+-]/gu, '') // keep letters/numbers/basic email chars
         .trim();
 
-      const findUserMessageTsForValue = (value: unknown, mode: 'exact' | 'digits'): string | null => {
+      const findUserMessageTsForValue = (
+        value: unknown,
+        mode: 'exact' | 'digits',
+        opts?: { wholeWord?: boolean },
+      ): string | null => {
         const raw = String(value ?? '').trim();
         if (!raw) return null;
         if (mode === 'digits') {
@@ -676,8 +786,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           if (!d || d.length < 7) return null;
           // Find first message that contains at least last 7 digits (robust to formatting).
           const needle = d.slice(-7);
-          for (let i = userMessages.length - 1; i >= 0; i -= 1) {
-            const m = userMessages[i];
+          for (const m of userMessages) {
             const msgDigits = digitsOnly(m.text);
             if (msgDigits.includes(needle)) return new Date(m.createdAt).toISOString();
           }
@@ -685,9 +794,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         }
         // exact substring match (case-insensitive)
         const needle = normalizeForMatch(raw);
-        for (let i = userMessages.length - 1; i >= 0; i -= 1) {
-          const m = userMessages[i];
-          if (normalizeForMatch(m.text).includes(needle)) return new Date(m.createdAt).toISOString();
+        for (const m of userMessages) {
+          const msg = normalizeForMatch(m.text);
+          if (!opts?.wholeWord) {
+            if (msg.includes(needle)) return new Date(m.createdAt).toISOString();
+          } else {
+            // Whole-word match in normalized space-separated text.
+            const re = new RegExp(`(^|\\s)${needle.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}(?=$|\\s)`, 'i');
+            if (re.test(msg)) return new Date(m.createdAt).toISOString();
+          }
         }
         return null;
       };
@@ -697,12 +812,118 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (!k) return null;
         if (value === null || value === undefined) return null;
 
+        const findReplyAfterAsk = (
+          askRe: RegExp,
+          replyPred: (replyText: string) => boolean,
+        ): string | null => {
+          for (let i = 0; i < msgsChrono.length; i += 1) {
+            const msg = msgsChrono[i];
+            if (msg.role !== 'assistant') continue;
+            if (!askRe.test(String(msg.text || ''))) continue;
+            for (let j = i + 1; j < msgsChrono.length; j += 1) {
+              const next = msgsChrono[j];
+              if (next.role !== 'user') continue;
+              const reply = String(next.text || '').trim();
+              if (!reply) continue;
+              if (replyPred(reply)) return new Date(next.createdAt).toISOString();
+              // Stop at first user reply after ask (avoid matching later unrelated answers)
+              break;
+            }
+          }
+          return null;
+        };
+
+        // New customer status: user may answer "לקוחה חדשה"/"לקוח קיים"/etc.
+        // The stored value is often boolean/normalized label, so we need semantic matching.
+        if (k === 'is_new_customer') {
+          const raw = String(value ?? '').trim().toLowerCase();
+          const asBool = value === true || raw === 'true' || raw === '1' || raw === 'yes' || raw === 'y' || raw === 'new' || raw.includes('חדש');
+          const newRe = /(לקוח(?:ה)?\s*חדש(?:ה)?|לקוחה\s*חדשה|לקוח\s*חדש|new\s*customer|i['’]?m\s+new)/i;
+          const existingRe = /(לקוח(?:ה)?\s*(?:קיים(?:ה)?|ותיק(?:ה)?)|לקוחה\s*קיימת|לקוח\s*קיים|existing\s*customer|i['’]?m\s+an?\s+existing)/i;
+          for (const m of userMessages) {
+            const text = String(m.text || '');
+            if (asBool) {
+              if (newRe.test(text)) return new Date(m.createdAt).toISOString();
+            } else {
+              if (existingRe.test(text)) return new Date(m.createdAt).toISOString();
+            }
+          }
+
+          // Fallback: user answered "כן/לא" after the assistant asked about new/existing customer.
+          const askRe = /(האם|אתה|את)\s*(?:לקוח(?:ה)?\s*(?:חדש(?:ה)?|קיים(?:ה)?|ותיק(?:ה)?))|new\s*customer|existing\s*customer/i;
+          const yesRe = /^(?:כן|כן\.|כן!|yes|y|true|1|חדש(?:ה)?)$/i;
+          const noRe = /^(?:לא|לא\.|לא!|no|n|false|0|קיים(?:ה)?|ותיק(?:ה)?)$/i;
+          for (let i = 0; i < msgsChrono.length; i += 1) {
+            const msg = msgsChrono[i];
+            if (msg.role !== 'assistant') continue;
+            if (!askRe.test(msg.text || '')) continue;
+            // Find the next user message after this assistant prompt.
+            for (let j = i + 1; j < msgsChrono.length; j += 1) {
+              const next = msgsChrono[j];
+              if (next.role !== 'user') continue;
+              const reply = String(next.text || '').trim();
+              if (!reply) continue;
+              const normalized = normalizeForMatch(reply);
+              const token = normalized.split(/\s+/g)[0] || normalized;
+              if (asBool) {
+                if (yesRe.test(token) || /כן|yes|true|חדש/.test(normalized)) return new Date(next.createdAt).toISOString();
+              } else {
+                if (noRe.test(token) || /לא|no|false|קיים|ותיק/.test(normalized)) return new Date(next.createdAt).toISOString();
+              }
+              break;
+            }
+          }
+          return null;
+        }
+
+        // City: user may answer after an explicit question ("באיזה יישוב/עיר...")
+        if (k === 'business_city') {
+          const s = String(value ?? '').trim();
+          if (s.length >= 2 && s.length <= 80) {
+            // Prefer direct value match in user message
+            const direct = findUserMessageTsForValue(s, 'exact', { wholeWord: true });
+            if (direct) return direct;
+          }
+          const askRe = /(יישוב|עיר|באיזה\s*(?:יישוב|עיר))/i;
+          return findReplyAfterAsk(askRe, (reply) => {
+            const normalizedReply = normalizeForMatch(reply);
+            const normalizedVal = normalizeForMatch(String(value ?? ''));
+            if (!normalizedVal) return false;
+            return normalizedReply.includes(normalizedVal) || normalizedVal.includes(normalizedReply);
+          });
+        }
+
+        // PO box: user may answer "אין/לא" (stored value may be empty string).
+        if (k === 'business_po_box') {
+          const askRe = /(ת\.?\s*ד|תיבת\s*דואר|תא\s*דואר|po\s*box)/i;
+          return findReplyAfterAsk(askRe, (reply) => (
+            /^(אין|לא|אין\.|לא\.|none|no)$/i.test(normalizeForMatch(reply))
+            || /אין\s*ת\.?\s*ד|אין\s*תיבת\s*דואר/i.test(reply)
+          ));
+        }
+
+        // Additional locations count: user may answer "אין/לא" meaning 0.
+        if (k === 'business_additional_locations_count') {
+          const n = Number(value);
+          const askRe = /(כתובות\s*נוספות|מיקומים\s*נוספים|סניפים\s*נוספים|additional\s*(?:locations|addresses))/i;
+          if (Number.isFinite(n) && n === 0) {
+            return findReplyAfterAsk(askRe, (reply) => (
+              /^(אין|לא|none|no)$/i.test(normalizeForMatch(reply))
+              || /אין\s+(?:כתובות|מיקומים|סניפים)\s+נוספ/i.test(reply)
+            ));
+          }
+          // If user actually gave a number in text, try to match it.
+          const direct = findUserMessageTsForValue(String(value ?? ''), 'exact');
+          if (direct) return direct;
+          return null;
+        }
+
         // Name keys: if the extracted name appears in a user message, treat as user input.
         if (/(^|_)(first_name|last_name)($|_)/.test(k)) {
           const s = String(value ?? '').trim();
           // Guardrails: avoid matching single letters / very long strings.
           if (s.length >= 2 && s.length <= 40) {
-            return findUserMessageTsForValue(s, 'exact');
+            return findUserMessageTsForValue(s, 'exact', { wholeWord: true });
           }
         }
 
@@ -734,23 +955,10 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       const pickLastUserMessageTsWithin = (startMs: number, endMs: number): string | null => {
         if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return null;
-        // Find last user message in [startMs, endMs]
-        let lo = 0;
-        let hi = userMessages.length - 1;
-        let lastIdx = -1;
-        while (lo <= hi) {
-          const mid = Math.floor((lo + hi) / 2);
-          const t = userMessages[mid].createdAt;
-          if (t < startMs) {
-            lo = mid + 1;
-          } else if (t > endMs) {
-            hi = mid - 1;
-          } else {
-            lastIdx = mid;
-            lo = mid + 1;
-          }
+        // Find first user message in [startMs, endMs] (stable: doesn't drift as more answers arrive in same stage window).
+        for (const m of userMessages) {
+          if (m.createdAt >= startMs && m.createdAt <= endMs) return new Date(m.createdAt).toISOString();
         }
-        if (lastIdx >= 0) return new Date(userMessages[lastIdx].createdAt).toISOString();
         return null;
       };
 
@@ -758,7 +966,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         const inferredContributor = contributorFromStageSlug(trace.stageSlug);
         const startMs = new Date(trace.enteredAt).getTime();
         const endMs = new Date(trace.completedAt || trace.enteredAt).getTime();
-        // Prefer the last user message timestamp within the trace window for user-provided answers.
+        // Prefer the FIRST user message timestamp within the trace window for user-provided answers.
         const userAnswerTs = pickLastUserMessageTsWithin(startMs, endMs);
         const ts = (inferredContributor === 'user' ? userAnswerTs : null)
           || (trace.completedAt || trace.enteredAt)?.toISOString?.()
@@ -796,10 +1004,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         const ts = (inferredContributor === 'user' ? userAnswerTs : null)
           || trace.enteredAt?.toISOString?.()
           || null;
-        for (const [kRaw, v] of Object.entries(snap)) {
+        for (const kRaw of Object.keys(snap).sort((a, b) => String(a).localeCompare(String(b)))) {
           const k = String(kRaw || '').trim();
           if (!k) continue;
           if (out[k]) continue;
+          const v = (snap as any)[kRaw];
           if (!isPresentValue(v)) continue;
           const overrideUserTs = !isSystemDefaultKey(k)
             ? (findUserMessageTsForKeyValue(k, (userData as any)?.[k]) || findUserMessageTsForKeyValue(k, v))
@@ -821,8 +1030,12 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       // Ensure we always have a provenance record for any key currently present in userData.
       const fallbackSystemTs = conversation.updatedAt?.toISOString?.() || new Date().toISOString();
-      const fallbackUserTs = lastUserMessageAtIso || fallbackSystemTs;
-      Object.keys(userData || {}).forEach((kRaw) => {
+      // Stable fallback for user-provided fields when we cannot match the value:
+      // prefer first user message (conversation start), else conversation createdAt, else updatedAt.
+      const fallbackUserTs = firstUserMessageAtIso
+        || conversation.createdAt?.toISOString?.()
+        || fallbackSystemTs;
+      Object.keys(userData || {}).sort((a, b) => String(a).localeCompare(String(b))).forEach((kRaw) => {
         const k = String(kRaw || '').trim();
         if (!k) return;
         if (out[k]) return;
@@ -842,9 +1055,62 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         };
       });
 
+      // Recompute stable sequence ordering by timestamp (best-effort).
+      // This ensures "Collected Data" is ordered by when values were first observed,
+      // rather than alphabetical fallbacks, and prevents system enrichment keys from drifting to the end.
+      try {
+        const parseTs = (ts: unknown): number => {
+          const t = String(ts || '').trim();
+          if (!t) return Number.POSITIVE_INFINITY;
+          const ms = Date.parse(t);
+          return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+        };
+        const entries = Object.entries(out);
+        entries.sort((a, b) => {
+          const ta = parseTs(a[1]?.ts);
+          const tb = parseTs(b[1]?.ts);
+          if (ta !== tb) return ta - tb;
+          const sa = typeof a[1]?.seq === 'number' ? a[1]!.seq! : Number.POSITIVE_INFINITY;
+          const sb = typeof b[1]?.seq === 'number' ? b[1]!.seq! : Number.POSITIVE_INFINITY;
+          if (sa !== sb) return sa - sb;
+          return String(a[0]).localeCompare(String(b[0]));
+        });
+        entries.forEach(([k, prov], idx) => {
+          out[k] = { ...prov, seq: idx };
+        });
+      } catch {
+        // best-effort
+      }
+
       fieldProvenance = out;
     } catch {
       fieldProvenance = {};
+    }
+
+    // Hide internal enrichment/meta keys from "Collected Data" UI, while keeping them in API Log.
+    // NOTE: We only filter the API response payload. The underlying persisted userData remains intact
+    // for internal/debug use and flow logic.
+    try {
+      const hideFromCollectedData = new Set<string>([
+        'business_legal_entity_type_source',
+        'business_registry_source',
+        'business_legal_name',
+        'il_company_number',
+        'il_companies_registry_name_match_should_verify',
+        // Potentially present if we ever persist registrar code fields (should stay API-log-only)
+        'il_companies_registry_city_code',
+        'il_companies_registry_classification_code',
+        'il_companies_registry_country_code',
+        'il_companies_registry_limitation_code',
+        'il_companies_registry_purpose_code',
+        'il_companies_registry_status_code',
+        'il_companies_registry_violator_code',
+      ]);
+      for (const k of hideFromCollectedData) {
+        if (k in (userData as any)) delete (userData as any)[k];
+      }
+    } catch {
+      // best-effort
     }
 
     res.json({

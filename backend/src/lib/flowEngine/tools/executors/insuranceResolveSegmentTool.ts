@@ -3,7 +3,7 @@ import { flowHelpers } from '../../flowHelpers';
 import { ToolExecutor, ToolResult } from '../types';
 import { resolveSegmentFromText } from '../../../insurance/segments/resolveSegmentFromText';
 import { buildQuestionnaireDefaultsFromResolution } from '../../../insurance/segments/buildQuestionnaireDefaults';
-import { formatBusinessSegmentLabelHe, looksLikeNoiseBusinessSegmentHe } from '../../../insurance/segments/formatBusinessSegmentLabelHe';
+import { formatBusinessSegmentLabelHe, shouldOverrideBusinessSegmentHe } from '../../../insurance/segments/formatBusinessSegmentLabelHe';
 
 function isEmpty(v: unknown): boolean {
   if (v === undefined || v === null) return true;
@@ -80,11 +80,9 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
     });
     if (desiredBusinessSegment) {
       const existing = String(payload.business_segment || '').trim();
-      const shouldOverride = !existing
-        || looksLikeNoiseBusinessSegmentHe(existing)
-        || existing.length < desiredBusinessSegment.length
-        || desiredBusinessSegment.includes(existing);
-      if (shouldOverride) saveResults.business_segment = desiredBusinessSegment;
+      if (shouldOverrideBusinessSegmentHe(existing, desiredBusinessSegment)) {
+        saveResults.business_segment = desiredBusinessSegment;
+      }
     }
 
     // If we already have a segment_id but it was low-confidence, allow upgrading it.

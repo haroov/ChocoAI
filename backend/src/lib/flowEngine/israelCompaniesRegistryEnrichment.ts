@@ -161,11 +161,7 @@ export async function enrichIsraelCompaniesRegistryInPlace(params: {
     // If we already enriched, only skip when we don't need to backfill newly-added fields.
     const needsBackfill = !isPresent((existingUserData as any).il_companies_registry_incorporation_date)
       || !isPresent((existingUserData as any).il_companies_registry_name_en)
-      || !isPresent((existingUserData as any).il_companies_registry_name_he)
-      || !isPresent((existingUserData as any).business_city)
-      || !isPresent((existingUserData as any).business_street)
-      || !isPresent((existingUserData as any).business_house_number)
-      || !isPresent((existingUserData as any).business_zip);
+      || !isPresent((existingUserData as any).il_companies_registry_name_he);
 
     if (prevCompanyNumber && prevCompanyNumber === regIdDigits && hasPrevSignals && !needsBackfill) return;
   } catch {
@@ -231,19 +227,31 @@ export async function enrichIsraelCompaniesRegistryInPlace(params: {
   // Store the legal name separately; do not override user-provided trade name.
   if (nameHe) validatedCollectedData.business_legal_name = nameHe;
 
-  // Address from registrar (best-effort). Only fill if missing.
+  // Address from registrar (best-effort).
+  // IMPORTANT: do NOT auto-fill the user's business_* address fields from the registry.
+  // We store it as a suggestion for observability / potential future UX, but the user must provide/confirm address explicitly.
   const hasAny = (k: string): boolean => isPresent((validatedCollectedData as any)[k]) || isPresent((existingUserData as any)[k]);
-  if (!hasAny('business_city') && c.city) validatedCollectedData.business_city = c.city;
-  if (!hasAny('business_street') && c.street) validatedCollectedData.business_street = c.street;
-  if (!hasAny('business_house_number') && c.houseNumber) validatedCollectedData.business_house_number = c.houseNumber;
-  if (!hasAny('business_zip') && c.zip) validatedCollectedData.business_zip = c.zip;
-  if (!hasAny('business_country') && c.country) validatedCollectedData.business_country = c.country;
+  const hasUserEnteredAddress = hasAny('business_user_entered_city')
+    || hasAny('business_user_entered_street')
+    || hasAny('business_user_entered_house_number')
+    || hasAny('business_user_entered_full_address');
 
-  // PO box from registrar: only fill if missing and it looks like a short numeric string.
-  if (!hasAny('business_po_box')) {
-    const po = String(c.poBox ?? '').trim();
-    const digits = po.replace(/\D/g, '');
-    if (digits && digits.length <= 7) validatedCollectedData.business_po_box = digits;
+  if (!hasUserEnteredAddress) {
+    if (!hasAny('business_registry_suggested_city') && c.city) validatedCollectedData.business_registry_suggested_city = c.city;
+    if (!hasAny('business_registry_suggested_street') && c.street) validatedCollectedData.business_registry_suggested_street = c.street;
+    if (!hasAny('business_registry_suggested_house_number') && c.houseNumber) validatedCollectedData.business_registry_suggested_house_number = c.houseNumber;
+    if (!hasAny('business_registry_suggested_zip') && c.zip) validatedCollectedData.business_registry_suggested_zip = c.zip;
+    if (!hasAny('business_country') && c.country) validatedCollectedData.business_country = c.country;
+    if (!hasAny('business_po_box')) {
+      const po = String(c.poBox ?? '').trim();
+      const digits = po.replace(/\D/g, '');
+      if (digits && digits.length <= 7) validatedCollectedData.business_po_box = digits;
+    }
+
+    const suggestedFull = `${String(c.street || '').trim()} ${String(c.houseNumber || '').trim()}, ${String(c.city || '').trim()}`.replace(/\s+/g, ' ').replace(/^,|,$/g, '').trim();
+    if (!hasAny('business_registry_suggested_full_address') && suggestedFull) {
+      validatedCollectedData.business_registry_suggested_full_address = suggestedFull;
+    }
   }
 
   // Name match vs. user-provided business_name
@@ -288,4 +296,3 @@ export async function enrichIsraelCompaniesRegistryInPlace(params: {
   }
   validatedCollectedData.il_companies_registry_red_flags = redFlags;
 }
-

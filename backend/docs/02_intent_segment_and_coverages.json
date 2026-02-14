@@ -527,7 +527,42 @@
       "module_key": "core_business_address",
       "audience": "customer",
       "stage_key": "01_identification",
-      "ask_if": "(business_address_needs_confirmation = true) AND (business_address_needs_correction = \"N\" OR (__present(business_address_needs_correction) = false))",
+      "ask_if": "(business_address_needs_confirmation = true) AND (__present(business_google_suggested_full_address) = false) AND (business_address_needs_correction = \"N\" OR (__present(business_address_needs_correction) = false))",
+      "required_if": null,
+      "priority": 18,
+      "whatsapp_rendering": {
+        "type": "yes_no",
+        "accepted_values": [
+          "כן",
+          "לא",
+          "y",
+          "n",
+          "1",
+          "0",
+          "true",
+          "false"
+        ]
+      }
+    },
+    {
+      "q_id": "Q025C",
+      "page": 1,
+      "section": "Part A",
+      "subsection": "B. Business address",
+      "stage_title_he": "חלק א — כתובת בית העסק",
+      "question_he": "תיקון מוצע מגוגל",
+      "prompt_he": "גוגל מצא התאמה שונה לכתובת שלך: \"{business_google_suggested_full_address}\". האם לעדכן את הכתובת לכתובת שגוגל מצא? (כן/לא)",
+      "field_key_en": "business_address_google_suggestion_accepted",
+      "data_type": "boolean",
+      "input_type": "select",
+      "options_he": "כן, לא",
+      "required": "Y",
+      "required_mode": "required",
+      "json_path": "locations[0].address.google_suggestion_accepted",
+      "module_key": "core_business_address",
+      "audience": "customer",
+      "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = true) AND (__present(business_google_suggested_full_address) = true) AND (__present(business_address_google_suggestion_accepted) = false)",
       "required_if": null,
       "priority": 18,
       "whatsapp_rendering": {
@@ -585,7 +620,7 @@
       "module_key": "core_business_address",
       "audience": "customer",
       "stage_key": "01_identification",
-      "ask_if": "(__present(business_po_box) = false)",
+      "ask_if": "(__present(business_po_box) = false) AND (business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "האם יש לעסק ת.ד? אם כן — כתוב/י את מספר הת.ד. אם לא — כתוב/י \"אין\".",
@@ -613,6 +648,7 @@
       "module_key": "core_business_address",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(__present(business_zip) = false) AND (business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "אם ידוע — נא לציין מיקוד (5 או 7 ספרות, לא מתחיל ב-0). אם לא ידוע — כתוב/י \"לא ידוע\".",

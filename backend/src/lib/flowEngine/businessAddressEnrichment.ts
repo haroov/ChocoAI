@@ -18,6 +18,12 @@ export async function enrichBusinessAddressInPlace(params: {
   const { validatedCollectedData, existingUserData } = params;
   const resolveAddress = params.resolveAddress || resolveBusinessAddressFromGoogle;
 
+  const normalizeForCompare = (s: unknown): string => String(s ?? '')
+    .trim()
+    .replace(/[“”"׳״']/g, '')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+
   const existingCity = String((existingUserData as any)?.business_city || '').trim();
   const existingStreet = String((existingUserData as any)?.business_street || '').trim();
   const existingHouse = String((existingUserData as any)?.business_house_number || '').trim();
@@ -111,32 +117,23 @@ export async function enrichBusinessAddressInPlace(params: {
     try {
       const conversationId = String(params.conversationId || '').trim();
       if (!conversationId) return;
-      const shouldLog = (
-        diag.diagnostics.geocode.status !== 'OK'
-        || (diag.diagnostics.places.attempted && (
-          diag.diagnostics.places.findPlace.status !== 'OK'
-          || diag.diagnostics.places.details.status !== 'OK'
-        ))
-      );
-      if (shouldLog) {
-        const ok = diag.diagnostics.geocode.status === 'OK'
-          && (!diag.diagnostics.places.attempted
-            || (diag.diagnostics.places.findPlace.status === 'OK' && diag.diagnostics.places.details.status === 'OK'));
-        await logApiCall({
-          conversationId,
-          provider: 'google_maps',
-          operation: 'business_address_resolve',
-          request: {
-            query: initialFull,
-            requests: diag.diagnostics.requests,
-          },
-          response: {
-            resolved: diag.resolved,
-            diagnostics: diag.diagnostics,
-          },
-          status: ok ? 'ok' : 'error',
-        });
-      }
+      const ok = diag.diagnostics.geocode.status === 'OK'
+        && (!diag.diagnostics.places.attempted
+          || (diag.diagnostics.places.findPlace.status === 'OK' && diag.diagnostics.places.details.status === 'OK'));
+      await logApiCall({
+        conversationId,
+        provider: 'google_maps',
+        operation: 'business_address_resolve',
+        request: {
+          query: initialFull,
+          requests: diag.diagnostics.requests,
+        },
+        response: {
+          resolved: diag.resolved,
+          diagnostics: diag.diagnostics,
+        },
+        status: ok ? 'ok' : 'error',
+      });
     } catch {
       // best-effort
     }
@@ -161,6 +158,104 @@ export async function enrichBusinessAddressInPlace(params: {
 
   if (!resolved) return;
 
+  // If Google returns a *different* city/street/house than what the user provided,
+  // do NOT auto-override. Store it as a suggestion and ask for confirmation.
+  try {
+    const userConfirmed = validatedCollectedData.business_address_confirmed === true || existingAddressConfirmed;
+    const gCity = String(resolved.city || '').trim();
+    const gStreet = String(resolved.street || '').trim();
+    const gHouse = String(resolved.houseNumber || '').trim();
+
+    const cityDiff = city && gCity && normalizeForCompare(city) !== normalizeForCompare(gCity);
+    const streetDiff = street && gStreet && normalizeForCompare(street) !== normalizeForCompare(gStreet);
+    const houseDiff = houseNumber && gHouse && normalizeForCompare(houseNumber) !== normalizeForCompare(gHouse);
+    const hasSuggestion = Boolean(gCity || gStreet || gHouse || resolved.googleFormattedAddress);
+
+    // If the user's "street" input is place-like (no house number, no digits), we allow Google to normalize it
+    // into a street+house without requiring confirmation (e.g., "קניון עזריאלי" -> "דרך מנחם בגין 132").
+    const userStreetLooksPlaceLike = !houseNumber && !/\d/.test(street) && /[\u0590-\u05FFA-Za-z]/.test(street);
+    const shouldConsiderStreetDiff = !userStreetLooksPlaceLike;
+    const shouldConsiderHouseDiff = Boolean(houseNumber);
+
+    const isMismatch = !userConfirmed
+      && hasSuggestion
+      && (
+        cityDiff
+        || (shouldConsiderStreetDiff && streetDiff)
+        || (shouldConsiderHouseDiff && houseDiff)
+      );
+
+    if (isMismatch) {
+      validatedCollectedData.business_google_match_status = 'mismatch_suggested';
+      if (gCity) validatedCollectedData.business_google_suggested_city = gCity;
+      if (gStreet) validatedCollectedData.business_google_suggested_street = gStreet;
+      if (gHouse) validatedCollectedData.business_google_suggested_house_number = gHouse;
+
+      const suggestedFull = buildBusinessFullAddress({
+        city: gCity || city,
+        street: gStreet || street,
+        houseNumber: gHouse || houseNumber,
+      }) || String(resolved.googleFormattedAddress || '').trim();
+      if (suggestedFull) validatedCollectedData.business_google_suggested_full_address = suggestedFull;
+
+      if (resolved.zip) validatedCollectedData.business_google_suggested_zip = resolved.zip;
+      if (typeof resolved.geoLat === 'number' && typeof resolved.geoLng === 'number') {
+        validatedCollectedData.business_google_suggested_geo_lat = resolved.geoLat;
+        validatedCollectedData.business_google_suggested_geo_lng = resolved.geoLng;
+      }
+      if (resolved.googleFormattedAddress) {
+        validatedCollectedData.business_google_suggested_formatted_address = resolved.googleFormattedAddress;
+      }
+      if (resolved.googlePlaceId) validatedCollectedData.business_google_suggested_place_id = resolved.googlePlaceId;
+      if (resolved.googlePlaceName) validatedCollectedData.business_google_suggested_place_name = resolved.googlePlaceName;
+      if (resolved.googlePlusCodeGlobal) validatedCollectedData.business_google_suggested_plus_code_global = resolved.googlePlusCodeGlobal;
+      if (resolved.googlePlusCodeCompound) validatedCollectedData.business_google_suggested_plus_code_compound = resolved.googlePlusCodeCompound;
+
+      validatedCollectedData.business_address_needs_confirmation = true;
+      validatedCollectedData.business_address_needs_correction = 'N';
+      validatedCollectedData.business_google_match_found = false;
+
+      // Keep user's original business_* fields as-is; do not write business_zip/coords from the mismatched suggestion.
+      return;
+    }
+  } catch {
+    // best-effort
+  }
+
+  // If Google could not return street+house components, treat it as "no match" for verification purposes.
+  // We still allow the flow to continue if the user confirms "as-is".
+  try {
+    const userConfirmed = validatedCollectedData.business_address_confirmed === true || existingAddressConfirmed;
+    const googleHasStreetHouse = Boolean(resolved.street && resolved.houseNumber);
+    if (!userConfirmed && !googleHasStreetHouse) {
+      validatedCollectedData.business_google_match_status = 'no_match_needs_confirmation';
+      validatedCollectedData.business_google_match_found = false;
+
+      // Store whatever Google returned as *suggested* (do not overwrite user values).
+      if (resolved.city) validatedCollectedData.business_google_suggested_city = String(resolved.city).trim();
+      if (resolved.street) validatedCollectedData.business_google_suggested_street = String(resolved.street).trim();
+      if (resolved.houseNumber) validatedCollectedData.business_google_suggested_house_number = String(resolved.houseNumber).trim();
+      if (resolved.zip) validatedCollectedData.business_google_suggested_zip = resolved.zip;
+      if (typeof resolved.geoLat === 'number' && typeof resolved.geoLng === 'number') {
+        validatedCollectedData.business_google_suggested_geo_lat = resolved.geoLat;
+        validatedCollectedData.business_google_suggested_geo_lng = resolved.geoLng;
+      }
+      if (resolved.googleFormattedAddress) {
+        validatedCollectedData.business_google_suggested_formatted_address = resolved.googleFormattedAddress;
+      }
+      if (resolved.googlePlaceId) validatedCollectedData.business_google_suggested_place_id = resolved.googlePlaceId;
+      if (resolved.googlePlaceName) validatedCollectedData.business_google_suggested_place_name = resolved.googlePlaceName;
+      if (resolved.googlePlusCodeGlobal) validatedCollectedData.business_google_suggested_plus_code_global = resolved.googlePlusCodeGlobal;
+      if (resolved.googlePlusCodeCompound) validatedCollectedData.business_google_suggested_plus_code_compound = resolved.googlePlusCodeCompound;
+
+      validatedCollectedData.business_address_needs_confirmation = true;
+      validatedCollectedData.business_address_needs_correction = 'N';
+      return;
+    }
+  } catch {
+    // best-effort
+  }
+
   // Fill missing structured parts first (and allow Places to turn a place-name into street+number).
   const effectiveHouse = String(validatedCollectedData.business_house_number ?? existingHouse ?? '').trim();
   if (!effectiveHouse && resolved.street && resolved.houseNumber) {
@@ -179,6 +274,8 @@ export async function enrichBusinessAddressInPlace(params: {
   }
 
   // Google outputs
+  validatedCollectedData.business_google_match_found = true;
+  validatedCollectedData.business_google_match_status = 'matched';
   if (!zip && resolved.zip) validatedCollectedData.business_zip = resolved.zip;
   if (!hasCoords && typeof resolved.geoLat === 'number' && typeof resolved.geoLng === 'number') {
     validatedCollectedData.business_geo_lat = resolved.geoLat;

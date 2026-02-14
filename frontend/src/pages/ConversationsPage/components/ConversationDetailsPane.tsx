@@ -229,6 +229,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     [traces],
   );
 
+  type FieldSig = { contributor: FieldContributor | null; tsMs: number | null };
+  const fieldSigRef = useRef<Record<string, FieldSig>>({});
+
   const fieldsCollectedProvenanceBySlug = useMemo(() => {
     const map = new Map<string, FieldProvenance>();
     tracesChrono.forEach((trace) => {
@@ -454,6 +457,21 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     user_has_israeli_id: 'יש תעודת זהות?',
     insured_relation_to_business: 'תפקיד בעסק',
     referral_source: 'מקור הגעה',
+    business_google_suggested_full_address: 'הצעת תיקון מגוגל — כתובת',
+    business_google_suggested_city: 'הצעת תיקון מגוגל — יישוב',
+    business_google_suggested_street: 'הצעת תיקון מגוגל — רחוב',
+    business_google_suggested_house_number: 'הצעת תיקון מגוגל — מספר בית',
+    business_google_match_status: 'סטטוס התאמה בגוגל',
+    business_google_match_found: 'נמצאה התאמה בגוגל?',
+    business_user_entered_city: 'הוזן ע״י הלקוח — יישוב',
+    business_user_entered_street: 'הוזן ע״י הלקוח — רחוב',
+    business_user_entered_house_number: 'הוזן ע״י הלקוח — מספר בית',
+    business_user_entered_full_address: 'הוזן ע״י הלקוח — כתובת מלאה',
+    business_registry_suggested_full_address: 'כתובת מהמרשם (הצעה) — כתובת מלאה',
+    business_registry_suggested_city: 'כתובת מהמרשם (הצעה) — יישוב',
+    business_registry_suggested_street: 'כתובת מהמרשם (הצעה) — רחוב',
+    business_registry_suggested_house_number: 'כתובת מהמרשם (הצעה) — מספר בית',
+    business_registry_suggested_zip: 'כתובת מהמרשם (הצעה) — מיקוד',
   };
 
   const labelForField = (field: string): string => {
@@ -557,14 +575,70 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     keys
       .filter((k) => k in obj)
       .map((k) => [k, obj[k]])
-      .filter(([_, v]) => v !== null && v !== undefined && v !== ''),
+      .filter(([k, v]) => {
+        if (v === null || v === undefined) return false;
+        // Allow explicit empty-string answers for some keys (e.g., "אין ת\"ד").
+        if (v === '' && !['business_po_box'].includes(String(k))) return false;
+        return true;
+      }),
   );
 
   const pickByPredicate = (
     obj: Record<string, unknown>,
     pred: (k: string, v: unknown) => boolean,
   ) => Object.fromEntries(
-    Object.entries(obj).filter(([k, v]) => pred(k, v) && v !== null && v !== undefined && v !== ''),
+    Object.entries(obj).filter(([k, v]) => {
+      if (!pred(k, v)) return false;
+      if (v === null || v === undefined) return false;
+      if (v === '' && !['business_po_box'].includes(String(k))) return false;
+      return true;
+    }),
+  );
+
+  // Internal enrichment/meta keys that should not show under "Collected Data" (they remain in API Log).
+  const hiddenCollectedDataKeys = new Set<string>([
+    'business_legal_entity_type_source',
+    'business_registry_source',
+    'business_legal_name',
+    'il_company_number',
+    'il_companies_registry_name_match_should_verify',
+    'il_companies_registry_city_code',
+    'il_companies_registry_classification_code',
+    'il_companies_registry_country_code',
+    'il_companies_registry_limitation_code',
+    'il_companies_registry_purpose_code',
+    'il_companies_registry_status_code',
+    'il_companies_registry_violator_code',
+
+    // Google diagnostics / internal glue (keep in API Log only)
+    'business_google_api_key_present',
+    'business_google_geocode_status',
+    'business_google_geocode_error_message',
+    'business_google_match_found',
+    'business_google_places_attempted',
+    'business_google_places_find_status',
+    'business_google_places_find_error_message',
+    'business_google_places_details_status',
+    'business_google_places_details_error_message',
+    'business_google_place_query',
+    'business_google_place_id',
+    'business_google_place_name',
+    'business_google_plus_code_global',
+    'business_google_plus_code_compound',
+    'business_google_suggested_place_id',
+    'business_google_suggested_place_name',
+    'business_google_suggested_plus_code_global',
+    'business_google_suggested_plus_code_compound',
+
+    // User-entered audit keys (stored for debugging, but not necessary to show in UI)
+    'business_user_entered_city',
+    'business_user_entered_street',
+    'business_user_entered_house_number',
+    'business_user_entered_full_address',
+  ]);
+
+  const stripHiddenCollectedKeys = (data: Record<string, unknown>): Record<string, unknown> => Object.fromEntries(
+    Object.entries(data).filter(([k]) => !hiddenCollectedDataKeys.has(String(k))),
   );
 
   // Split collected data into: User (contact/device) vs Insured (business + insurance payload).
@@ -624,12 +698,12 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'third_party_limit_ils',
   ];
 
-  const userOnlyData = {
+  const userOnlyData = stripHiddenCollectedKeys({
     ...pickNonEmptyKeys(displayUserData, userDataKeys),
     ...pickByPredicate(displayUserData, (k) => /(user_agent|browser|device|os)/i.test(k)),
-  };
+  });
 
-  const insuredData = {
+  const insuredData = stripHiddenCollectedKeys({
     ...pickNonEmptyKeys(displayUserData, insuredExplicitKeys),
     ...pickByPredicate(displayUserData, (k) => (
       /^(business_|legal_)/.test(k)
@@ -639,7 +713,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       || /^(insured_)/.test(k)
       || /(_sum_insured_|_limit_)/.test(k)
     )),
-  };
+  });
 
   // Fields explicitly collected by any flow/stage in this conversation (union of fieldsToCollect).
   // These are conceptually part of the insured/candidate payload (not "User contact").
@@ -656,7 +730,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     'email',
   ]);
   const flowDefinedInsuredKeys = flowDefinedFieldKeys.filter((k) => !excludeFromInsured.has(k));
-  const flowDefinedInsuredData = pickNonEmptyKeys(displayUserData, flowDefinedInsuredKeys);
+  const flowDefinedInsuredData = stripHiddenCollectedKeys(pickNonEmptyKeys(displayUserData, flowDefinedInsuredKeys));
   const insuredDataMerged = {
     ...insuredData,
     ...flowDefinedInsuredData,
@@ -747,6 +821,11 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   };
 
   const formatCollectedValue = (key: string, value: unknown) => {
+    if (key === 'business_po_box') {
+      const s = String(value ?? '').trim();
+      if (!s) return 'אין';
+      return s;
+    }
     if (key === 'legal_id_type') {
       const v = String(value || '').trim();
       if (v === 'AM') return 'עוסק מורשה';
@@ -1325,7 +1404,10 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                                       {trace.toolsExecuted.map((tool, idx: number) => (
                                         <div
                                           key={idx}
-                                          className="flex items-center gap-2 p-2 bg-gray-50 rounded border border-gray-200"
+                                          className={[
+                                            'flex items-center gap-2 p-2 bg-gray-50 rounded',
+                                            'border border-gray-200',
+                                          ].join(' ')}
                                         >
                                           <WrenchScrewdriverIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
                                           <div className="flex-1 min-w-0">
@@ -1465,30 +1547,78 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     setFieldOrderByContainer((prev) => {
       let changed = false;
       const next: Record<string, string[]> = { ...prev };
-      const active = new Set(containers.map((c) => c.id));
-
-      // cleanup removed containers
-      Object.keys(next).forEach((id) => {
-        if (!active.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      });
 
       const arraysEqual = (a: string[], b: string[]) => (
         a.length === b.length && a.every((v, i) => v === b[i])
       );
 
       containers.forEach(({ id, keys }) => {
+        const hadPrev = Object.prototype.hasOwnProperty.call(prev, id);
         const prevOrder = prev[id] || [];
         const keySet = new Set(keys);
-        const kept = prevOrder.filter((k) => keySet.has(k));
-        const keptSet = new Set(kept);
-        const appended = keys.filter((k) => !keptSet.has(k));
-        const order = [...kept, ...appended];
+        let order: string[];
+
+        const sigFor = (key: string): FieldSig => {
+          const prov = provenanceForField(key);
+          const tsMs = prov?.ts ? new Date(prov.ts).getTime() : null;
+          const contributor = prov?.contributor || null;
+          return { contributor, tsMs: Number.isFinite(tsMs as number) ? tsMs : null };
+        };
+
+        const shouldPromote = (containerId: string, key: string): boolean => {
+          const sigKey = `${containerId}::${key}`;
+          const prevSig = fieldSigRef.current[sigKey];
+          if (!prevSig) return false;
+          const nextSig = sigFor(key);
+          if (!nextSig.contributor && nextSig.tsMs == null) return false;
+          // Promote when a field transitions system->user, or when its timestamp advances.
+          if (prevSig.contributor === 'system' && nextSig.contributor === 'user') return true;
+          const prevTs = prevSig.tsMs ?? -1;
+          const nextTs = nextSig.tsMs ?? -1;
+          if (nextTs > prevTs) return true;
+          return false;
+        };
+
+        if (!hadPrev) {
+          // First time we see this container: initialize deterministically from backend seq if available,
+          // otherwise by key name. This makes ordering stable across refresh.
+          order = [...keys].sort((a, b) => {
+            const pa = provenanceForField(a);
+            const pb = provenanceForField(b);
+            const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
+            const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
+            if (sa !== sb) return sa - sb;
+            return String(a).localeCompare(String(b));
+          });
+        } else {
+          // Keep existing order; append any newly seen keys to the end.
+          const keptAll = prevOrder.filter((k) => keySet.has(k));
+          const promoted = keptAll.filter((k) => shouldPromote(id, k));
+          const kept = keptAll.filter((k) => !promoted.includes(k));
+          const keptSet = new Set(kept);
+          const appended = keys
+            .filter((k) => !keptSet.has(k))
+            .sort((a, b) => {
+              const pa = provenanceForField(a);
+              const pb = provenanceForField(b);
+              const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
+              const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
+              if (sa !== sb) return sa - sb;
+              return String(a).localeCompare(String(b));
+            });
+          // Keep order stable, append new keys, then append "newly collected" (promoted) keys at the end.
+          order = [...kept, ...appended, ...promoted];
+        }
+
         if (!arraysEqual(prevOrder, order)) {
           next[id] = order;
           changed = true;
+        }
+
+        // Update signatures for stability across polls.
+        for (const key of keys) {
+          const sigKey = `${id}::${key}`;
+          fieldSigRef.current[sigKey] = sigFor(key);
         }
       });
 
@@ -1549,23 +1679,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                 {isFlattened ? (() => {
                   const instance = entityType.instances[0];
                   const containerId = `${entityKey}::${instance.id}`;
-                  const firstSeenOrder = fieldOrderByContainer[containerId] || [];
-                  const firstSeenIndex = new Map<string, number>(firstSeenOrder.map((k, idx) => [k, idx]));
-                  const keys = Object.keys(instance.data || {});
-                  const orderedKeys = [...keys].sort((a, b) => {
-                    const pa = provenanceForField(a);
-                    const pb = provenanceForField(b);
-                    const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
-                    const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
-                    if (ta !== tb) return ta - tb; // oldest-first => newest ends up last
-                    const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
-                    const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
-                    if (sa !== sb) return sa - sb;
-                    const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
-                    const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
-                    if (ra !== rb) return ra - rb;
-                    return String(a).localeCompare(String(b));
-                  });
+                  const order = fieldOrderByContainer[containerId] || [];
+                  const orderedKeys = (order.length > 0 ? order : Object.keys(instance.data || {}))
+                    .filter((k) => k in (instance.data || {}));
 
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -1579,12 +1695,19 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                               const prov = provenanceForField(key);
                               const isMasked = maskedFields.has(String(key).toLowerCase());
                               const formattedValue = formatCollectedValue(key, value);
-                              const metaText = `${prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'} · ${prov?.contributor || 'system'}`;
+                              const metaText = [
+                                (prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'),
+                                (prov?.contributor || 'system'),
+                              ].join(' · ');
                               const segmentId = (() => {
                                 if (key !== 'business_segment' || isMasked) return null;
-                                const direct = String((instance.data as any)?.segment_id ?? '').trim();
+                                const direct = String(
+                                  (instance.data as Record<string, unknown>)?.['segment_id'] ?? '',
+                                ).trim();
                                 if (direct) return direct;
-                                const fromConversation = String((displayUserData as any)?.segment_id ?? '').trim();
+                                const fromConversation = String(
+                                  (displayUserData as Record<string, unknown>)?.['segment_id'] ?? '',
+                                ).trim();
                                 return fromConversation || null;
                               })();
 
@@ -1688,36 +1811,29 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                         <div className="border-t border-gray-200 px-3 py-2 space-y-2">
                           {(() => {
                             const containerId = `${entityKey}::${instance.id}`;
-                            const firstSeenOrder = fieldOrderByContainer[containerId] || [];
-                            const firstSeenIndex = new Map<string, number>(firstSeenOrder.map((k, idx) => [k, idx]));
-                            const keys = Object.keys(instance.data || {});
-                            const orderedKeys = [...keys].sort((a, b) => {
-                              const pa = provenanceForField(a);
-                              const pb = provenanceForField(b);
-                              const ta = pa?.ts ? new Date(pa.ts).getTime() : Number.POSITIVE_INFINITY;
-                              const tb = pb?.ts ? new Date(pb.ts).getTime() : Number.POSITIVE_INFINITY;
-                              if (ta !== tb) return ta - tb; // oldest-first
-                              const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
-                              const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
-                              if (sa !== sb) return sa - sb;
-                              const ra = firstSeenIndex.get(a) ?? Number.POSITIVE_INFINITY;
-                              const rb = firstSeenIndex.get(b) ?? Number.POSITIVE_INFINITY;
-                              if (ra !== rb) return ra - rb;
-                              return String(a).localeCompare(String(b));
-                            });
+                            const order = fieldOrderByContainer[containerId] || [];
+                            const orderedKeys = (order.length > 0 ? order : Object.keys(instance.data || {}))
+                              .filter((k) => k in (instance.data || {}));
                             return orderedKeys.map((key) => {
                               const value = (instance.data || {})[key];
                               const prov = provenanceForField(key);
                               const isMasked = maskedFields.has(key.toLowerCase());
                               const formattedValue = formatCollectedValue(key, value);
-                              const metaText = `${prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'} · ${prov?.contributor || 'system'}`;
+                              const metaText = [
+                                (prov?.ts ? moment(prov.ts).format('DD/MM/YYYY, HH:mm:ss') : '—'),
+                                (prov?.contributor || 'system'),
+                              ].join(' · ');
                               const segmentId = (() => {
                                 if (key !== 'business_segment' || isMasked) return null;
                                 // Prefer explicit resolved segment_id if present in this entity snapshot.
-                                const direct = String((instance.data as any)?.segment_id ?? '').trim();
+                                const direct = String(
+                                  (instance.data as Record<string, unknown>)?.['segment_id'] ?? '',
+                                ).trim();
                                 if (direct) return direct;
-                                // Fallback: use the conversation-level resolved segment_id (written by the backend flow router).
-                                const fromConversation = String((displayUserData as any)?.segment_id ?? '').trim();
+                                // Fallback: use the conversation-level resolved segment_id.
+                                const fromConversation = String(
+                                  (displayUserData as Record<string, unknown>)?.['segment_id'] ?? '',
+                                ).trim();
                                 return fromConversation || null;
                               })();
                               return (
@@ -1867,9 +1983,9 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
       style={{ width: detailsWidthPx }}
     >
       {/* Resize handle */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
+      <button
+        type="button"
+        aria-label="Resize details pane"
         title="Drag to resize"
         className={[
           'absolute left-0 top-0 h-full w-1',

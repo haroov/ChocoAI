@@ -1,4 +1,8 @@
-import { formatBusinessSegmentLabelHe, looksLikeNoiseBusinessSegmentHe } from '../../lib/insurance/segments/formatBusinessSegmentLabelHe';
+import {
+  formatBusinessSegmentLabelHe,
+  looksLikeNoiseBusinessSegmentHe,
+  shouldOverrideBusinessSegmentHe,
+} from '../../lib/insurance/segments/formatBusinessSegmentLabelHe';
 
 describe('formatBusinessSegmentLabelHe', () => {
   test('prefixes office label for professional_offices (insurance agent)', () => {
@@ -31,3 +35,17 @@ describe('looksLikeNoiseBusinessSegmentHe', () => {
   });
 });
 
+describe('shouldOverrideBusinessSegmentHe', () => {
+  test('overrides when existing is noise', () => {
+    expect(shouldOverrideBusinessSegmentHe('לביטוח', 'משרד סוכן ביטוח')).toBe(true);
+    expect(shouldOverrideBusinessSegmentHe('', 'משרד סוכן ביטוח')).toBe(true);
+  });
+
+  test('does not override when user terminology differs meaningfully (משרד הנדסאים)', () => {
+    expect(shouldOverrideBusinessSegmentHe('משרד הנדסאים', 'משרד אדריכלים')).toBe(false);
+  });
+
+  test('overrides when desired is a refinement that includes existing (prefixing משרד)', () => {
+    expect(shouldOverrideBusinessSegmentHe('אדריכלים', 'משרד אדריכלים')).toBe(true);
+  });
+});

@@ -185,22 +185,85 @@ class LlmService {
       if (noPriorQuestion && msgRaw) {
         const out: Record<string, unknown> = {};
 
-        // Name: look for two Hebrew tokens at the end (e.g., "... תודה רבה, עופרי גפן.").
+        // Name (initial prompt only):
+        // - Ignore intent/segment words (e.g., "ביטוח למשרד הנדסאים").
+        // - Only extract from a likely signature/contact area:
+        //   - After "תודה/בתודה/בברכה/Regards/Thanks"
+        //   - Or right before a phone/email token (common contact block)
+        // - High confidence rule: only if we end up with exactly 2 Hebrew name tokens -> first+last.
+        //   If exactly 1 token -> first only. Otherwise -> don't set any names.
         if (hasField('first_name') || hasField('last_name')) {
-          const tail = msgRaw
-            .replace(/[“”"׳״']/g, '')
+          const normalize = (s: string) => String(s || '')
+            .normalize('NFKC')
+            .replace(/[“”"׳״'’`´]/g, '')
             .replace(/[.,;:!?()[\]{}]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
-          const toks = tail.split(' ').filter(Boolean);
-          const he = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
-          const stop = new Set(['תודה', 'רבה', 'שלום', 'הי', 'היי', 'אהלן', 'אני', 'מבקשת', 'מבקש', 'רוצה']);
-          const filtered = toks.filter((t) => he(t) && !stop.has(t));
-          if (filtered.length >= 2) {
-            const last = filtered[filtered.length - 1];
-            const first = filtered[filtered.length - 2];
-            if (hasField('first_name')) out.first_name = first;
-            if (hasField('last_name')) out.last_name = last;
+
+          const isHebrewToken = (t: string) => /^[\u0590-\u05FF]{2,}$/.test(t);
+
+          const domainBad = new Set<string>([
+            // intent/insurance
+            'ביטוח', 'הצעה', 'הצעת', 'פוליסה',
+            // business/segment nouns
+            'משרד', 'חנות', 'מסעדה', 'קליניקה', 'סטודיו', 'מחסן', 'מרלוג', 'עסק',
+            'אדריכל', 'אדריכלים', 'הנדסאי', 'הנדסאים',
+            'סוכן', 'סוכני', 'סוכנות',
+            'עורך', 'עורכי', 'דין', 'עו״ד', 'עו"ד',
+            // common relation words
+            'בעלים', 'שותף', 'מנהל', 'מורשה',
+          ]);
+          const stop = new Set<string>([
+            'תודה', 'רבה', 'בתודה', 'בברכה',
+            'שלום', 'הי', 'היי', 'אהלן', 'הלו',
+            'אני', 'מבקש', 'מבקשת', 'רוצה', 'צריך', 'אשמח', 'מעוניין', 'מחפש',
+            'להצעת', 'הצעת', 'הצעה', 'ביטוח',
+            'למשרד', 'לעסק', 'לביטוח', 'לאדריכל', 'לאדריכלים', 'להנדסאים', 'להנדסאי',
+          ]);
+          const isBadNameToken = (tok: string): boolean => {
+            const t = tok.trim();
+            if (!t) return true;
+            if (!isHebrewToken(t)) return true;
+            if (stop.has(t)) return true;
+            if (domainBad.has(t)) return true;
+            // Hebrew preposition "ל" prefix for domain nouns (e.g. "למשרד", "לאדריכל").
+            if (/^ל[\u0590-\u05FF]{2,}$/.test(t)) {
+              const rest = t.slice(1);
+              if (domainBad.has(rest) || stop.has(rest)) return true;
+              if (rest.startsWith('ה') && (domainBad.has(rest.slice(1)) || stop.has(rest.slice(1)))) return true;
+            }
+            return false;
+          };
+
+          const extractCandidateZone = (): string => {
+            const s = String(msgRaw || '').normalize('NFKC');
+            // Prefer signature area after last signature marker.
+            const sigRe = /(תודה|בתודה|בברכה|regards|thanks)/ig;
+            let lastIdx = -1;
+            let m: RegExpExecArray | null;
+            while ((m = sigRe.exec(s)) !== null) lastIdx = m.index + m[0].length;
+            if (lastIdx >= 0) return s.slice(lastIdx);
+
+            // Otherwise, take tail before contact token (email/phone).
+            const contactIdx = s.search(/@|\d{7,}/);
+            if (contactIdx >= 0) return s.slice(0, contactIdx);
+
+            // Fallback: last line / clause.
+            const parts = s.split(/[\n|,]+/);
+            return parts[parts.length - 1] || s;
+          };
+
+          const zone = normalize(extractCandidateZone());
+          const tokens = zone.split(' ').map((t) => t.trim()).filter(Boolean);
+          const candidates = tokens.filter((t) => !isBadNameToken(t));
+
+          // Only consider the last 2 candidates (signature/contact area usually ends with the name).
+          const tail = candidates.slice(-2);
+          if (tail.length === 2) {
+            if (hasField('first_name')) out.first_name = tail[0];
+            if (hasField('last_name')) out.last_name = tail[1];
+          } else if (tail.length === 1) {
+            if (hasField('first_name')) out.first_name = tail[0];
           }
         }
 
@@ -389,6 +452,37 @@ Example of empty fields:
       }
     });
 
+    // Deterministic extraction for explicit self-corrections in Hebrew.
+    // Users often send a multi-line message like:
+    // "אני לקוחה חדשה\nהשם הפרטי שלי הוא יעל\nשם המשפחה שלי הוא פינקלמן - נייגר"
+    // In such cases, we should trust these explicit statements even if the last assistant question was different.
+    try {
+      const msgRaw = String(options.message || '').normalize('NFKC');
+      const takeLineValue = (re: RegExp): string => {
+        const lines = msgRaw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        for (const line of lines) {
+          const m = line.match(re);
+          if (m?.[1]) return String(m[1] || '').trim();
+        }
+        return '';
+      };
+
+      const normalizeNameValue = (v: string): string => String(v || '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s*[-–—]\s*/g, ' - ')
+        .trim()
+        .replace(/^[-–—]\s*/g, '')
+        .trim();
+
+      const explicitFirst = normalizeNameValue(takeLineValue(/(?:^|[\s,.;:!?()'"“”׳״-])(?:השם\s*הפרטי\s*שלי\s*הוא|שם\s*פרטי\s*שלי\s*הוא)\s+(.+)$/i));
+      const explicitLast = normalizeNameValue(takeLineValue(/(?:^|[\s,.;:!?()'"“”׳״-])(?:שם\s*(?:ה)?משפחה\s*שלי\s*הוא|השם\s*(?:ה)?משפחה\s*שלי\s*הוא)\s+(.+)$/i));
+
+      if (explicitFirst) (json as any).first_name = explicitFirst;
+      if (explicitLast) (json as any).last_name = explicitLast;
+    } catch {
+      // best-effort
+    }
+
     // Domain guardrail (Israel SMB):
     // If the last assistant question asked for a business registration ID (VAT/Company ID),
     // and the model put the numeric answer into business_phone, remap it.
@@ -487,7 +581,15 @@ Example of empty fields:
       }
       if (/שטח.*מ[\"״׳']?ר|sqm|square\s*meters?/i.test(lastQ)) addIfExists('premises_area_sqm');
       if (/חומרי\s*הבנייה|חומרי\s*בנייה|המבנה\s*בנוי|building\s*materials?/i.test(lastQ)) addIfExists('building_materials');
-      if (/חומרי\s*הגג|הגג\s*בנוי|roof\s*materials?/i.test(lastQ)) addIfExists('roof_materials');
+      // Roof materials questions are phrased inconsistently across flows ("חומרי הגג" / "פרטי הגג" / "עבור הגג: ...").
+      // Detect both the explicit phrasing and the common options list.
+      if (
+        /חומרי\s*הגג|הגג\s*בנוי|roof\s*materials?/i.test(lastQ)
+        || (/גג/.test(lastQ) && /בטון/.test(lastQ) && /רעפים/.test(lastQ))
+        || (/גג/.test(lastQ) && (/אסבסט/.test(lastQ) || /אסכורית/.test(lastQ) || /פח/.test(lastQ)))
+      ) {
+        addIfExists('roof_materials');
+      }
       if (/פל[-\s]?קל|פלקל|pal\s*kal/i.test(lastQ)) addIfExists('pal_kal_construction', 'pal_kal_details');
       if (/העסק\s*בקומה|\bbusiness\s*floor\b|(?<!total\s*)\bfloor\b/i.test(lastQ)) addIfExists('business_floor');
       if (/מתוך\s*קומות|total\s*floors|\bfloors\b/i.test(lastQ)) addIfExists('building_total_floors');
@@ -530,6 +632,14 @@ Example of empty fields:
       if (/טלפון|נייד|מספר\s*נייד|mobile/i.test(lastQ)) addIfExists('business_phone', 'phone', 'user_phone', 'mobile_phone');
       // Relation/role question can be phrased with segment nouns (office/clinic/studio/store/etc.)
       if (/התפקיד\s*שלך\s*(?:בעסק|ב(?:ה)?משרד|ב(?:ה)?סוכנות(?:\s*הביטוח)?|ב(?:ה)?קליניקה|ב(?:ה)?מרפאה|ב(?:ה)?סטודיו|ב(?:ה)?חנות|ב(?:ה)?מסעדה|בבית\s*הקפה|ב(?:ה)?סדנה|בבית\s*המלאכה|ב(?:ה)?מחסן|ב(?:ה)?מרלוג)|זיקת\s*המציע/i.test(lastQ)) addIfExists('insured_relation_to_business');
+      // Building/property numeric fields: collect ONLY when explicitly asked.
+      if (/קומה|floor|level/i.test(lastQ)) addIfExists('business_floor');
+      if (/שטח|מ["״׳']?ר|מ״ר|sqm|square\s*meters|area/i.test(lastQ)) addIfExists('premises_area_sqm');
+      if (/שנת\s*בנייה|נבנה|year\s*built|construction\s*year/i.test(lastQ)) addIfExists('building_year_built');
+      if (/מספר\s*קומות|כמה\s*קומות|total\s*floors/i.test(lastQ)) addIfExists('building_total_floors');
+      // Roof/building materials choices
+      if (/גג|roof/i.test(lastQ)) addIfExists('roof_materials', 'roof_materials_other');
+      if (/חומרי\s*הבנייה|building\s*materials/i.test(lastQ)) addIfExists('building_materials', 'building_materials_other');
       // Customer status question can be phrased in masculine/feminine:
       // "האם אתה לקוח חדש או קיים?" / "האם את לקוחה חדשה או קיימת?"
       if (/לקוח(?:ה)?\s*חדש(?:ה)?|לקוח(?:ה)?\s*(?:קיים|קיימת|ותיק|ותיקה)|האם\s+את(?:ה)?\s+לקוח(?:ה)?/i.test(lastQ)) {
@@ -619,6 +729,25 @@ Example of empty fields:
         const hasAnyName = nameKeys.some((k) => Object.prototype.hasOwnProperty.call(json, k));
         const askedForNameNow = expected.has('first_name') || expected.has('last_name');
 
+        const isLikelyPollutedNameToken = (raw: string): boolean => {
+          const s = String(raw || '').normalize('NFKC').trim();
+          if (!s) return false;
+          const lowered = s.toLowerCase();
+          // Domain stopwords / segment tokens (Hebrew)
+          const bad = new Set([
+            'ביטוח', 'הצעה', 'הצעת', 'פוליסה',
+            'משרד', 'עסק', 'חנות', 'מסעדה', 'קליניקה', 'סטודיו', 'מחסן', 'מרלוג',
+            'אדריכל', 'אדריכלים', 'הנדסאי', 'הנדסאים',
+            'עורך', 'עורכי', 'דין', 'עו״ד', 'עו"ד',
+          ]);
+          if (bad.has(lowered)) return true;
+          // Hebrew preposition-prefix tokens: "למשרד", "לאדריכל" etc
+          if (/^ל[\u0590-\u05FF]{2,}$/.test(s)) return true;
+          // Values starting with a dash are almost always partial extraction ("- נייגר")
+          if (/^[-–—]\s*/.test(s)) return true;
+          return false;
+        };
+
         const looksLikeUserProvidedNameHe = (raw: string): boolean => {
           const s = String(raw || '').normalize('NFKC').trim();
           if (!s) return false;
@@ -636,7 +765,20 @@ Example of empty fields:
 
           // Contact blocks: allow name extraction if the message contains clear contact signals.
           const hasContactSignal = /@|\d{7,}/.test(s);
-          if (hasContactSignal) return true;
+          // BUT: don't accept obviously polluted "names" just because a phone/email exists.
+          if (hasContactSignal) {
+            // If the message contains at least one plausible name token, treat as user-provided.
+            // Otherwise, we might keep values like "למשרד"/"ביטוח" as a name.
+            const tokens = s
+              .replace(/[“”"׳״']/g, ' ')
+              .trim()
+              .split(/\s+/)
+              .map((t) => t.trim())
+              .filter(Boolean)
+              .filter((t) => /^[\u0590-\u05FF]{2,}$/.test(t))
+              .filter((t) => !isLikelyPollutedNameToken(t));
+            if (tokens.length > 0) return true;
+          }
 
           // Short name-like message: 1-3 Hebrew tokens, no quote/insurance intent keywords.
           const hasInsuranceIntent = /(הצעת\s*ביטוח|ביטוח|הצעה|פוליסה|לעסק|למשרד|לביטוח)/.test(s);
@@ -656,6 +798,15 @@ Example of empty fields:
 
         if (hasAnyName && !askedForNameNow && !looksLikeUserProvidedNameHe(msgRaw)) {
           for (const k of nameKeys) delete (json as any)[k];
+        }
+
+        // Additional safety: even if we think the user provided a name, never keep obviously polluted name tokens
+        // unless we explicitly asked for the name now.
+        if (!askedForNameNow) {
+          for (const k of nameKeys) {
+            const v = (json as any)[k];
+            if (typeof v === 'string' && isLikelyPollutedNameToken(v)) delete (json as any)[k];
+          }
         }
       } catch {
         // best-effort
@@ -881,6 +1032,37 @@ Example of empty fields:
           } else {
             // Do not persist invalid enum values (prevents cross-field pollution overwriting a required enum).
             delete (json as any).business_interruption_type;
+          }
+        }
+      }
+
+      // Premises / environment (Flow 04 and similar):
+      // - environment_description / neighboring_businesses: store full reply deterministically for short answers.
+      for (const k of ['environment_description', 'neighboring_businesses'] as const) {
+        if (expected.has(k) && hasField(k)) {
+          const isShortAnswer = msgRaw.length <= 300 && !msgRaw.includes('\n');
+          const multiField = msgRaw.includes('\n') || /@/.test(msgRaw);
+          if (isShortAnswer && !multiField && msgRaw) {
+            (json as any)[k] = msgRaw.trim();
+            for (const kk of Object.keys(json)) {
+              if (kk !== k) delete (json as any)[kk];
+            }
+          }
+        }
+      }
+
+      // - below_ground: accept natural language answers like "בגובה הקרקע" as "לא".
+      if (expected.has('below_ground') && hasField('below_ground')) {
+        const isShortAnswer = msgRaw.length <= 80 && !msgRaw.includes('\n');
+        if (isShortAnswer && msgRaw) {
+          const t = msgRaw.trim();
+          const looksTrue = /מרתף|מתחת\s*ל(?:קרקע|אדמה)|נמוך\s*מגובה\s*פני\s*הקרקע/i.test(t);
+          const looksFalse = /בגובה\s*הקרקע|על\s*הקרקע|קומת\s*קרקע/i.test(t);
+          if (looksTrue || looksFalse) {
+            (json as any).below_ground = Boolean(looksTrue && !looksFalse);
+            for (const kk of Object.keys(json)) {
+              if (kk !== 'below_ground') delete (json as any)[kk];
+            }
           }
         }
       }
@@ -1771,6 +1953,21 @@ Example of empty fields:
     // - Reject "ID-like" huge numbers for *_count fields.
     // - Reject digit-only strings for *date* fields unless already normalized ISO (YYYY-MM-DD).
     try {
+      const lastQ = String(lastAssistantQuestion || '');
+      const msgRaw = String(options.message || '').trim();
+      const msgHasDigits = /\d/.test(msgRaw);
+      const numericEvidence = (k: string): boolean => {
+        if (expectedFromLastQuestion.has(k)) return true;
+        // If user didn't type any digits, don't accept numeric defaults for numeric fields.
+        if (!msgHasDigits) return false;
+        // Field-specific cues from the assistant question or the message.
+        if (k === 'business_floor') return /קומה|floor|level/i.test(lastQ) || /קומה/i.test(msgRaw);
+        if (k === 'premises_area_sqm') return /שטח|מ["״׳']?ר|מ״ר|sqm|area/i.test(lastQ) || /מ["״׳]?\s*ר|מ״ר|sqm/i.test(msgRaw);
+        if (k === 'building_total_floors') return /מספר\s*קומות|כמה\s*קומות|total\s*floors/i.test(lastQ) || /קומות/i.test(msgRaw);
+        if (k === 'building_year_built') return /שנת\s*בנייה|נבנה|year\s*built|construction\s*year/i.test(lastQ) || /שנת/i.test(msgRaw);
+        return false;
+      };
+
       for (const [k, v] of Object.entries(json)) {
         if (v === null || v === undefined) continue;
 
@@ -1794,6 +1991,11 @@ Example of empty fields:
           if (/^\d{8,10}$/.test(s) && !/^\d{4}-\d{2}-\d{2}$/.test(s)) {
             delete (json as any)[k];
           }
+        }
+
+        // Building numeric fields: reject default/hallucinated numbers unless we have evidence.
+        if (['business_floor', 'premises_area_sqm', 'building_year_built', 'building_total_floors'].includes(k)) {
+          if (!numericEvidence(k)) delete (json as any)[k];
         }
       }
     } catch {

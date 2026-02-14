@@ -20,6 +20,10 @@ coverage/
 .turbo/
 .vite/
 
+# Accidental transpiled output (should not live under src/)
+frontend/src/**/*.js
+frontend/src/**/*.js.map
+
 # Editor/IDE
 .vscode/
 .idea/

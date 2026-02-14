@@ -91,9 +91,28 @@ function tokenizeInputWithAliases(rawInput: string): Set<string> {
     out.add('ביטוח');
   }
 
-  // Hebrew prefix normalization for profession-like tokens.
-  // Example: "לאדריכל" -> "אדריכל" (the resolver catalog tokens are unprefixed).
-  // We ONLY do this for recognized profession roots to avoid harming words like "לוגיסטיקה".
+  // Hebrew prefix normalization for common prepositions (ל/ול) on *specific* safe nouns.
+  // This fixes patterns like "למשרד", "להצעת", "לאדריכל".
+  // We keep it conservative to avoid harming words where the first letter is part of the root.
+  const safeNouns = new Set([
+    // place types
+    'משרד',
+    'חנות',
+    'קליניקה',
+    'מסעדה',
+    'מחסן',
+    'מפעל',
+    'סטודיו',
+    'מרפאה',
+    'סוכנות',
+    // quote-request tokens that often appear with ל'
+    'הצעה',
+    'הצעת',
+    'מחיר',
+    'ביטוח',
+  ]);
+
+  // Profession roots (for stripping ל' on profession words)
   const professionRootRe = /^(אדריכ|מהנדס|הנדס|רואי|רואה|עורכ|סוכן|רופא|רוקח)/i;
   for (const t of [...out]) {
     const s = String(t || '').trim();
@@ -104,7 +123,15 @@ function tokenizeInputWithAliases(rawInput: string): Set<string> {
       return '';
     })();
     if (!stripped) continue;
-    if (!professionRootRe.test(stripped)) continue;
+    // If the stripped token is a stopword (or a safe noun that is also stopword-like),
+    // drop the original and don't keep it.
+    if (stop.has(stripped)) {
+      out.delete(s);
+      continue;
+    }
+
+    // Replace only when it looks like a profession token or a safe noun.
+    if (!(professionRootRe.test(stripped) || safeNouns.has(stripped))) continue;
     out.delete(s);
     out.add(stripped);
   }
@@ -201,6 +228,49 @@ function distinctTokenBonus(inputTokens: Set<string>, candidateTokens: Set<strin
   return Math.min(0.25, inter * 0.12);
 }
 
+function keywordPhraseBonus(params: {
+  inputNorm: string;
+  keywords: string[];
+}): number {
+  const input = String(params.inputNorm || '').trim();
+  if (!input) return 0;
+  const keywords = Array.isArray(params.keywords) ? params.keywords : [];
+  if (keywords.length === 0) return 0;
+
+  const generic = new Set([
+    'עסק',
+    'חנות',
+    'משרד',
+    'קליניקה',
+    'מסעדה',
+    'מחסן',
+    'מפעל',
+    'סוכנות',
+    'ביטוח',
+    'הצעה',
+    'הצעת',
+    'מחיר',
+  ]);
+
+  const normalizeKw = (s: string) => normalizeText(s);
+  const hasMeaningful = (kwNorm: string) => {
+    const toks = kwNorm.split(' ').map((t) => t.trim()).filter(Boolean);
+    return toks.some((t) => t.length >= 2 && !generic.has(t));
+  };
+
+  for (const kw of keywords) {
+    const kwNorm = normalizeKw(String(kw || '').trim());
+    if (!kwNorm) continue;
+    if (kwNorm.length < 4) continue; // too short to be decisive
+    if (!hasMeaningful(kwNorm)) continue;
+    if (input.includes(kwNorm)) {
+      // Explicit keyword phrase match is a very strong signal.
+      return 0.18;
+    }
+  }
+  return 0;
+}
+
 function buildResolvedFromCatalog(params: {
   segment_id?: string;
   segment_group_id?: string;
@@ -260,7 +330,9 @@ export async function resolveSegmentFromText(
       ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
       : [];
     const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
-    const kwOverlap = overlapRatio(inputTokens, kwTokens);
+    const kwOverlapRaw = overlapRatio(inputTokens, kwTokens);
+    const kwOverlapMeaningful = overlapRatio(meaningfulTokenSet(inputTokens), meaningfulTokenSet(kwTokens));
+    const kwOverlap = Math.max(kwOverlapRaw, kwOverlapMeaningful);
     const nameNorm = normalizeText(name);
     // Strong signal: exact match with a segment name.
     // Without this, short 2-token segments (e.g., "סוכן ביטוח") can be penalized by extra tokens
@@ -268,7 +340,8 @@ export async function resolveSegmentFromText(
     const exactName = Boolean(nameNorm && inputNorm === nameNorm);
     const bonus = exactName ? 0.6 : (nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0);
     const tieBreakBonus = distinctTokenBonus(inputTokens, nameTokens);
-    return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus + tieBreakBonus);
+    const kwPhrase = keywordPhraseBonus({ inputNorm, keywords: kwArr.slice(0, 140) });
+    return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.97) + bonus + tieBreakBonus + kwPhrase);
   });
 
   if (segMatch.item && segMatch.score >= 0.55) {
@@ -308,11 +381,14 @@ export async function resolveSegmentFromText(
         ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
         : [];
       const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
-      const kwOverlap = overlapRatio(inputTokens, kwTokens);
+      const kwOverlapRaw = overlapRatio(inputTokens, kwTokens);
+      const kwOverlapMeaningful = overlapRatio(meaningfulTokenSet(inputTokens), meaningfulTokenSet(kwTokens));
+      const kwOverlap = Math.max(kwOverlapRaw, kwOverlapMeaningful);
       const nameNorm = normalizeText(name);
       const bonus = nameNorm && inputNorm.includes(nameNorm) ? 0.25 : 0;
       const tieBreakBonus = distinctTokenBonus(inputTokens, nameTokens);
-      return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.9) + bonus + tieBreakBonus);
+      const kwPhrase = keywordPhraseBonus({ inputNorm, keywords: kwArr.slice(0, 140) });
+      return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.97) + bonus + tieBreakBonus + kwPhrase);
     });
 
     const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.28 ? (segInGroup.item as any).segment_id : undefined;
