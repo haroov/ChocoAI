@@ -1,10 +1,10 @@
 import { parseAndApplyAnswer, buildInitialQuestionnaireState } from '../../lib/insurance/questionnaire/engine';
-import type { Questionnaire } from '../../lib/insurance/questionnaire/types';
+import type { Questionnaire, QuestionnaireQuestion } from '../../lib/insurance/questionnaire/types';
 
 describe('insurance questionnaire boolean parsing', () => {
   const questionnaire: Questionnaire = {
-    meta: { name: 'test' } as any,
-    runtime: { engine_contract: { defaults: {}, derived_rules: [] } } as any,
+    meta: { name: 'test' },
+    runtime: { engine_contract: { condition_dsl: 'simple', defaults: {}, derived_rules: [] } },
     stages: [],
     questions: [],
     modules_catalog: [],
@@ -13,9 +13,19 @@ describe('insurance questionnaire boolean parsing', () => {
     production_validations: [],
   };
 
+  const q = {
+    q_id: 'T1',
+    stage_key: 'triage',
+    audience: 'customer',
+    prompt_he: 'test',
+    field_key_en: 'has_employees',
+    data_type: 'boolean',
+    options_he: 'כן, לא',
+    json_path: 'triage.has_employees',
+  } satisfies QuestionnaireQuestion;
+
   test('parses Hebrew/English yes/no tokens', () => {
     const state = buildInitialQuestionnaireState(questionnaire, {}, {});
-    const q: any = { q_id: 'T1', field_key_en: 'has_employees', data_type: 'boolean', options_he: 'כן, לא', json_path: 'triage.has_employees' };
 
     expect(parseAndApplyAnswer(questionnaire, state, q, 'כן').ok).toBe(true);
     expect(state.vars.has_employees).toBe(true);
@@ -27,7 +37,6 @@ describe('insurance questionnaire boolean parsing', () => {
 
   test('parses "חיובי"/"שלילי"', () => {
     const state = buildInitialQuestionnaireState(questionnaire, {}, {});
-    const q: any = { q_id: 'T1', field_key_en: 'has_employees', data_type: 'boolean', options_he: 'כן, לא', json_path: 'triage.has_employees' };
 
     expect(parseAndApplyAnswer(questionnaire, state, q, 'חיובי').ok).toBe(true);
     expect(state.vars.has_employees).toBe(true);
@@ -38,8 +47,6 @@ describe('insurance questionnaire boolean parsing', () => {
   });
 
   test('parses numeric prefixes as boolean (>0 => true, 0 => false)', () => {
-    const q: any = { q_id: 'T1', field_key_en: 'has_employees', data_type: 'boolean', options_he: 'כן, לא', json_path: 'triage.has_employees' };
-
     const state = buildInitialQuestionnaireState(questionnaire, {}, {});
     expect(parseAndApplyAnswer(questionnaire, state, q, '3').ok).toBe(true);
     expect(state.vars.has_employees).toBe(true);

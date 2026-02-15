@@ -1,6 +1,7 @@
 import { getSegmentsCatalogProd } from './loadSegmentsCatalog';
 import { ResolvedSegment } from './resolveSegmentFromText';
 import { SegmentsCatalogSegment, SegmentsCatalogSegmentGroup } from './types';
+import type { JsonObject } from '../../../utils/json';
 
 export type QuestionnairePrefillDefaults = {
   // Mirrors the existing questionnaire vars used by insuranceQuestionnaireInit/Answer
@@ -13,8 +14,8 @@ export type QuestionnairePrefillDefaults = {
 
 export type SegmentDefaultsResult = {
   prefill: QuestionnairePrefillDefaults;
-  userData: Record<string, unknown>;
-  debug?: Record<string, unknown>;
+  userData: JsonObject;
+  debug?: JsonObject;
 };
 
 const ALLOWED_SITE_TYPES = new Set([
@@ -111,7 +112,7 @@ export function buildQuestionnaireDefaultsFromResolution(resolved: ResolvedSegme
     ...(activity ? { business_activity_and_products: activity } : {}),
   };
 
-  const userData: Record<string, unknown> = {
+  const userData: JsonObject = {
     ...(resolved.segment_group_id ? { segment_group_id: resolved.segment_group_id } : {}),
     ...(resolved.segment_id ? { segment_id: resolved.segment_id } : {}),
     ...(resolved.default_package_key ? { default_package_key: resolved.default_package_key } : {}),

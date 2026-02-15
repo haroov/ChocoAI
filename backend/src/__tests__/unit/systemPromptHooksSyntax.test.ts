@@ -1,17 +1,21 @@
 import { chocoClalSmbTopicSplitProcessFlows } from '../../lib/flowEngine/builtInFlows/chocoClalSmbTopicSplitProcessFlows';
+import type { JsonValue } from '../../utils/json';
+import { asJsonObject } from '../../utils/json';
 
 function collectSystemPromptHookConditions(flowDef: any): Array<{ label: string; condition: string }> {
   const out: Array<{ label: string; condition: string }> = [];
-  const stages = (flowDef && typeof flowDef === 'object' && flowDef.definition?.stages && typeof flowDef.definition.stages === 'object')
-    ? flowDef.definition.stages
-    : {};
+  const defObj = asJsonObject(flowDef.definition ?? null);
+  const stagesObj = asJsonObject(defObj?.stages ?? null) || {};
 
-  for (const [stageSlug, stage] of Object.entries(stages)) {
-    const hooks = (stage as any)?.orchestration?.systemPromptHooks;
-    const before = Array.isArray(hooks?.beforePrompt) ? hooks.beforePrompt : [];
-    const after = Array.isArray(hooks?.afterPrompt) ? hooks.afterPrompt : [];
+  for (const [stageSlug, stageVal] of Object.entries(stagesObj)) {
+    const stageObj = asJsonObject(stageVal);
+    const orchestrationObj = asJsonObject(stageObj?.orchestration ?? null);
+    const hooksObj = asJsonObject(orchestrationObj?.systemPromptHooks ?? null);
+    const before = Array.isArray(hooksObj?.beforePrompt) ? hooksObj.beforePrompt : [];
+    const after = Array.isArray(hooksObj?.afterPrompt) ? hooksObj.afterPrompt : [];
     for (const hook of [...before, ...after]) {
-      const condition = String((hook as any)?.condition || '').trim();
+      const hookObj = asJsonObject(hook as JsonValue);
+      const condition = String(hookObj?.condition || '').trim();
       if (!condition) continue;
       const label = `${String(flowDef?.slug || flowDef?.name || 'flow')}:${String(stageSlug)}`;
       out.push({ label, condition });
@@ -24,7 +28,7 @@ function collectSystemPromptHookConditions(flowDef: any): Array<{ label: string;
 describe('systemPromptHooks condition syntax', () => {
   test('all systemPromptHooks conditions compile as valid JS', () => {
     const flows = Array.isArray(chocoClalSmbTopicSplitProcessFlows) ? chocoClalSmbTopicSplitProcessFlows : [];
-    const all = flows.flatMap(collectSystemPromptHookConditions);
+    const all = (flows as any[]).flatMap((f) => collectSystemPromptHookConditions(f));
 
     // Ensure we are actually validating something (avoid false-green test if flows change).
     expect(all.length).toBeGreaterThan(0);

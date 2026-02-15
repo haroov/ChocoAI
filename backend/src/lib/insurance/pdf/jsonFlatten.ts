@@ -1,14 +1,16 @@
 export type FlattenedEntry = { path: string; value: string };
 
-function isPrimitive(v: any): v is string | number | boolean | null {
+import { isJsonObject, type JsonValue } from '../../../utils/json';
+
+function isPrimitive(v: JsonValue): v is string | number | boolean | null {
   return v === null || ['string', 'number', 'boolean'].includes(typeof v);
 }
 
-export function flattenJsonToTextEntries(input: any, options?: { maxEntries?: number }): FlattenedEntry[] {
+export function flattenJsonToTextEntries(input: JsonValue, options?: { maxEntries?: number }): FlattenedEntry[] {
   const maxEntries = options?.maxEntries ?? 2000;
   const out: FlattenedEntry[] = [];
 
-  const walk = (value: any, prefix: string) => {
+  const walk = (value: JsonValue, prefix: string) => {
     if (out.length >= maxEntries) return;
 
     if (isPrimitive(value)) {
@@ -25,13 +27,13 @@ export function flattenJsonToTextEntries(input: any, options?: { maxEntries?: nu
       return;
     }
 
-    if (typeof value === 'object' && value) {
+    if (isJsonObject(value)) {
       const keys = Object.keys(value);
       if (keys.length === 0) {
         out.push({ path: prefix, value: '{}' });
         return;
       }
-      keys.forEach((k) => walk(value[k], prefix ? `${prefix}.${k}` : k));
+      keys.forEach((k) => walk((value as Record<string, JsonValue>)[k], prefix ? `${prefix}.${k}` : k));
       return;
     }
 

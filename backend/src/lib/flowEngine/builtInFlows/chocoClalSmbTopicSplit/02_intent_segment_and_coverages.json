@@ -516,7 +516,7 @@
       "subsection": "B. Business address",
       "stage_title_he": "חלק א — כתובת בית העסק",
       "question_he": "אימות כתובת",
-      "prompt_he": "לא הצלחתי לאמת בגוגל את הרחוב ומספר הבית עבור הכתובת \"{business_full_address}\". האם זו הכתובת הנכונה? (כן/לא)",
+      "prompt_he": "לא מצאתי בגוגל התאמה לרחוב/מקום בתוך היישוב {business_city} עבור הכתובת \"{business_full_address}\". האם זו הכתובת הנכונה? (כן/לא)",
       "field_key_en": "business_address_confirmed",
       "data_type": "boolean",
       "input_type": "select",
@@ -677,6 +677,7 @@
       "module_key": "core_additional_locations",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "האם בית העסק המוצע לביטוח ממוקם בכתובות נוספות? (אפשרויות: לא, כן)",
@@ -748,6 +749,7 @@
       "module_key": "core_policy_term",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "מאיזה תאריך תרצה שהביטוח יתחיל?",
@@ -1190,7 +1192,7 @@
       "stage_title_he": "נספח א — כיסוי סייבר",
       "chapter": "A",
       "question_he": "כיסוי סייבר ודלף מידע",
-      "prompt_he": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)",
+      "prompt_he": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (לא/כן)",
       "field_key_en": "cyber_selected",
       "data_type": "boolean",
       "input_type": "select",
@@ -1204,8 +1206,8 @@
       "stage_key": "02_needs_discovery",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)",
-        "whatsapp": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (מותנה בעמידה בתנאים) (לא/כן)"
+        "web_chat": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (לא/כן)",
+        "whatsapp": "האם תרצה גם כיסוי לביטוח סייבר ודלף מידע? (לא/כן)"
       },
       "priority": 160,
       "whatsapp_rendering": {

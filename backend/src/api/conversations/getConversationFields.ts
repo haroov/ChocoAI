@@ -3,17 +3,17 @@ import { registerRoute } from '../../utils/routesRegistry';
 import { maskPII } from '../../lib/__redact';
 import { prisma } from '../../core';
 import { validateField } from './helpers/__validateFields';
-import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
+import type { JsonObject, JsonValue } from '../../utils/json';
 
-async function getUserDataForFlowOnly(userId: string, flowId: string | null | undefined) {
+async function getUserDataForFlowOnly(userId: string, flowId: string | null | undefined): Promise<JsonObject> {
   if (!flowId) return {};
   const rows = await prisma.userData.findMany({
     where: { userId, flowId },
     select: { key: true, value: true, type: true },
   });
-  const out: Record<string, unknown> = {};
+  const out: JsonObject = {};
   for (const row of rows) {
-    let value: unknown;
+    let value: JsonValue;
     switch (row.type) {
       case 'string': value = row.value; break;
       case 'number': value = Number(row.value); break;
@@ -27,8 +27,7 @@ async function getUserDataForFlowOnly(userId: string, flowId: string | null | un
 
 registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, res: Response) => {
   try {
-    const idRaw = (req.params as any).id as unknown;
-    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
+    const id = String(req.params.id || '').trim();
 
     if (!id) {
       res.status(400).json({
@@ -49,7 +48,7 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
 
     // Prefer authoritative userData from the flow engine (insurance + modern flows).
     // Fallback to legacy timelineEvent.details if userId is missing.
-    let fields: Record<string, any> = {};
+    let fields: JsonObject = {};
     if (conversation.userId) {
       const userFlow = await prisma.userFlow.findUnique({ where: { userId: conversation.userId } });
       // IMPORTANT: For the "Collected Data" panel, scope to the active flow only.
@@ -61,10 +60,16 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
         where: { conversationId: conversation.id, kind: 'timeline' },
         orderBy: { createdAt: 'desc' },
       });
-      fields = (timeline?.data as any)?.details || {};
+      const dataVal = timeline?.data as JsonValue;
+      if (dataVal && typeof dataVal === 'object' && !Array.isArray(dataVal)) {
+        const detailsVal = (dataVal as JsonObject).details;
+        if (detailsVal && typeof detailsVal === 'object' && !Array.isArray(detailsVal)) {
+          fields = detailsVal as JsonObject;
+        }
+      }
     }
 
-    const role = fields.role || 'customer';
+    const role = String(fields.role || 'customer');
 
     // Build sections
     const sections = [];
@@ -95,7 +100,7 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
     const countCollected = (keys: string[]) => keys.filter((key) => {
       const value = fields[key];
       if (key === 'email')
-        return value && /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value);
+        return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(value);
       return !!value;
     }).length;
 
@@ -147,7 +152,7 @@ registerRoute('get', '/api/v1/conversations/:id/fields', async (req: Request, re
         userMinConfidence: 1.0,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       ok: false,
       error: {

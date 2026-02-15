@@ -21,11 +21,13 @@ import {
   ZodNumber,
   ZodString,
 } from 'zod';
+import { asJsonObject, type JsonObject, type JsonValue } from '../../utils/json';
 import { switchCaseGuard } from '../../utils/switchCaseGuard';
 import { prisma } from '../../core/prisma';
 import { GuidestarOrganisation, OrganisationRegion, USAOrganisation } from '../../types/kycOrganisation';
 import { FieldDefinition, FieldsExtractionContext, FlowDefinition } from './types';
 import { inferFirstLastFromText, isBadNameValue, repairNameFieldsFromInference } from './nameInference';
+import type { ResolvedSegment } from '../insurance/segments/resolveSegmentFromText';
 
 class FlowHelpers {
   private isAutoPopulating = false;
@@ -296,7 +298,7 @@ class FlowHelpers {
    * - Entity fields are auto-populated when entity_type is PRIMARY_ORG
    */
   async setUserData(userId: string, flowId: string, data: Record<string, unknown>, conversationId?: string) {
-    const userUpdateData: Record<string, unknown> = {};
+    const userUpdateData: JsonObject = {};
     // Some fields are intentionally transient pointers/state and must be clearable to empty string.
     // By default we skip empty strings to avoid accidental overwrites, but these keys need explicit clearing.
     const allowEmptyStringKeys = new Set<string>([
@@ -341,11 +343,11 @@ class FlowHelpers {
     let conversationContext: { messages?: Array<{ content: string; role?: string }> } | undefined;
     if (conversationId && (
       data.phone
-      || (data as any).mobile_phone
+      || data.mobile_phone
       || data.proposer_mobile_phone
       || data.proposer_phone
-      || (data as any).user_phone
-      || (data as any).user_mobile_phone
+      || data.user_phone
+      || data.user_mobile_phone
     )) {
       const messages = await prisma.message.findMany({
         where: { conversationId, role: 'user' },
@@ -359,12 +361,12 @@ class FlowHelpers {
     // === Name fallback inference (when user sent full name but extraction missed part) ===
     // Implemented in `nameInference.ts` (shared + unit-tested).
 
-    const augmentedData: Record<string, unknown> = { ...data };
+    const augmentedData: JsonObject = { ...(data as unknown as JsonObject) };
 
     // Guardrail: referral_source answers like "גוגל" can be mistakenly inferred as a first name by heuristics.
     // If referral_source is present in this update, never let it overwrite first-name fields.
     try {
-      const rs = String((augmentedData as any).referral_source ?? '').trim();
+      const rs = String(augmentedData.referral_source ?? '').trim();
       if (rs) {
         const rsLower = rs.toLowerCase();
         const referralTokens = new Set([
@@ -377,15 +379,15 @@ class FlowHelpers {
           'סוכן', 'agent',
           'פרסום', 'ads', 'ad',
         ]);
-        const shouldDropIfSeen = (val: unknown): boolean => {
+        const shouldDropIfSeen = (val: JsonValue | undefined): boolean => {
           const v = String(val ?? '').trim();
           if (!v) return false;
           const vLower = v.toLowerCase();
           return v === rs || referralTokens.has(vLower) || (referralTokens.has(rsLower) && referralTokens.has(vLower));
         };
         for (const k of ['first_name', 'user_first_name', 'proposer_first_name'] as const) {
-          if (k in augmentedData && shouldDropIfSeen((augmentedData as any)[k])) {
-            delete (augmentedData as any)[k];
+          if (k in augmentedData && shouldDropIfSeen(augmentedData[k])) {
+            delete augmentedData[k];
           }
         }
       }
@@ -415,21 +417,21 @@ class FlowHelpers {
       try {
         const current = await this.getUserData(userId, flowId);
         const isBadName = isBadNameValue;
-        const isValidEmail = (v: unknown): boolean => {
+        const isValidEmail = (v: JsonValue | undefined): boolean => {
           const s = String(v ?? '').trim();
           if (!s) return false;
           // Minimal email sanity: local@domain.tld
           return /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
         };
-        const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
-        const isMissingOrBad = (val: unknown): boolean => {
+        const pickNonEmpty = (...vals: Array<JsonValue | undefined>) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+        const isMissingOrBad = (val: JsonValue | undefined): boolean => {
           const s = String(val ?? '').trim();
           if (!s) return true;
           return isBadName(s);
         };
         const isExplicitGood = (key: string): boolean => {
           if (!(key in augmentedData)) return false;
-          const v = (augmentedData as any)[key];
+          const v = augmentedData[key];
           const s = String(v ?? '').trim();
           if (!s) return false;
           return !isBadName(s);
@@ -505,11 +507,11 @@ class FlowHelpers {
         'business_activity_and_products',
         'business_occupation',
       ];
-      const hasNewIntent = intentKeys.some((k) => k in augmentedData && String((augmentedData as any)[k] || '').trim());
+      const hasNewIntent = intentKeys.some((k) => k in augmentedData && String(augmentedData[k] || '').trim());
       if (hasNewIntent) {
         const current = await this.getUserData(userId, flowId);
-        const merged = { ...current, ...augmentedData } as Record<string, unknown>;
-        const isEmpty = (v: unknown): boolean => {
+        const merged: JsonObject = { ...current, ...augmentedData };
+        const isEmpty = (v: JsonValue | undefined): boolean => {
           if (v === null || v === undefined) return true;
           const s = String(v).trim();
           if (!s) return true;
@@ -519,13 +521,13 @@ class FlowHelpers {
           return false;
         };
 
-        const existingSegmentId = String((merged as any).segment_id || '').trim();
-        const existingGroupId = String((merged as any).segment_group_id || '').trim();
+        const existingSegmentId = String(merged.segment_id || '').trim();
+        const existingGroupId = String(merged.segment_group_id || '').trim();
 
         const needsSegment = isEmpty(existingSegmentId) && isEmpty(existingGroupId);
-        const needsSiteType = isEmpty((merged as any).business_site_type);
+        const needsSiteType = isEmpty(merged.business_site_type);
         const needsSegmentLabelFix = (() => {
-          const v = String((merged as any).business_segment || '').trim();
+          const v = String(merged.business_segment || '').trim();
           if (!v) return true;
           // Very short / partial values observed in production (e.g., "דין", "דיו")
           if (v.length <= 4) return true;
@@ -538,7 +540,7 @@ class FlowHelpers {
           const { buildQuestionnaireDefaultsFromResolution } = await import('../insurance/segments/buildQuestionnaireDefaults');
 
           const catalog = getSegmentsCatalogProd();
-          const seg = catalog.segments.find((s: any) => s.segment_id === existingSegmentId);
+          const seg = catalog.segments.find((s) => s.segment_id === existingSegmentId);
           const segName = String(seg?.segment_name_he || '').trim();
           if (segName) {
             const firstPart = segName.split('/')[0]?.trim();
@@ -546,13 +548,15 @@ class FlowHelpers {
           }
 
           // If site type is missing/placeholder, fill it from the defaults builder.
-          const defaults = buildQuestionnaireDefaultsFromResolution({
+          const resolvedForDefaults: ResolvedSegment = {
             segment_id: existingSegmentId,
             segment_group_id: existingGroupId || undefined,
             source: 'catalog',
             match_confidence: 1,
-          } as any);
-          const st = (defaults.prefill as any)?.business_site_type;
+          };
+          const defaults = buildQuestionnaireDefaultsFromResolution(resolvedForDefaults);
+          const prefillObj = asJsonObject(defaults.prefill) || {};
+          const st = prefillObj.business_site_type;
           if (needsSiteType && Array.isArray(st) && st.length > 0) {
             augmentedData.business_site_type = String(st[0] || '').trim();
           }
@@ -586,10 +590,10 @@ class FlowHelpers {
                 if (!(k in augmentedData)) augmentedData[k] = v;
                 continue;
               }
-              if (isEmpty((merged as any)[k]) && v !== undefined) augmentedData[k] = v;
+              if (isEmpty(merged[k]) && v !== undefined) augmentedData[k] = v;
             }
             for (const [k, v] of Object.entries(defaults.prefill || {})) {
-              if (isEmpty((merged as any)[k]) && v !== undefined) {
+              if (isEmpty(merged[k]) && v !== undefined) {
                 if (k === 'business_site_type' && Array.isArray(v)) {
                   augmentedData[k] = String(v[0] || '').trim();
                 } else {
@@ -599,8 +603,9 @@ class FlowHelpers {
             }
 
             // Upgrade business_segment label to the canonical catalog name (e.g., "משרד עורכי דין").
-            const segName = String((defaults.userData as any)?.segment_name_he || '').trim();
-            const grpName = String((defaults.userData as any)?.segment_group_name_he || '').trim();
+            const udObj = asJsonObject(defaults.userData);
+            const segName = String(udObj?.segment_name_he || '').trim();
+            const grpName = String(udObj?.segment_group_name_he || '').trim();
             const desiredLabel = segName || grpName;
             if (desiredLabel) {
               const firstPart = desiredLabel.split('/')[0]?.trim();
@@ -626,7 +631,7 @@ class FlowHelpers {
         'owner',
         'manager',
       ]);
-      const norm = (v: unknown) => String(v || '')
+      const norm = (v: JsonValue | undefined) => String(v || '')
         .trim()
         .replace(/[“”"׳״']/g, '')
         .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
@@ -634,20 +639,20 @@ class FlowHelpers {
         .trim()
         .toLowerCase();
       const current = await this.getUserData(userId, flowId);
-      const existingRel = String((current as any).insured_relation_to_business || '').trim();
+      const existingRel = String(current.insured_relation_to_business || '').trim();
       const hasRelAlready = existingRel.length > 0;
-      const hasRelIncoming = 'insured_relation_to_business' in augmentedData && String((augmentedData as any).insured_relation_to_business || '').trim();
+      const hasRelIncoming = 'insured_relation_to_business' in augmentedData && String(augmentedData.insured_relation_to_business || '').trim();
 
       if (!hasRelAlready && !hasRelIncoming) {
         const nameKeys = ['first_name', 'proposer_first_name', 'user_first_name'];
         for (const k of nameKeys) {
-          const raw = String((augmentedData as any)[k] || '').trim();
+          const raw = String(augmentedData[k] || '').trim();
           if (!raw) continue;
           const normalized = norm(raw);
           if (relationWords.has(normalized)) {
             // Persist the clean label (prevents completion misses on values like: ״בעלים״)
-            (augmentedData as any).insured_relation_to_business = normalized === 'owner' ? 'בעלים' : normalized === 'manager' ? 'מנהל' : raw.replace(/[“”"׳״']/g, '').trim();
-            delete (augmentedData as any)[k];
+            augmentedData.insured_relation_to_business = normalized === 'owner' ? 'בעלים' : normalized === 'manager' ? 'מנהל' : raw.replace(/[“”"׳״']/g, '').trim();
+            delete augmentedData[k];
             break;
           }
         }
@@ -661,13 +666,13 @@ class FlowHelpers {
     // whether the business has physical premises. This is used early in Flow 02 gating.
     try {
       const current = await this.getUserData(userId, flowId);
-      const merged = { ...current, ...augmentedData } as Record<string, unknown>;
-      const isEmpty = (v: unknown): boolean => v === null || v === undefined || String(v).trim() === '';
+      const merged: JsonObject = { ...current, ...augmentedData };
+      const isEmpty = (v: JsonValue | undefined): boolean => v === null || v === undefined || String(v).trim() === '';
 
-      const existing = (merged as any).has_physical_premises;
+      const existing = merged.has_physical_premises;
       const needs = isEmpty(existing);
       if (needs) {
-        const stRaw = (merged as any).business_site_type;
+        const stRaw = merged.business_site_type;
         const stList = Array.isArray(stRaw) ? stRaw : [stRaw];
         const st = stList
           .map((x) => String(x ?? '').trim())
@@ -691,7 +696,7 @@ class FlowHelpers {
     // === Overwrite protection (high-signal fields) ===
     // Prevent accidental overwrites from extraction pollution on later questions.
     // Example observed in production: business_name shortened to "ושות׳ עורכי דין" after answering house number/PO box.
-    let currentForOverwriteProtection: Record<string, unknown> | null = null;
+    let currentForOverwriteProtection: JsonObject | null = null;
     try {
       currentForOverwriteProtection = await this.getUserData(userId, flowId);
     } catch {
@@ -716,7 +721,7 @@ class FlowHelpers {
       if (key === 'business_name' && typeof value === 'string' && currentForOverwriteProtection) {
         try {
           const incoming = String(value ?? '').trim();
-          const existing = String((currentForOverwriteProtection as any).business_name ?? '').trim();
+          const existing = String(currentForOverwriteProtection.business_name ?? '').trim();
           if (incoming && existing && incoming !== existing && incoming.length < existing.length && existing.includes(incoming)) {
             continue;
           }
@@ -799,12 +804,12 @@ class FlowHelpers {
               let shabbatCheck;
               try {
                 shabbatCheck = await isShabbatOrHoliday(dateObj);
-              } catch (checkError: any) {
+              } catch (checkError) {
                 // If holiday check fails, log but continue - don't block date saving
                 try {
                   const { logger } = await import('../../utils/logger');
                   logger.error('Error checking Shabbat/holiday:', {
-                    error: checkError?.message,
+                    error: checkError instanceof Error ? checkError.message : String(checkError),
                     formattedDate,
                   });
                 } catch {
@@ -868,13 +873,13 @@ class FlowHelpers {
             value = `RAW_DATE:${String(rawValue)}`;
             // Continue to save this raw date value - LLM will be instructed to handle it
           }
-        } catch (dateError: any) {
+        } catch (dateError) {
           // If date parsing fails completely, store raw value with flag
           // LLM will be instructed to ask for Gregorian date or guess
           try {
             const { logger } = await import('../../utils/logger');
             logger.warn('Error parsing campaign_start_date, storing raw value for LLM to handle:', {
-              error: dateError?.message,
+              error: dateError instanceof Error ? dateError.message : String(dateError),
               rawValue: String(rawValue).substring(0, 100),
               conversationId,
             });
@@ -911,7 +916,7 @@ class FlowHelpers {
             if (orgData) {
               // Get current userData to check what's already set
               const currentUserData = await this.getUserData(userId, flowId);
-              const autoPopulatedData: Record<string, unknown> = {};
+              const autoPopulatedData: JsonObject = {};
 
               // Populate entity_name if not already set - use "name" from organization object
               if (!currentUserData.entity_name) {
@@ -1133,7 +1138,7 @@ class FlowHelpers {
    * @param flowId - Optional flow ID to prioritize specific flow data
    * @returns Object with user data key-value pairs (merged from all flows)
    */
-  async getUserData(userId?: string | null, flowId?: string) {
+  async getUserData(userId?: string | null, flowId?: string): Promise<JsonObject> {
     if (!userId) return {};
 
     // 1. Fetch ALL data for this user, regardless of flow
@@ -1142,14 +1147,14 @@ class FlowHelpers {
       // Note: UserData doesn't have createdAt, relying on default DB order (entry order)
     });
 
-    const collectedData: Record<string, unknown> = {};
+    const collectedData: JsonObject = {};
 
     // 2. Separate current flow data vs others to implement precedence
-    const currentFlowData: Record<string, unknown> = {};
-    const otherFlowsData: Record<string, unknown> = {};
+    const currentFlowData: JsonObject = {};
+    const otherFlowsData: JsonObject = {};
 
     allUserData.forEach((row) => {
-      let value: unknown;
+      let value: JsonValue;
       switch (row.type) {
         case 'string': value = row.value; break;
         case 'number': value = Number(row.value); break;
@@ -1157,7 +1162,7 @@ class FlowHelpers {
         case 'object':
           try {
             if (!row.value) value = row.value;
-            else value = JSON.parse(row.value);
+            else value = JSON.parse(row.value) as JsonValue;
           } catch {
             value = row.value;
           }
@@ -1178,7 +1183,7 @@ class FlowHelpers {
             || k.endsWith('_selected') // sometimes stored as arrays/objects
             || k.endsWith('_ids');
           if (shouldParse && s && (s.startsWith('[') || s.startsWith('{'))) {
-            value = JSON.parse(s);
+            value = JSON.parse(s) as JsonValue;
           }
         }
       } catch {
@@ -1197,28 +1202,42 @@ class FlowHelpers {
     // 3. Merge: Other flows (Base) + Current Flow (Overlay)
     // This ensures that if I just answered "email" in *this* flow, it wins.
     // But if "email" was set in a previous flow and not here, I still see it.
-    const merged = { ...otherFlowsData, ...currentFlowData } as Record<string, unknown>;
+    const merged: JsonObject = { ...otherFlowsData, ...currentFlowData };
 
     // Back-compat aliases (read-time) for common contact keys.
     // Some flows use `mobile_phone`; we want the UI + other flows to see canonical `user_phone`/`phone`.
-    const pickNonEmpty = (...vals: unknown[]) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
-    const mobile = pickNonEmpty(merged.user_phone, merged.phone, (merged as any).mobile_phone, merged.proposer_mobile_phone, (merged as any).proposer_phone);
+    const pickNonEmpty = (...vals: Array<JsonValue | undefined>) => vals.find((v) => v !== null && v !== undefined && String(v).trim() !== '');
+    const mobile = pickNonEmpty(merged.user_phone, merged.phone, merged.mobile_phone, merged.proposer_mobile_phone, merged.proposer_phone);
     if (merged.user_phone == null && mobile != null) merged.user_phone = mobile;
     if (merged.phone == null && mobile != null) merged.phone = mobile;
-    if ((merged as any).proposer_mobile_phone == null && mobile != null) (merged as any).proposer_mobile_phone = mobile;
+    if (merged.proposer_mobile_phone == null && mobile != null) merged.proposer_mobile_phone = mobile;
 
     // Read-time repair:
+    // 0) Prevent user_id (ת"ז) from being treated as business_registration_id (ח"פ/ע"מ).
+    // This can happen when an ambiguous question ("ת.ז./ח.פ/...") causes the extractor to store the same digits
+    // under business_registration_id and user_id. We must always require the insured's business identifier explicitly.
+    try {
+      const digitsOnly = (v: JsonValue | undefined): string => String(v ?? '').replace(/\D/g, '');
+      const reg = digitsOnly(merged.business_registration_id);
+      const uid = digitsOnly(merged.user_id) || digitsOnly(merged.legal_id);
+      if (reg && uid && reg === uid) {
+        delete merged.business_registration_id;
+      }
+    } catch {
+      // ignore
+    }
+
     // 1) If first_name accidentally contains a relation word (e.g., "בעלים"), move it to insured_relation_to_business.
     try {
       const relationWords = new Set(['בעלים', 'מנהל', 'מנהלת', 'שותף', 'שותפה', 'אחר']);
-      const clean = (raw: unknown) => String(raw || '')
+      const clean = (raw: JsonValue | undefined) => String(raw || '')
         .trim()
         .replace(/[“”"׳״']/g, '')
         .replace(/^[\s\-–—.,;:!?()\[\]{}]+/g, '')
         .replace(/[\s\-–—.,;:!?()\[\]{}]+$/g, '')
         .trim();
-      const first = clean((merged as any).first_name || (merged as any).user_first_name || '');
-      const relRaw = String((merged as any).insured_relation_to_business || '').trim();
+      const first = clean(merged.first_name || merged.user_first_name || '');
+      const relRaw = String(merged.insured_relation_to_business || '').trim();
       const rel = clean(relRaw);
 
       // Also normalize existing relation values (common failure: saved with quotes, e.g. ״בעלים״).
@@ -1232,15 +1251,15 @@ class FlowHelpers {
         };
         const normalized = map[relLower] || rel;
         if (normalized !== relRaw) {
-          (merged as any).insured_relation_to_business = normalized;
+          merged.insured_relation_to_business = normalized;
         }
       }
 
       if (!rel && first && relationWords.has(first)) {
-        (merged as any).insured_relation_to_business = first;
-        delete (merged as any).first_name;
-        delete (merged as any).user_first_name;
-        delete (merged as any).proposer_first_name;
+        merged.insured_relation_to_business = first;
+        delete merged.first_name;
+        delete merged.user_first_name;
+        delete merged.proposer_first_name;
       }
     } catch {
       // ignore
@@ -1248,16 +1267,16 @@ class FlowHelpers {
 
     // 2) If we have a catalog segment id but business_segment is partial, normalize it to the catalog label.
     try {
-      const segId = String((merged as any).segment_id || '').trim();
-      const bs = String((merged as any).business_segment || '').trim();
+      const segId = String(merged.segment_id || '').trim();
+      const bs = String(merged.business_segment || '').trim();
       if (segId && (!bs || bs.length <= 4)) {
         const { getSegmentsCatalogProd } = await import('../insurance/segments/loadSegmentsCatalog');
         const catalog = getSegmentsCatalogProd();
-        const seg = catalog.segments.find((s: any) => s.segment_id === segId);
+        const seg = catalog.segments.find((s) => s.segment_id === segId);
         const segName = String(seg?.segment_name_he || '').trim();
         if (segName) {
           const firstPart = segName.split('/')[0]?.trim();
-          (merged as any).business_segment = firstPart || segName;
+          merged.business_segment = firstPart || segName;
         }
       }
     } catch {
@@ -1267,16 +1286,16 @@ class FlowHelpers {
     // 3) If first/last name accidentally contain customer-status tokens ("לקוח חדש/קיים"),
     // treat them as invalid names (they are answers to is_new_customer).
     try {
-      const first = String((merged as any).first_name || (merged as any).user_first_name || '').trim();
-      const last = String((merged as any).last_name || (merged as any).user_last_name || '').trim();
+      const first = String(merged.first_name || merged.user_first_name || '').trim();
+      const last = String(merged.last_name || merged.user_last_name || '').trim();
       const isStatusName = first === 'לקוח' && (last === 'חדש' || last === 'קיים' || last === 'ותיק');
       if (isStatusName) {
-        delete (merged as any).first_name;
-        delete (merged as any).last_name;
-        delete (merged as any).user_first_name;
-        delete (merged as any).user_last_name;
-        delete (merged as any).proposer_first_name;
-        delete (merged as any).proposer_last_name;
+        delete merged.first_name;
+        delete merged.last_name;
+        delete merged.user_first_name;
+        delete merged.user_last_name;
+        delete merged.proposer_first_name;
+        delete merged.proposer_last_name;
       }
     } catch {
       // ignore
@@ -1309,11 +1328,11 @@ class FlowHelpers {
     return jwtToken || null;
   }
 
-  sanitizeData(data: Record<string, unknown>, fieldsDefinitions: Record<string, FieldDefinition>) {
+  sanitizeData(data: Record<string, unknown>, fieldsDefinitions: Record<string, FieldDefinition>): JsonObject {
     return Object.fromEntries(Object.entries(data).map(([key, value]) => {
       const isSensitive = fieldsDefinitions[key]?.sensitive;
       return [key, isSensitive && value ? '••••••••' : value];
-    }));
+    })) as unknown as JsonObject;
   }
 }
 

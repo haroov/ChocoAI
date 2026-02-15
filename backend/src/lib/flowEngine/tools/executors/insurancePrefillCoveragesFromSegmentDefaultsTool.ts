@@ -1,6 +1,7 @@
 import { ToolExecutor, ToolResult } from '../types';
 import { getSegmentsCatalogProd } from '../../../insurance/segments/loadSegmentsCatalog';
 import { prisma } from '../../../../core/prisma';
+import type { JsonValue } from '../../../../utils/json';
 
 function asBool(v: unknown): boolean | undefined {
   return typeof v === 'boolean' ? v : undefined;
@@ -138,7 +139,7 @@ export const insurancePrefillCoveragesFromSegmentDefaultsTool: ToolExecutor = as
       terror_selected: asBool((coverages as any).terror) === true,
     };
 
-    const saveResults: Record<string, unknown> = {};
+    const saveResults: Record<string, JsonValue | undefined> = {};
 
     // Mark one-time application (used by Flow02 entry stage condition).
     if (payload.segment_coverages_prefilled_v1 !== true) saveResults.segment_coverages_prefilled_v1 = true;

@@ -35,7 +35,7 @@ export const signAdminJwt = (payload: { sub: string; username: string; role: str
 
 export const verifyAdminJwt = (token: string): { sub: string; username: string; role: string } | null => {
   try {
-    return jwt.verify(token, config.auth.jwtSecret) as any;
+    return jwt.verify(token, config.auth.jwtSecret) as { sub: string; username: string; role: string };
   } catch (_e) { return null; }
 };
 
@@ -44,10 +44,10 @@ export const respondUnauthorized = (res: express.Response) => res
   .json({ ok: false, error: 'Unauthorized' });
 
 export const adminAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const token = (req as any).cookies?.[config.auth.adminCookieName] || req.headers['x-admin-token'];
+  const token = req.cookies?.[config.auth.adminCookieName] || req.headers['x-admin-token'];
   if (!token || typeof token !== 'string') return respondUnauthorized(res);
   const payload = verifyAdminJwt(token);
   if (!payload) return respondUnauthorized(res);
-  (req as any).admin = payload;
+  req.admin = payload;
   next();
 };

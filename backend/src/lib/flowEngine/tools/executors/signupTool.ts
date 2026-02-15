@@ -108,7 +108,7 @@ export const signupTool: ToolExecutor = async (payload, { conversationId }) => {
     const timezone = await getUserTimezone(
       conversationId,
       conversation.channel as 'web' | 'whatsapp',
-      payload.clientTimezone, // If provided from web widget
+      typeof (payload as any).clientTimezone === 'string' ? String((payload as any).clientTimezone) : undefined, // If provided from web widget
     );
 
     // IMPORTANT (Choco requirement):

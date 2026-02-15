@@ -45,6 +45,7 @@ export type ConversationDetails = {
     method: 'fieldsCollected' | 'snapshot';
     seq?: number;
   }>;
+  lastCollectedKeys?: string[];
   activeFlow: {
     name: string;
     slug: string;

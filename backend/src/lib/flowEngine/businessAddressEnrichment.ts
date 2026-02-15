@@ -228,6 +228,10 @@ export async function enrichBusinessAddressInPlace(params: {
     const userConfirmed = validatedCollectedData.business_address_confirmed === true || existingAddressConfirmed;
     const googleHasStreetHouse = Boolean(resolved.street && resolved.houseNumber);
     if (!userConfirmed && !googleHasStreetHouse) {
+      // "No match": we couldn't validate street+house within the given city.
+      // UX: show a clear warning and ask the user to confirm/correct.
+      // - If user confirms → continue as-is
+      // - If user says no → ask for corrected full address
       validatedCollectedData.business_google_match_status = 'no_match_needs_confirmation';
       validatedCollectedData.business_google_match_found = false;
 

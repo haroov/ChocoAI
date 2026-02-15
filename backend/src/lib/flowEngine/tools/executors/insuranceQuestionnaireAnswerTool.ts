@@ -16,6 +16,7 @@ import { setByJsonPath } from '../../../insurance/questionnaire/jsonPath';
 import { ToolExecutor, ToolResult } from '../types';
 import { replaceTemplateVariables } from '../../../notifications/templates';
 import { inferClalSmbFromUserData } from '../../../insurance/questionnaire/segmentInferences';
+import type { JsonValue } from '../../../../utils/json';
 
 function safeParseJson(value: unknown): any | null {
   if (!value) return null;
@@ -310,7 +311,7 @@ export const insuranceQuestionnaireAnswerTool: ToolExecutor = async (
 
     const state = buildInitialQuestionnaireState(questionnaire, existingVars, existingForm);
 
-    const inferredSaveResults: Record<string, unknown> = {};
+    const inferredSaveResults: Record<string, JsonValue | undefined> = {};
 
     // Data hygiene: if business_city accidentally contains the full address, normalize it.
     const normalizedFromCity = normalizeBusinessCityIfLooksLikeFullAddress(userData);
@@ -625,7 +626,7 @@ export const insuranceQuestionnaireAnswerTool: ToolExecutor = async (
     const firedHandoffs = evaluateHandoffTriggers(questionnaire, state);
     const handoffRequired = firedHandoffs.length > 0;
 
-    const saveResults: Record<string, unknown> = {
+    const saveResults: Record<string, JsonValue | undefined> = {
       insured_form_json: JSON.stringify(state.formJson),
       questionnaire_complete: complete || handoffRequired,
       questionnaire_last_qid: currentQid,
@@ -633,8 +634,8 @@ export const insuranceQuestionnaireAnswerTool: ToolExecutor = async (
       questionnaire_answer: '',
       // Persist the typed value also at top-level key so it appears in Collected Data and can be used by conditions.
       ...(q.input_type === 'table' && q.data_type === 'array'
-        ? { [q.field_key_en]: state.vars[q.field_key_en] }
-        : { [q.field_key_en]: applied.value }),
+        ? { [q.field_key_en]: state.vars[q.field_key_en] as JsonValue }
+        : { [q.field_key_en]: applied.value as JsonValue }),
       questionnaire_channel: channelProfile,
       attachments_checklist_pending_json: JSON.stringify(pendingAttachments),
       attachments_checklist_pending_count: pendingAttachments.length,

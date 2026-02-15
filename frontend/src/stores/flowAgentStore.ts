@@ -2,13 +2,27 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { FlowSchema } from '../types/flow';
 import { apiClientStore } from './apiClientStore';
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+type JsonObject = { [k: string]: JsonValue };
+type JsonArray = JsonValue[];
+
+type AgentModifications = {
+  operations: JsonValue[];
+  description: string;
+} & JsonObject;
+
+type AgentDiff = {
+  before: FlowSchema;
+  after: FlowSchema;
+  changes: Array<{ type: string; path: string; before?: JsonValue; after?: JsonValue }>;
+} & JsonObject;
+
 export type AgentSuggestion = {
   id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  modifications: any;
+  modifications: AgentModifications;
   preview: FlowSchema;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  diff: any;
+  diff: AgentDiff;
   description: string;
   timestamp: Date;
 };
@@ -34,15 +48,15 @@ class FlowAgentStore {
         body: JSON.stringify({ instructions: message }),
       });
 
-      const res = await resp.json();
+      const res = await resp.json() as { ok: boolean } & JsonObject;
       if (!res.ok) throw res;
 
       const suggestion: AgentSuggestion = {
         id: `suggestion-${Date.now()}`,
-        modifications: res.modifications,
-        preview: res.preview,
-        diff: res.diff,
-        description: res.modifications.description,
+        modifications: res.modifications as AgentModifications,
+        preview: res.preview as FlowSchema,
+        diff: res.diff as AgentDiff,
+        description: String((res.modifications as AgentModifications)?.description || ''),
         timestamp: new Date(),
       };
 
@@ -56,11 +70,13 @@ class FlowAgentStore {
 
       return suggestion;
     } catch (error) {
+      const msg = (error && typeof error === 'object' && 'error' in error && typeof (error as { error?: string }).error === 'string')
+        ? (error as { error: string }).error
+        : (error instanceof Error ? error.message : String(error));
       runInAction(() => {
         this.conversationHistory.push({
           role: 'assistant',
-          // @ts-ignore
-          content: `Sorry, I encountered an error: ${error?.error || error?.message || 'Unknown error'}`,
+          content: `Sorry, I encountered an error: ${msg || 'Unknown error'}`,
         });
       });
       throw error;
@@ -100,11 +116,14 @@ class FlowAgentStore {
 
       return res.flow;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+    } catch (error) {
+      const msg = (error && typeof error === 'object' && 'error' in error && typeof (error as { error?: string }).error === 'string')
+        ? (error as { error: string }).error
+        : (error instanceof Error ? error.message : String(error));
       runInAction(() => {
         this.conversationHistory.push({
           role: 'assistant',
-          content: `Failed to apply changes: ${error?.error || error?.message || 'Unknown error'}`,
+          content: `Failed to apply changes: ${msg || 'Unknown error'}`,
         });
       });
       throw error;

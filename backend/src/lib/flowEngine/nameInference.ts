@@ -227,10 +227,15 @@ export function repairNameFieldsFromInference(options: {
   const existingMainLast = String(pickNonEmpty(augmented.last_name, current.last_name) ?? '').trim();
   const mainLastMissingOrBad = !existingMainLast || isBadNameValue(existingMainLast);
   const mainFirstMissingOrBad = !existingMainFirst || isBadNameValue(existingMainFirst);
+  // If canonical first+last are already good (from current or this update), never infer alias groups.
+  // Alias groups should be derived deterministically by setUserData() alias writes; inferring them from other text
+  // can overwrite canonical values (e.g., last name reply overwriting first name).
+  const canonicalPairAlreadyGood = !mainFirstMissingOrBad && !mainLastMissingOrBad;
   const skipAliasGroupsDueToMultiwordCanonical = (
     (explicitMainFirst && explicitMainFirst.includes(' ') && mainLastMissingOrBad)
     || (explicitMainLast && explicitMainLast.includes(' ') && mainFirstMissingOrBad)
   );
+  const skipAliasGroups = skipAliasGroupsDueToMultiwordCanonical || canonicalPairAlreadyGood;
 
   const repairGroup = (firstKey: string, lastKey: string) => {
     const existingFirst = String(pickNonEmpty(augmented[firstKey], current[firstKey]) ?? '').trim();
@@ -316,14 +321,14 @@ export function repairNameFieldsFromInference(options: {
   };
 
   repairGroup('first_name', 'last_name');
-  if (!skipAliasGroupsDueToMultiwordCanonical) {
+  if (!skipAliasGroups) {
     repairGroup('proposer_first_name', 'proposer_last_name');
     repairGroup('user_first_name', 'user_last_name');
   }
 
   // Compatibility: if proposer_first_name contains a full name and proposer_last_name is missing/bad, split.
   try {
-    if (skipAliasGroupsDueToMultiwordCanonical) return out;
+    if (skipAliasGroups) return out;
     const pf = String(out.proposer_first_name ?? '').replace(/\s+/g, ' ').trim();
     const pl = String(out.proposer_last_name ?? '').replace(/\s+/g, ' ').trim();
     // Only split when it's EXACTLY 2 tokens; multi-word first names are common.

@@ -5,8 +5,38 @@ import { getProjectConfig } from '../../../../utils/getProjectConfig';
 import { logger } from '../../../../utils/logger';
 import { httpService } from '../../../services/httpService';
 import { createOrgTool } from './createOrgTool';
+import { asJsonObject, getString, isJsonObject, type JsonObject, type JsonValue } from '../../../../utils/json';
+import { JsonValueSchema } from '../../../../utils/zodJson';
 
-export const checkAccountContextTool: ToolExecutor = async (payload, { conversationId }) => {
+type CheckAccountContextInput = JsonObject;
+
+type OrgContext = {
+  id: string;
+  name: string;
+  entities: JsonObject[];
+  gateways: JsonObject[];
+  hasActiveGateway: boolean;
+  hasVerifiedGateway: boolean;
+  hasEntities: boolean;
+  hasGateways: boolean;
+};
+
+type AccountContext = {
+  organizations: OrgContext[];
+  hasActiveGateway: boolean;
+  hasActiveVerifiedGateway: boolean;
+  hasAnyEntities: boolean;
+  hasAnyGateways: boolean;
+  hasCampaignReadyOrg: boolean;
+  nextFlow: 'kyc' | 'campaignManagement';
+};
+
+type CheckAccountContextResult = {
+  accountContext: AccountContext;
+  nextFlow: AccountContext['nextFlow'];
+};
+
+export const checkAccountContextTool: ToolExecutor<CheckAccountContextInput, CheckAccountContextResult> = async (_payload, { conversationId }) => {
   try {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -30,13 +60,13 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
     const userData = await flowHelpers.getUserData(userId, flowId);
 
     // 1. Get Organizations
-    let organizations: any[] = [];
+    let organizations: JsonObject[] = [];
     let organizationsJsonUsable = false;
     if (userData.organizations_json) {
       try {
-        const parsed = JSON.parse(userData.organizations_json as string);
-        organizations = Array.isArray(parsed) ? parsed : [];
-        organizationsJsonUsable = Array.isArray(parsed);
+        const parsedVal = JsonValueSchema.parse(JSON.parse(String(userData.organizations_json)));
+        organizations = Array.isArray(parsedVal) ? (parsedVal.filter(isJsonObject) as JsonObject[]) : [];
+        organizationsJsonUsable = Array.isArray(parsedVal);
       } catch (e) {
         logger.warn('[checkAccountContextTool] Failed to parse organizations_json', e);
       }
@@ -120,9 +150,11 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
             continue;
           }
 
-          const data = await response.json().catch(() => ({} as any));
-          const orgs = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-          if (!Array.isArray(orgs) || orgs.length === 0) {
+          const dataVal = JsonValueSchema.parse(await response.json().catch(() => ({})));
+          const dataObj = asJsonObject(dataVal) || {};
+          const orgsVal = dataObj.data;
+          const orgs = Array.isArray(orgsVal) ? (orgsVal.filter(isJsonObject) as JsonObject[]) : (Array.isArray(dataVal) ? (dataVal.filter(isJsonObject) as JsonObject[]) : []);
+          if (orgs.length === 0) {
             // If the token is valid but the user has no orgs yet, we'll create one below.
             organizations = [];
             break;
@@ -131,19 +163,22 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
           organizations = orgs;
 
           // Persist organizations and primary org id for later calls.
-          const primaryOrg = orgs.find((org: any) => org?.attributes?.primary === true) || orgs[0];
-          const primaryOrgId = primaryOrg?.id;
+          const primaryOrg = orgs.find((org) => (asJsonObject(org.attributes as JsonValue) || {}).primary === true) || orgs[0];
+          const primaryOrgId = String(primaryOrg?.id || '').trim();
           await flowHelpers.setUserData(userId, flowId, {
-            org_customer_id: primaryOrgId ? String(primaryOrgId) : null,
-            primary_org_id: primaryOrgId ? String(primaryOrgId) : null,
-            organizations_json: JSON.stringify(orgs.map((org: any) => ({
-              id: org.id,
-              attributes: {
-                name: org.attributes?.name || org.name,
-                primary: org.attributes?.primary || org.primary,
-              },
-              name: org.attributes?.name || org.name,
-            }))),
+            org_customer_id: primaryOrgId ? primaryOrgId : null,
+            primary_org_id: primaryOrgId ? primaryOrgId : null,
+            organizations_json: JSON.stringify(orgs.map((org) => {
+              const attrs = asJsonObject(org.attributes as JsonValue) || {};
+              return ({
+                id: String(org.id || '').trim(),
+                attributes: {
+                  name: getString(attrs, 'name') || getString(org, 'name') || '',
+                  primary: attrs.primary === true,
+                },
+                name: getString(attrs, 'name') || getString(org, 'name') || '',
+              });
+            })),
           }, conversationId);
 
           logger.info('[checkAccountContextTool] Loaded organizations from API', {
@@ -221,9 +256,11 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
                 providerName: 'ChocoAPI',
               });
               if (response.ok) {
-                const data = await response.json().catch(() => ({} as any));
-                const orgs = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-                organizations = Array.isArray(orgs) ? orgs : [];
+                const dataVal = JsonValueSchema.parse(await response.json().catch(() => ({})));
+                const dataObj = asJsonObject(dataVal) || {};
+                const orgsVal = dataObj.data;
+                const orgs = Array.isArray(orgsVal) ? (orgsVal.filter(isJsonObject) as JsonObject[]) : (Array.isArray(dataVal) ? (dataVal.filter(isJsonObject) as JsonObject[]) : []);
+                organizations = orgs;
               }
             }
           }
@@ -241,35 +278,35 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
 
     // Fallback: Check if single org context exists (e.g. from signup)
     if (organizations.length === 0 && userData.org_customer_id) {
-      organizations = [{
-        id: userData.org_customer_id,
+      organizations = [({
+        id: String(userData.org_customer_id || '').trim(),
         attributes: {
-          name: userData.organization_name || 'My Organization',
+          name: getString(userData, 'organization_name') || 'My Organization',
           primary: true,
         },
-      }];
+      }) satisfies JsonObject];
     }
 
     // Persist commonly-used primary org context for KYC prompts/tools.
     if (organizations.length > 0) {
-      const primaryOrg = organizations.find((org: any) => org?.attributes?.primary === true) || organizations[0];
-      const primaryOrgId = primaryOrg?.id;
-      const primaryOrgName = primaryOrg?.attributes?.name || primaryOrg?.name;
+      const primaryOrg = organizations.find((org) => (asJsonObject(org.attributes as JsonValue) || {}).primary === true) || organizations[0];
+      const primaryOrgId = String(primaryOrg?.id || '').trim();
+      const primaryOrgName = getString(asJsonObject(primaryOrg?.attributes as JsonValue) || {}, 'name') || getString(primaryOrg || {}, 'name');
 
       await flowHelpers.setUserData(userId, flowId, {
         // Keep existing org_customer_id if already set; otherwise use the primary org we found.
-        org_customer_id: userData.org_customer_id ? String(userData.org_customer_id) : (primaryOrgId ? String(primaryOrgId) : null),
-        primary_org_id: primaryOrgId ? String(primaryOrgId) : null,
-        single_org_id: primaryOrgId ? String(primaryOrgId) : null,
+        org_customer_id: userData.org_customer_id ? String(userData.org_customer_id) : (primaryOrgId ? primaryOrgId : null),
+        primary_org_id: primaryOrgId ? primaryOrgId : null,
+        single_org_id: primaryOrgId ? primaryOrgId : null,
         single_org_name: primaryOrgName ? String(primaryOrgName) : null,
       }, conversationId);
     }
 
     const authToken = await getChocoAuthToken(userId, flowId, true);
 
-    const accountContext: any = {
+    const accountContext: AccountContext = {
       organizations: [],
-      // C1 routing signal: any active gateway (do NOT require verified)
+      // C1 routing signal: active gateway (do NOT require verified)
       hasActiveGateway: false,
       hasActiveVerifiedGateway: false,
       hasAnyEntities: false,
@@ -281,9 +318,10 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
     // 3. Iterate Orgs and fetch details
     for (const org of organizations) {
       const orgId = String(org.id || org);
-      const orgName = org.attributes?.name || org.name || 'Unknown Org';
+      const orgAttrs = asJsonObject(org.attributes as JsonValue) || {};
+      const orgName = getString(orgAttrs, 'name') || getString(org, 'name') || 'Unknown Org';
 
-      const orgContext: any = {
+      const orgContext: OrgContext = {
         id: orgId,
         name: orgName,
         entities: [],
@@ -307,8 +345,10 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
           });
 
           if (entitiesResponse.ok) {
-            const data = await entitiesResponse.json();
-            orgContext.entities = Array.isArray(data.data) ? data.data : (data.data ? [data.data] : []);
+            const dataVal = JsonValueSchema.parse(await entitiesResponse.json().catch(() => ({})));
+            const dataObj = asJsonObject(dataVal) || {};
+            const listVal = dataObj.data;
+            orgContext.entities = Array.isArray(listVal) ? (listVal.filter(isJsonObject) as JsonObject[]) : (isJsonObject(listVal) ? [listVal] : []);
             orgContext.hasEntities = orgContext.entities.length > 0;
             if (orgContext.hasEntities) accountContext.hasAnyEntities = true;
           }
@@ -327,8 +367,10 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
           });
 
           if (gatewaysResponse.ok) {
-            const data = await gatewaysResponse.json();
-            orgContext.gateways = Array.isArray(data.data) ? data.data : (data.data ? [data.data] : []);
+            const dataVal = JsonValueSchema.parse(await gatewaysResponse.json().catch(() => ({})));
+            const dataObj = asJsonObject(dataVal) || {};
+            const listVal = dataObj.data;
+            orgContext.gateways = Array.isArray(listVal) ? (listVal.filter(isJsonObject) as JsonObject[]) : (isJsonObject(listVal) ? [listVal] : []);
             orgContext.hasGateways = orgContext.gateways.length > 0;
             if (orgContext.hasGateways) accountContext.hasAnyGateways = true;
           }
@@ -337,25 +379,25 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
         }
       }
 
-      const isGatewayActive = (g: any): boolean => {
-        const attrs = g.attributes || g;
+      const isGatewayActive = (g: JsonObject): boolean => {
+        const attrs = asJsonObject(g.attributes as JsonValue) || g;
         if (attrs.active === true) return true;
         if (typeof attrs.status === 'string' && attrs.status.toLowerCase() === 'active') return true;
         return false;
       };
 
-      const isGatewayVerified = (g: any): boolean => {
-        const attrs = g.attributes || g;
+      const isGatewayVerified = (g: JsonObject): boolean => {
+        const attrs = asJsonObject(g.attributes as JsonValue) || g;
         return attrs.verified === true;
       };
 
-      const hasActiveGateway = orgContext.gateways.some((g: any) => isGatewayActive(g));
+      const hasActiveGateway = orgContext.gateways.some((g) => isGatewayActive(g));
       if (hasActiveGateway) {
         orgContext.hasActiveGateway = true;
         accountContext.hasActiveGateway = true;
       }
 
-      const activeVerified = orgContext.gateways.some((g: any) => isGatewayActive(g) && isGatewayVerified(g));
+      const activeVerified = orgContext.gateways.some((g) => isGatewayActive(g) && isGatewayVerified(g));
       if (activeVerified) {
         orgContext.hasVerifiedGateway = true;
         accountContext.hasActiveVerifiedGateway = true;
@@ -380,7 +422,7 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
     // Generate simple text list for LLM usage
     // CHANGE: Use numbered list instead of IDs for user-friendly output
     const orgsListText = accountContext.organizations
-      .map((o: any, index: number) => `${index + 1}. ${o.name}`)
+      .map((o, index: number) => `${index + 1}. ${o.name}`)
       .join('\n');
 
     await flowHelpers.setUserData(userId, flowId, {
@@ -419,11 +461,11 @@ export const checkAccountContextTool: ToolExecutor = async (payload, { conversat
       },
     };
 
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[checkAccountContextTool] Error', error);
     return {
       success: false,
-      error: error.message || 'Unknown error in checkAccountContext',
+      error: error instanceof Error ? error.message : String(error || 'Error in checkAccountContext'),
     };
   }
 };

@@ -1,6 +1,7 @@
 import { prisma } from '../../../../core';
 import { flowHelpers } from '../../flowHelpers';
 import { ToolExecutor, ToolResult } from '../types';
+import type { JsonValue } from '../../../../utils/json';
 
 function isTruthyString(v: unknown): boolean {
   return typeof v === 'string' && v.trim().length > 0;
@@ -47,7 +48,7 @@ export const insuranceSetDefaultProductLineTool: ToolExecutor = async (
     }
 
     const inferred = inferProductLine(payload);
-    const saveResults: Record<string, unknown> = {
+    const saveResults: Record<string, JsonValue | undefined> = {
       product_line: inferred,
       product_line_source: 'default_inferred',
     };

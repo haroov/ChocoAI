@@ -7,7 +7,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_01_welcome_user');
+    expect(res.data?.targetFlowSlug).toBe('flow_01_welcome_user');
   });
 
   test('after 01+02 with no coverages and no premises, skips to 21', async () => {
@@ -32,7 +32,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_21_history_and_disclosures');
+    expect(res.data?.targetFlowSlug).toBe('flow_21_history_and_disclosures');
   });
 
   test('if contents selected (and building not selected), routes directly to contents flow (07)', async () => {
@@ -45,7 +45,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_07_property_contents');
+    expect(res.data?.targetFlowSlug).toBe('flow_07_property_contents');
   });
 
   test('if building selected, routes to premises characteristics (03)', async () => {
@@ -57,7 +57,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_03_premises_building_characteristics');
+    expect(res.data?.targetFlowSlug).toBe('flow_03_premises_building_characteristics');
   });
 
   test('if 03 is completed and building is still relevant, routes to 04', async () => {
@@ -74,7 +74,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_04_premises_environment_and_water');
+    expect(res.data?.targetFlowSlug).toBe('flow_04_premises_environment_and_water');
   });
 
   test('if 03-04 are completed and building is still relevant, routes to 05', async () => {
@@ -92,7 +92,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_05_premises_security_fire_and_burglary');
+    expect(res.data?.targetFlowSlug).toBe('flow_05_premises_security_fire_and_burglary');
   });
 
   test('if 03-05 are completed and building is still relevant, routes to 06', async () => {
@@ -111,7 +111,7 @@ describe('insurance.router.next (topic-split manifest routing)', () => {
       { conversationId: 'test' },
     );
     expect(res.success).toBe(true);
-    expect((res.data as any)?.targetFlowSlug).toBe('flow_06_premises_licenses_and_liens');
+    expect(res.data?.targetFlowSlug).toBe('flow_06_premises_licenses_and_liens');
   });
 });
 

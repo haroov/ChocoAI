@@ -18,7 +18,7 @@ registerRoute('get', '/api/v1/admin/users', async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json({ ok: true, users });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[admin/users] List error:', error);
     res.status(500).json({ ok: false, error: 'Failed to list users' });
   }
@@ -55,7 +55,7 @@ registerRoute('post', '/api/v1/admin/users', async (req, res) => {
     });
 
     res.json({ ok: true, user: newUser });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[admin/users] Create error:', error);
     res.status(500).json({ ok: false, error: 'Failed to create user' });
   }
@@ -83,7 +83,7 @@ registerRoute('post', '/api/v1/admin/users/:id/reset-password', async (req, res)
     });
 
     res.json({ ok: true });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[admin/users] Reset password error:', error);
     res.status(500).json({ ok: false, error: 'Failed to reset password' });
   }
@@ -93,7 +93,7 @@ registerRoute('post', '/api/v1/admin/users/:id/reset-password', async (req, res)
 registerRoute('delete', '/api/v1/admin/users/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const requestingUser = (req as any).admin; // Populated by middleware
+    const requestingUser = req.admin; // Populated by middleware
 
     if (requestingUser?.sub === id) {
       return res.status(400).json({ ok: false, error: 'Cannot delete yourself' });
@@ -101,7 +101,7 @@ registerRoute('delete', '/api/v1/admin/users/:id', async (req, res) => {
 
     await prisma.admin.delete({ where: { id } });
     res.json({ ok: true });
-  } catch (error: any) {
+  } catch (error) {
     logger.error('[admin/users] Delete error:', error);
     res.status(500).json({ ok: false, error: 'Failed to delete user' });
   }

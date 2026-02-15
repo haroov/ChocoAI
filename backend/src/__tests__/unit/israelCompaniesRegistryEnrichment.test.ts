@@ -51,9 +51,13 @@ describe('israelCompaniesRegistryEnrichment', () => {
     expect(validatedCollectedData.business_po_box).toBe('123');
     expect(validatedCollectedData.business_country).toBe('ישראל');
 
-    const flags = validatedCollectedData.il_companies_registry_red_flags as unknown;
-    expect(Array.isArray(flags)).toBe(true);
-    expect((flags as any[])).toContain('company_is_violator');
+    const hasFlags = validatedCollectedData.il_companies_registry_red_flags as unknown;
+    expect(hasFlags).toBe(true);
+
+    const reasons = validatedCollectedData.il_companies_registry_red_flag_reasons as unknown;
+    expect(Array.isArray(reasons)).toBe(true);
+    if (!Array.isArray(reasons)) throw new Error('Expected reasons array');
+    expect(reasons).toContain('company_is_violator');
   });
 });
 

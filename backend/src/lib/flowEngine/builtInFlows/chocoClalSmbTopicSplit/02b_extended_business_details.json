@@ -414,7 +414,7 @@
             "subsection": "B. Business address",
             "stage_title_he": "חלק א — כתובת בית העסק",
             "question_he": "אימות כתובת",
-            "prompt_he": "לא הצלחתי לאמת בגוגל את הרחוב ומספר הבית עבור הכתובת \"{business_full_address}\". האם זו הכתובת הנכונה? (כן/לא)",
+            "prompt_he": "לא מצאתי בגוגל התאמה לרחוב/מקום בתוך היישוב {business_city} עבור הכתובת \"{business_full_address}\". האם זו הכתובת הנכונה? (כן/לא)",
             "field_key_en": "business_address_confirmed",
             "data_type": "boolean",
             "input_type": "select",

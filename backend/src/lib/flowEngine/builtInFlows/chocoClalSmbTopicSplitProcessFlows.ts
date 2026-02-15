@@ -477,7 +477,7 @@ export const chocoClalSmbTopicSplitProcessFlows = (() => {
                 toolName: 'insurance.resolveSegment',
                 // Run only if we still don't have a segment id, and we have some activity text.
                 // (kseval evaluates this against userData directly.)
-                condition: '((typeof segment_id === \"undefined\" || !segment_id) || (typeof segment_resolution_confidence !== \"undefined\" && Number(segment_resolution_confidence) < 0.7)) && (business_segment || business_activity_and_products || business_used_for || business_occupation || industry || activity_description || segment_description)',
+                condition: '(((typeof segment_id === \"undefined\" || !segment_id) || (typeof segment_resolution_confidence !== \"undefined\" && Number(segment_resolution_confidence) < 0.7) || (typeof segment_name_he_user === \"undefined\" || !segment_name_he_user)) && (business_segment || business_activity_and_products || business_used_for || business_occupation || industry || activity_description || segment_description))',
                 allowReExecutionOnError: true,
                 onError: { behavior: 'continue' },
               },

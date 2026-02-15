@@ -72,7 +72,9 @@ export const saveGatewayCredentialsTool: ToolExecutor = async (payload, { conver
     // Given FlowEngine limitations, best is to rely on 'gateway_credentials_json' if we have an extractor,
     // or just iterate through all potential fields in payload.
 
-    const providerCode = payload.gateway_provider_code || '';
+    const providerCode = typeof (payload as any).gateway_provider_code === 'string'
+      ? String((payload as any).gateway_provider_code).trim()
+      : String((payload as any).gateway_provider_code ?? '').trim();
     if (!providerCode) return { success: false, error: 'Provider code missing context' };
 
     const config = getGatewayConfig(providerCode);
@@ -83,7 +85,8 @@ export const saveGatewayCredentialsTool: ToolExecutor = async (payload, { conver
     const missing: string[] = [];
 
     requiredFields.forEach((field) => {
-      const val = payload[field.name]; // Expect the flow to map collected fields to payload
+      const raw = (payload as any)?.[field.name]; // Expect the flow to map collected fields to payload
+      const val = typeof raw === 'string' ? raw.trim() : String(raw ?? '').trim();
       if (val) {
         collected[field.name] = val;
       } else {

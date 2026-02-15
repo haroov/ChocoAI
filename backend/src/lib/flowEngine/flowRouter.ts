@@ -32,6 +32,8 @@ import {
 } from './fieldValidation';
 import { enrichBusinessAddressInPlace } from './businessAddressEnrichment';
 import { enrichIsraelCompaniesRegistryInPlace } from './israelCompaniesRegistryEnrichment';
+import { derivePolicyEndDateFromStartYmd } from './utils/dateTimeUtils';
+import type { JsonObject, JsonValue } from '../../utils/json';
 
 class FlowRouter {
   async determineFlowAndCollectData(conversation: Conversation, message: Message): Promise<DeterminedFlow | null> {
@@ -73,16 +75,49 @@ class FlowRouter {
           collectedData: {},
         };
       } else {
-        const flow = await this.guessFlow(message);
-        if (flow) {
+        // If we have a userId but no active userFlow, we might be in a broken/incomplete state
+        // (e.g. server crash mid-turn before userFlow persisted). In that case, default to the
+        // welcome/default flow so the UX can recover deterministically.
+        //
+        // Heuristic: if this conversation has never had an assistant message, treat it as a fresh start.
+        const hasAssistantMessage = await prisma.message.findFirst({
+          where: { conversationId: conversation.id, role: 'assistant' },
+          select: { id: true },
+        });
+
+        if (!hasAssistantMessage) {
+          const allFlows = await prisma.flow.findMany();
+          const defaultFlow = allFlows.find((f) => {
+            const definition = f.definition as FlowDefinition;
+            return definition.config.defaultForNewUsers === true;
+          });
+
+          if (!defaultFlow) {
+            logger.error('[flowRouter] No flow found with defaultForNewUsers: true');
+            return null;
+          }
+
+          const flow = defaultFlow;
           const stage = (flow.definition as FlowDefinition).config.initialStage;
 
           res = {
-            kind: 'guessed',
+            kind: 'initial',
             flow,
             stage,
             collectedData: {},
           };
+        } else {
+          const flow = await this.guessFlow(message);
+          if (flow) {
+            const stage = (flow.definition as FlowDefinition).config.initialStage;
+
+            res = {
+              kind: 'guessed',
+              flow,
+              stage,
+              collectedData: {},
+            };
+          }
         }
       }
     }
@@ -538,14 +573,23 @@ class FlowRouter {
               // Also set human-friendly fields used by UI + downstream orchestration.
               // - `business_segment` is what the UI links to a segment page.
               // - `business_site_type` improves phrasing + removes unnecessary follow-up questions.
-              const { formatBusinessSegmentLabelHe, shouldOverrideBusinessSegmentHe } = await import('../insurance/segments/formatBusinessSegmentLabelHe');
+              const { formatBusinessSegmentLabelHe } = await import('../insurance/segments/formatBusinessSegmentLabelHe');
+              const { pickUserSegmentLabelHeFromText } = await import('../insurance/segments/pickUserSegmentLabelHe');
               const desiredLabel = formatBusinessSegmentLabelHe({
                 segment_name_he: (defaults.userData as any)?.segment_name_he,
                 group_name_he: (defaults.userData as any)?.segment_group_name_he,
                 segment_group_id: (defaults.userData as any)?.segment_group_id,
               });
               const existingBs = String(collected.business_segment || '').trim();
-              if (desiredLabel && shouldOverrideBusinessSegmentHe(existingBs, desiredLabel)) {
+              const userLabel = pickUserSegmentLabelHeFromText({
+                rawText: combinedText,
+                resolvedSegmentId: String((defaults.userData as any)?.segment_id || ''),
+              });
+              if (userLabel) {
+                collected.segment_name_he_user = userLabel;
+                // Prefer user terminology if our current label is the catalog-derived default.
+                if (!existingBs || existingBs === desiredLabel) collected.business_segment = userLabel;
+              } else if (desiredLabel && (!existingBs || existingBs === desiredLabel)) {
                 collected.business_segment = desiredLabel;
               }
               const st = (defaults.prefill as any)?.business_site_type;
@@ -603,6 +647,56 @@ class FlowRouter {
       ),
     );
 
+    // Policy: never override insured_relation_to_business once set.
+    // We infer it from initial prompt / occupation answers, but if the user already has a stored role,
+    // do not overwrite it with a later inference.
+    try {
+      if (Object.prototype.hasOwnProperty.call(cleanedCollectedData, 'insured_relation_to_business')) {
+        const existing = await flowHelpers.getUserData(userId, options.determinedFlow.flow.id);
+        const current = String((existing as any)?.insured_relation_to_business || '').trim();
+        if (current) {
+          delete (cleanedCollectedData as any).insured_relation_to_business;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
+    const parseBooleanish = (v: unknown): boolean | null => {
+      if (v === true) return true;
+      if (v === false) return false;
+      const s = String(v ?? '').trim().toLowerCase();
+      if (!s) return null;
+
+      // Explicit tokens + common Hebrew synonyms
+      if (['true', '1', 'כן', 'y', 'yes', 'יש', 'מעסיק', 'עם עובדים', 'עובדים', 'חיובי'].includes(s)) return true;
+      if (['false', '0', 'לא', 'n', 'no', 'אין', 'בלי', 'ללא', 'שלילי'].includes(s)) return false;
+
+      // Numeric prefixes: 0 => false, any positive integer => true (e.g., "3 עובדים", "1-999999")
+      const m = /^(\d{1,9})\b/.exec(s);
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n)) return n > 0;
+      }
+
+      return null;
+    };
+
+    // Normalize business_interruption_type BEFORE validation.
+    // This field is an enum ("אובדן הכנסה (פיצוי יומי)" | "לא") but upstream extraction may yield:
+    // - boolean true/false
+    // - "כן"/"לא"
+    // If we validate first, those forms get rejected and the flow can get stuck on invalid markers.
+    try {
+      if (Object.prototype.hasOwnProperty.call(cleanedCollectedData, 'business_interruption_type')) {
+        const biBool = parseBooleanish((cleanedCollectedData as any).business_interruption_type);
+        if (biBool === true) (cleanedCollectedData as any).business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
+        if (biBool === false) (cleanedCollectedData as any).business_interruption_type = 'לא';
+      }
+    } catch {
+      // best-effort
+    }
+
     // Validate + normalize collected data before persisting.
     const flowDefinition = options.determinedFlow.flow.definition as FlowDefinition;
     const fieldDefs = flowDefinition.fields || {};
@@ -640,27 +734,7 @@ class FlowRouter {
       }
     };
 
-    const parseBooleanish = (v: unknown): boolean | null => {
-      if (v === true) return true;
-      if (v === false) return false;
-      const s = String(v ?? '').trim().toLowerCase();
-      if (!s) return null;
-
-      // Explicit tokens + common Hebrew synonyms
-      if (['true', '1', 'כן', 'y', 'yes', 'יש', 'מעסיק', 'עם עובדים', 'עובדים', 'חיובי'].includes(s)) return true;
-      if (['false', '0', 'לא', 'n', 'no', 'אין', 'בלי', 'ללא', 'שלילי'].includes(s)) return false;
-
-      // Numeric prefixes: 0 => false, any positive integer => true (e.g., "3 עובדים", "1-999999")
-      const m = /^(\d{1,9})\b/.exec(s);
-      if (m) {
-        const n = Number(m[1]);
-        if (Number.isFinite(n)) return n > 0;
-      }
-
-      return null;
-    };
-
-    const validatedCollectedData: Record<string, unknown> = {};
+    const validatedCollectedData: JsonObject = {};
     const invalidFieldSlugs: string[] = [];
     const invalidHints: Record<string, string> = {};
 
@@ -674,7 +748,7 @@ class FlowRouter {
         }
         continue;
       }
-      validatedCollectedData[fieldSlug] = res.normalizedValue;
+      validatedCollectedData[fieldSlug] = res.normalizedValue as JsonValue;
     }
 
     try {
@@ -742,6 +816,24 @@ class FlowRouter {
       // best-effort
     }
 
+    // Derivation: policy_end_date from policy_start_date.
+    // Business rule: end-of-month nearest to start+12mo, except start day >=16 => end-of-month of start+11mo.
+    // Do not override an explicitly provided end date.
+    try {
+      const hasStartDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'policy_start_date');
+      const hasEndDef = Object.prototype.hasOwnProperty.call(fieldDefs, 'policy_end_date');
+      if (hasStartDef && hasEndDef) {
+        const start = String(validatedCollectedData.policy_start_date ?? '').trim();
+        const end = String(validatedCollectedData.policy_end_date ?? '').trim();
+        if (start && !end) {
+          const derived = derivePolicyEndDateFromStartYmd(start);
+          if (derived) validatedCollectedData.policy_end_date = derived;
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     // Derivation (topic-split insurance): if the user selected Business Interruption daily coverage (ch3a),
     // deterministically set the enum business_interruption_type so downstream routing is reliable.
     //
@@ -756,8 +848,6 @@ class FlowRouter {
         const ch3a = parseBooleanish(validatedCollectedData.ch3a_selected);
         if (ch3a === true) {
           validatedCollectedData.business_interruption_type = 'אובדן הכנסה (פיצוי יומי)';
-        } else if (ch3a === false) {
-          validatedCollectedData.business_interruption_type = 'לא';
         }
       }
     } catch {
@@ -814,8 +904,8 @@ class FlowRouter {
           const def = (fieldDefs as any)?.business_legal_entity_type as FieldDefinition | undefined;
           const vr = validateFieldValue('business_legal_entity_type', def, inferred.heLabel);
           if (vr.ok) {
-            validatedCollectedData.business_legal_entity_type = vr.normalizedValue;
-            validatedCollectedData.business_legal_entity_type_code = inferred.code;
+            validatedCollectedData.business_legal_entity_type = vr.normalizedValue as JsonValue;
+            validatedCollectedData.business_legal_entity_type_code = inferred.code as JsonValue;
             validatedCollectedData.business_legal_entity_type_source = 'business_registration_id_prefix';
             if (inferred.detailHe) validatedCollectedData.business_legal_entity_type_detail_he = inferred.detailHe;
           }

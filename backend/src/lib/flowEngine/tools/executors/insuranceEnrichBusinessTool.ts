@@ -1,6 +1,7 @@
 import { prisma } from '../../../../core';
 import { lookupIsraelCompanyByNumber } from '../../../services/gateways/israelCompaniesRegistry';
 import { ToolExecutor, ToolResult } from '../types';
+import type { JsonValue } from '../../../../utils/json';
 
 function normalizeLegalIdType(v: unknown): 'HP' | 'AM' | 'TZ' | 'EIN' | null {
   const raw = String(v || '').trim().toUpperCase();
@@ -66,7 +67,7 @@ export const insuranceEnrichBusinessTool: ToolExecutor = async (
     const businessName = String(payload.business_name || '').trim();
     const currentLegalEntityType = String(payload.business_legal_entity_type || '').trim();
 
-    const saveResults: Record<string, unknown> = {};
+    const saveResults: Record<string, JsonValue | undefined> = {};
 
     // Normalize stored legal_id_type to a human Hebrew label for UI/UX (keep tools compatible via normalization)
     if (legalIdType) {

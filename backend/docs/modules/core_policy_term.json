@@ -18,6 +18,7 @@
       "module_key": "core_policy_term",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "מאיזה תאריך תרצה שהביטוח יתחיל?",
@@ -46,6 +47,7 @@
       "module_key": "core_policy_term",
       "audience": "customer",
       "stage_key": "01_identification",
+      "ask_if": "(business_address_needs_confirmation = false OR (__present(business_address_needs_confirmation) = false))",
       "required_if": null,
       "prompt_variants": {
         "web_chat": "מהו ועד לתאריך? (תאריך)",

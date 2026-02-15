@@ -23,8 +23,9 @@ import { switchCaseGuard } from '../../utils/switchCaseGuard';
 import { logApiCall } from '../../utils/trackApiCall';
 import { logger } from '../../utils/logger';
 import type { FieldsExtractionContext } from './types';
-import { validateEmailValue } from './fieldValidation';
+import { isValidIsraeliIdChecksum, validateEmailValue } from './fieldValidation';
 import { parsePolicyStartDateToYmd } from './utils/dateTimeUtils';
+import { inferInsuredRelationToBusinessHe } from './utils/insuredRelationInference';
 
 enum AIOperationType {
   DetermineFlow = 'determine_flow',
@@ -313,15 +314,8 @@ class LlmService {
       const hasField = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
       const noPriorQuestion = !lastAssistantQuestion;
       if (noPriorQuestion && msgRaw && hasField('insured_relation_to_business')) {
-        const s = msgRaw
-          .replace(/[“”"׳״']/g, '')
-          .replace(/[.,;:!?()[\]{}]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        // Common phrasing: "אני בעלים של X" / "בעלת העסק" / "אני מנהלת"
-        if (/(^|\s)(בעלים|בעלת)(\s|$)/.test(s)) return { insured_relation_to_business: 'בעלים' };
-        if (/(^|\s)מורשה\s+חתימה(\s|$)/.test(s)) return { insured_relation_to_business: 'מורשה חתימה' };
-        if (/(^|\s)(מנהל|מנהלת)(\s|$)/.test(s)) return { insured_relation_to_business: 'מנהל' };
+        const inferred = inferInsuredRelationToBusinessHe(msgRaw);
+        if (inferred) return { insured_relation_to_business: inferred };
       }
     } catch {
       // best-effort
@@ -517,6 +511,8 @@ Example of empty fields:
       const msgRaw = String(options.message || '').trim();
       const msgDigits = msgRaw.replace(/\D/g, '');
       const msgIsMostlyDigits = msgDigits.length >= 6 && msgDigits.length === msgRaw.replace(/\s+/g, '').length;
+      const id9 = msgDigits.length > 0 && msgDigits.length <= 9 ? msgDigits.padStart(9, '0') : msgDigits;
+      const msgLooksLikeIsraeliPersonalId = msgIsMostlyDigits && /^\d{9}$/.test(id9) && isValidIsraeliIdChecksum(id9);
       // Israel business registration ID (ח"פ / ע"מ) is typically 8-10 digits.
       // If the user reply looks like such an ID, do not allow it to populate address fields.
       const msgLooksLikeBusinessRegistrationId = msgIsMostlyDigits && msgDigits.length >= 8 && msgDigits.length <= 10;
@@ -536,7 +532,8 @@ Example of empty fields:
         addIfExists('business_name');
       }
       // Occupation / business segment (Flow 01 Q040 and similar)
-      if (/במה\s+.*עוסק|במה\s+.*עוסקת|מה\s+.*הפעילות|פעילות\s+העסק|מה\s+.*העיסוק|מה\s+.*המקצוע|עיסוק|מקצוע|occupation/i.test(lastQ)) {
+      const askedForOccupation = /במה\s+.*עוסק|במה\s+.*עוסקת|מה\s+.*הפעילות|פעילות\s+העסק|מה\s+.*העיסוק|מה\s+.*המקצוע|עיסוק|מקצוע|occupation/i.test(lastQ);
+      if (askedForOccupation) {
         addIfExists(
           'business_segment',
           'business_occupation',
@@ -546,6 +543,13 @@ Example of empty fields:
           'business_used_for',
           'business_activity_and_products',
         );
+        // If the user answered in the form "בעלים של X", preserve role alongside occupation.
+        try {
+          const inferred = inferInsuredRelationToBusinessHe(msgRaw);
+          if (inferred && availableKeys.has('insured_relation_to_business')) expected.add('insured_relation_to_business');
+        } catch {
+          // best-effort
+        }
       }
       // Business site type (Flow 01 Q033 and similar)
       if (/סוג\s+העסק|סוג\s+המקום|סיווג\s+עסק|משרד\s*\/\s*חנות|קליניקה|מחסן|site\s*type/i.test(lastQ)) {
@@ -682,6 +686,20 @@ Example of empty fields:
         for (const k of Object.keys(json)) {
           if (!expected.has(k)) delete (json as any)[k];
         }
+      }
+
+      // CRITICAL guardrail:
+      // Never accept an Israeli personal ID (ת"ז) as business registration ID (ח"פ/ע"מ), even if the assistant question
+      // is ambiguous (e.g., "ת.ז./ח.פ./...") or the model tries to fit digits into business_registration_id.
+      // This prevents using user_id as company_id; we must obtain the business identifier from the insured explicitly.
+      if (
+        msgLooksLikeIsraeliPersonalId
+        && !msgDigits.startsWith('5') // company numbers start with 5; keep those
+        && (expected.has('business_registration_id') || hasField('business_registration_id'))
+      ) {
+        delete (json as any).business_registration_id;
+        delete (json as any).entity_tax_id;
+        delete (json as any).regNum;
       }
 
       // Hard guardrail: regardless of what the model extracted, never accept an ID-like numeric token
@@ -1076,6 +1094,16 @@ Example of empty fields:
           || msgDigits.length >= 7
           || /רחוב|יישוב|עיר|מיקוד|ת\.ד|ח[\"״׳']?פ|ע[\"״׳']?מ/i.test(msgRaw);
         if (isShortAnswer && !multiField && msgRaw) {
+          // If the user answered in a sentence form ("אני בעלים של ..."), infer deterministically.
+          const inferred = inferInsuredRelationToBusinessHe(msgRaw);
+          if (inferred) {
+            (json as any).insured_relation_to_business = inferred;
+            for (const k of Object.keys(json)) {
+              if (k !== 'insured_relation_to_business') delete (json as any)[k];
+            }
+            return json;
+          }
+
           const cleanChoiceToken = (raw: string): string => String(raw || '')
             .trim()
             .replace(/[“”"׳״']/g, '')

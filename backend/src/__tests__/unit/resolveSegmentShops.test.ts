@@ -1,13 +1,14 @@
 import { resolveSegmentFromText } from '../../lib/insurance/segments/resolveSegmentFromText';
 import { setSegmentsCatalogProdOverride } from '../../lib/insurance/segments/loadSegmentsCatalog';
+import type { SegmentsCatalogProd } from '../../lib/insurance/segments/types';
 
 beforeAll(() => {
-  setSegmentsCatalogProdOverride({
+  const catalog = {
     catalog_id: 'test-shops',
     catalog_version: '0',
     environment: 'test',
     segment_groups: [
-      { group_id: 'shops', group_name_he: 'חנויות', default_package_key: 'pkg_shops' } as any,
+      { group_id: 'shops', group_name_he: 'חנויות', default_package_key: 'pkg_shops' },
     ],
     segments: [
       {
@@ -17,7 +18,7 @@ beforeAll(() => {
         keywords: ['חנות בגדים', 'מוצרי הלבשה', 'מוצרי עור'],
         business_profile_defaults: { primary_activity_he: 'ביגוד', site_type_he: 'חנות', has_physical_location: true },
         default_package_key: 'pkg_shops',
-      } as any,
+      },
       {
         segment_id: 'flower_shop',
         segment_group_id: 'shops',
@@ -25,9 +26,11 @@ beforeAll(() => {
         keywords: ['חנות פרחים'],
         business_profile_defaults: { primary_activity_he: 'פרחים', site_type_he: 'חנות', has_physical_location: true },
         default_package_key: 'pkg_shops',
-      } as any,
+      },
     ],
-  } as any);
+  } satisfies SegmentsCatalogProd;
+
+  setSegmentsCatalogProdOverride(catalog);
 });
 
 describe('resolveSegmentFromText (shops tie-break)', () => {

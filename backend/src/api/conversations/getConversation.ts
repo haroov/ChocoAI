@@ -3,6 +3,8 @@ import { registerRoute } from '../../utils/routesRegistry';
 import { prisma } from '../../core';
 import { flowHelpers } from '../../lib/flowEngine/flowHelpers';
 import { parsePolicyStartDateToYmd } from '../../lib/flowEngine/utils/dateTimeUtils';
+import type { JsonObject, JsonValue } from '../../utils/json';
+import type { FlowDefinition, FlowStageDefinition } from '../../lib/flowEngine/types';
 
 type ConversationMessage = {
   id: string;
@@ -38,15 +40,23 @@ type UiFieldProvenance = {
   seq?: number; // stable first-seen sequence for deterministic ordering
 };
 
-const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowStage[] => {
-  const stagesObj = definition?.stages || {};
+type UiSortableFlowDefinition = FlowDefinition & {
+  config: FlowDefinition['config'] & { ui?: { fieldsSort?: string } };
+};
+
+const buildStages = (definition: UiSortableFlowDefinition, completedStageSlugs: Set<string>): UiFlowStage[] => {
+  const stagesObj = definition.stages;
 
   const sortFieldsByUiPolicy = (fieldSlugs: string[]): string[] => {
-    const mode = String(definition?.config?.ui?.fieldsSort || '').trim();
+    const mode = String(definition.config.ui?.fieldsSort || '').trim();
     if (mode !== 'priorityAsc') return fieldSlugs;
-    const fields = definition?.fields || {};
+    const fields = definition.fields;
     const pr = (slug: string): number => {
-      const n = Number(fields?.[slug]?.priority);
+      const fd = fields?.[slug];
+      const priorityRaw = (fd && typeof fd === 'object' && 'priority' in fd)
+        ? (fd as Record<string, unknown>).priority
+        : undefined;
+      const n = Number(priorityRaw);
       return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
     };
     return [...fieldSlugs].sort((a, b) => {
@@ -57,7 +67,7 @@ const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowS
     });
   };
 
-  const inferKind = (stageSlug: string, stageDef: any): UiFlowStage['kind'] => {
+  const inferKind = (stageSlug: string, stageDef: FlowStageDefinition): UiFlowStage['kind'] => {
     const slug = String(stageSlug || '').trim().toLowerCase();
     if (slug === 'error') return 'error';
     if (['route', 'resolvesegment', 'decidenextstep'].includes(slug)) return 'system';
@@ -71,7 +81,7 @@ const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowS
     return 'user';
   };
 
-  const extractRequiredFields = (stageDef: any): string[] => {
+  const extractRequiredFields = (stageDef: FlowStageDefinition): string[] => {
     const cond = String(stageDef?.orchestration?.customCompletionCheck?.condition || '').trim();
     if (!cond) return Array.isArray(stageDef?.fieldsToCollect) ? stageDef.fieldsToCollect : [];
 
@@ -84,7 +94,7 @@ const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowS
   };
 
   return Object.entries(stagesObj)
-    .map(([stageSlug, stageDef]: any) => {
+    .map(([stageSlug, stageDef]) => {
       const kind = inferKind(stageSlug, stageDef);
       return ({
         slug: stageSlug,
@@ -99,7 +109,7 @@ const buildStages = (definition: any, completedStageSlugs: Set<string>): UiFlowS
     .filter((s) => s.kind === 'user');
 };
 
-const isPresentValue = (v: unknown): boolean => {
+const isPresentValue = (v: JsonValue | undefined): boolean => {
   if (v === undefined || v === null) return false;
   if (typeof v === 'string') {
     const s = v.trim();
@@ -128,8 +138,7 @@ const contributorFromStageSlug = (stageSlug: string | null | undefined): UiField
 
 registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Response) => {
   try {
-    const idRaw = (req.params as any).id as unknown;
-    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
+    const id = String(req.params.id || '').trim();
 
     if (!id) {
       res.status(400).json({
@@ -158,14 +167,12 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       return;
     }
 
-    const messages: ConversationMessage[] = Array.isArray((conversation as any).messages)
-      ? ((conversation as any).messages as ConversationMessage[])
-      : [];
+    const messages: ConversationMessage[] = conversation.messages || [];
 
     const userId = conversation.userId || null;
 
     // ---- userData (prefer active flow overlay if known) ----
-    let userData: Record<string, unknown> = {};
+    let userData: JsonObject = {};
     let activeFlow: UiFlow | null = null;
     const completedFlows: UiFlow[] = [];
 
@@ -218,13 +225,18 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           return false;
         });
 
-        const first0 = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
-        const last0 = String((userData as any).user_last_name || (userData as any).last_name || '').trim();
-        const looksPolluted = Boolean(first0 && last0) && (
-          /ביטוח|הצעה|פוליסה/i.test(first0)
-          || /^ל[\u0590-\u05FF]{2,}$/.test(first0) // Hebrew preposition prefix (likely "למשרד", "לאדריכל", etc.)
-          || /^ל[\u0590-\u05FF]{2,}$/.test(last0)
-        );
+        const first0 = String(userData.user_first_name || userData.first_name || '').trim();
+        const last0 = String(userData.user_last_name || userData.last_name || '').trim();
+        const tokenLooksPolluted = (t: string): boolean => {
+          const s = String(t || '').normalize('NFKC').trim();
+          if (!s) return false;
+          if (/^[-–—]\s*/.test(s)) return true;
+          if (/ביטוח|הצעה|פוליסה/i.test(s)) return true;
+          // Hebrew preposition prefix (likely "למשרד", "לאדריכל", "למהנדסים", etc.)
+          if (/^ל[\u0590-\u05FF]{2,}$/.test(s)) return true;
+          return false;
+        };
+        const looksPolluted = tokenLooksPolluted(first0) || tokenLooksPolluted(last0);
 
         if (!assistantAskedForFirstOrLast && !userExplicitlyProvidedName && looksPolluted && overlayFlowId) {
           await prisma.userData.deleteMany({
@@ -248,8 +260,8 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         }
 
         const bad = new Set(['הי', 'היי', 'שלום', 'אהלן', 'הלו', 'hi', 'hello', 'hey']);
-        const first = String((userData as any).user_first_name || (userData as any).first_name || '').trim();
-        const last = String((userData as any).user_last_name || (userData as any).last_name || '').trim();
+        const first = String(userData.user_first_name || userData.first_name || '').trim();
+        const last = String(userData.user_last_name || userData.last_name || '').trim();
         const lowered = first.toLowerCase();
         const referralTokens = new Set([
           'גוגל', 'google',
@@ -260,7 +272,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           'המלצה', 'recommendation',
           'סוכן', 'agent',
         ]);
-        const referral = String((userData as any).referral_source || '').trim();
+        const referral = String(userData.referral_source || '').trim();
         const needsRepair = first && (
           bad.has(lowered)
           || lowered === 'לקוח'
@@ -324,7 +336,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       // normalize to YYYY-MM-DD, and persist it.
       // This fixes cases where extraction missed the field but the assistant moved on.
       try {
-        const current = String((userData as any).policy_start_date ?? '').trim();
+        const current = String(userData.policy_start_date ?? '').trim();
         const hasIso = /^\d{4}-\d{2}-\d{2}$/.test(current);
         if (!hasIso && Array.isArray(conversation.messages) && conversation.messages.length > 0) {
           const msgs = conversation.messages as Array<{ role: string; content: string }>;
@@ -361,7 +373,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       // If we detect address fields that look like the registration ID (or a reg-id-like numeric token),
       // clear them (and best-effort re-infer from message context).
       try {
-        const digitsOnly = (val: unknown): string => String(val ?? '').replace(/\D/g, '');
+        const digitsOnly = (val: JsonValue | undefined): string => String(val ?? '').replace(/\D/g, '');
         const isMostlyDigitsToken = (raw: string): boolean => {
           const s = String(raw || '').trim();
           if (!s) return false;
@@ -376,11 +388,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         };
         const hasHebrewLetters = (raw: string): boolean => /[\u0590-\u05FF]/.test(String(raw || ''));
 
-        const regDigits = digitsOnly((userData as any).business_registration_id);
+        const regDigits = digitsOnly(userData.business_registration_id);
         const addressKeys = ['business_city', 'business_street', 'business_house_number', 'business_zip', 'business_po_box'] as const;
         const otherKeys = ['business_interruption_type', 'business_additional_locations_count', 'policy_start_date'] as const;
 
-        const isPollutedAddressValue = (rawVal: unknown): boolean => {
+        const isPollutedAddressValue = (rawVal: JsonValue | undefined): boolean => {
           const v = String(rawVal ?? '').trim();
           if (!v) return false;
           const vDigits = digitsOnly(v);
@@ -389,9 +401,9 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           return looksLikeBusinessRegId(v);
         };
 
-        const shouldRepairAddress = addressKeys.some((k) => isPollutedAddressValue((userData as any)[k]));
+        const shouldRepairAddress = addressKeys.some((k) => isPollutedAddressValue(userData[k]));
         const shouldRepairOther = otherKeys.some((k) => {
-          const v = String((userData as any)[k] ?? '').trim();
+          const v = String(userData[k] ?? '').trim();
           if (!v) return false;
           const vDigits = digitsOnly(v);
           if (regDigits && vDigits && vDigits === regDigits && looksLikeBusinessRegId(v)) return true;
@@ -500,9 +512,9 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
             }
           }
 
-          const patch: Record<string, unknown> = {};
+          const patch: JsonObject = {};
           for (const k of addressKeys) {
-            const current = (userData as any)[k];
+            const current = userData[k];
             if (isPollutedAddressValue(current)) {
               // Prefer inferred value, else clear.
               patch[k] = inferred[k] ?? '';
@@ -510,7 +522,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           }
 
           // If reg id is missing, but we inferred it, persist it.
-          if (!String((userData as any).business_registration_id ?? '').trim() && inferred.business_registration_id) {
+          if (!String(userData.business_registration_id ?? '').trim() && inferred.business_registration_id) {
             patch.business_registration_id = inferred.business_registration_id;
           }
 
@@ -519,7 +531,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           // setUserData intentionally skips empty strings for most keys.
           if (shouldRepairOther) {
             for (const k of otherKeys) {
-              const current = String((userData as any)[k] ?? '').trim();
+              const current = String(userData[k] ?? '').trim();
               if (!current) continue;
               const currentDigits = digitsOnly(current);
               const isPolluted = (regDigits && currentDigits && currentDigits === regDigits && looksLikeBusinessRegId(current))
@@ -528,12 +540,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
                   : looksLikeBusinessRegId(current));
               if (!isPolluted) continue;
               try {
+                const where = overlayFlowId
+                  ? { userId, key: k, flowId: overlayFlowId }
+                  : { userId, key: k };
                 await prisma.userData.deleteMany({
-                  where: {
-                    userId,
-                    key: k,
-                    ...(overlayFlowId ? { flowId: overlayFlowId } : {}),
-                  } as any,
+                  where,
                 });
               } catch {
                 // best-effort
@@ -557,22 +568,22 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       // ---- active flow ----
       if (activeUserFlow?.flow) {
-        const completedStageRows: Array<{ stage: string }> = await prisma.flowHistory.findMany({
+        const completedStageRows = await prisma.flowHistory.findMany({
           where: {
             userId,
             flowId: activeUserFlow.flow.id,
             sessionId: activeUserFlow.id,
           },
           select: { stage: true },
-        }) as any;
-        const completedStageSlugs = new Set<string>(completedStageRows.map((r: { stage: string }) => r.stage));
+        });
+        const completedStageSlugs = new Set<string>(completedStageRows.map((r) => r.stage));
 
         activeFlow = {
           name: activeUserFlow.flow.name,
           slug: activeUserFlow.flow.slug,
           isCompleted: false,
           sessionId: activeUserFlow.id,
-          stages: buildStages(activeUserFlow.flow.definition, completedStageSlugs),
+          stages: buildStages(activeUserFlow.flow.definition as UiSortableFlowDefinition, completedStageSlugs),
         };
       }
 
@@ -586,12 +597,13 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       });
 
       // Group by sessionId + flowId (a "flow run")
-      const grouped = new Map<string, { flow: any; stages: Set<string> }>();
+      type HistoryFlow = { id: string; name: string; slug: string; definition: UiSortableFlowDefinition };
+      const grouped = new Map<string, { flow: HistoryFlow; stages: Set<string> }>();
       for (const row of historyRows) {
         const key = `${row.sessionId}::${row.flowId}`;
         const existing = grouped.get(key);
         if (!existing) {
-          grouped.set(key, { flow: row.flow, stages: new Set([row.stage]) });
+          grouped.set(key, { flow: row.flow as HistoryFlow, stages: new Set([row.stage]) });
         } else {
           existing.stages.add(row.stage);
         }
@@ -599,13 +611,13 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
 
       for (const [key, group] of grouped.entries()) {
         const [sessionId] = key.split('::');
-        const allStages = buildStages(group.flow?.definition, group.stages);
+        const allStages = buildStages(group.flow.definition, group.stages);
         const totalStages = allStages.length;
         const completedCount = allStages.filter((s) => s.isCompleted).length;
 
         completedFlows.push({
-          name: group.flow?.name || group.flow?.slug || 'Flow',
-          slug: group.flow?.slug || 'flow',
+          name: group.flow.name || group.flow.slug || 'Flow',
+          slug: group.flow.slug || 'flow',
           isCompleted: totalStages > 0 ? completedCount === totalStages : false,
           sessionId,
           stages: allStages,
@@ -635,18 +647,19 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         id: row.organisation.id,
         region: row.organisation.region,
         einOrRegNum: row.organisation.einOrRegNum,
-        data: row.organisation.data as Record<string, unknown>,
+        data: row.organisation.data as JsonObject,
       }))
       : [];
 
     // Best-effort: per-field provenance derived from flow traces.
     // We prefer fieldsCollected (stage completion) and fall back to first-seen in userDataSnapshot.
     let fieldProvenance: Record<string, UiFieldProvenance> = {};
+    let lastCollectedKeys: string[] = [];
     try {
       const msgsChrono = messages
         .map((m: ConversationMessage) => ({
           role: String(m.role || ''),
-          createdAt: new Date(m.createdAt as any).getTime(),
+          createdAt: new Date(m.createdAt).getTime(),
           text: String(m.content || ''),
         }))
         .filter((m: { createdAt: number }) => Number.isFinite(m.createdAt))
@@ -655,7 +668,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       const userMessages = messages
         .filter((m: ConversationMessage) => m.role === 'user')
         .map((m: ConversationMessage) => ({
-          createdAt: new Date(m.createdAt as any).getTime(),
+          createdAt: new Date(m.createdAt).getTime(),
           text: String(m.content || ''),
         }))
         .filter((m: { createdAt: number }) => Number.isFinite(m.createdAt))
@@ -691,8 +704,8 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         const flows: Array<UiFlow | null> = [activeFlow, ...completedFlows];
         flows.forEach((flow: UiFlow | null) => {
           flow?.stages?.forEach((s: UiFlowStage) => {
-            const fields = Array.isArray((s as any).fieldsToCollect) ? (s as any).fieldsToCollect : [];
-            fields.forEach((f: any) => {
+            const fields = Array.isArray(s.fieldsToCollect) ? s.fieldsToCollect : [];
+            fields.forEach((f: string) => {
               const k = String(f || '').trim();
               if (k) userFieldKeys.add(k);
             });
@@ -713,8 +726,8 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (k.startsWith('default_')) return true;
 
         // If company registry enrichment happened, legal-* business fields are system-derived.
-        const hasRegistry = !!String((userData as any)?.business_registry_source || '').trim()
-          || !!String((userData as any)?.business_legal_entity_type_source || '').trim();
+        const hasRegistry = !!String(userData.business_registry_source || '').trim()
+          || !!String(userData.business_legal_entity_type_source || '').trim();
         if (hasRegistry && (k.startsWith('business_legal_') || k === 'business_legal_entity_type')) return true;
 
         // Segment resolution + derived identifiers are system-generated.
@@ -733,11 +746,21 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         // Israel Companies Registry enrichment keys should be anchored to the time we collected the company number,
         // otherwise they drift to the end of "Collected Data" even though they conceptually belong with the reg number.
         // We anchor them to the first user message that contains the business registration ID / company number digits.
-        if (k === 'il_companies_registry_red_flags' || k.startsWith('il_companies_registry_')) {
+        const isRegistryDerived = (
+          k === 'il_companies_registry_red_flags'
+          || k.startsWith('il_companies_registry_')
+          || k.startsWith('business_legal_')
+          || k.startsWith('business_registry_')
+          || k === 'business_legal_entity_type'
+          || k === 'business_legal_entity_type_code'
+          || k === 'business_legal_entity_type_source'
+          || k === 'il_company_number'
+        );
+        if (isRegistryDerived) {
           try {
-            const anchor = (userData as any)?.business_registration_id
-              || (userData as any)?.il_company_number
-              || (userData as any)?.entity_tax_id;
+            const anchor = userData.business_registration_id
+              || userData.il_company_number
+              || userData.entity_tax_id;
             const digits = String(anchor ?? '').replace(/\D/g, '');
             if (digits && digits.length >= 7) {
               const needle = digits.slice(-7);
@@ -761,9 +784,9 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       ): UiFieldProvenance['contributor'] => {
         // Segment-derived defaults should be system unless we have direct evidence the user provided them.
         if (key === 'business_site_type') {
-          const src = String((userData as any)?.segment_resolution_source || '').trim().toLowerCase();
-          const segId = String((userData as any)?.segment_id || '').trim();
-          const grpId = String((userData as any)?.segment_group_id || '').trim();
+          const src = String(userData.segment_resolution_source || '').trim().toLowerCase();
+          const segId = String(userData.segment_id || '').trim();
+          const grpId = String(userData.segment_group_id || '').trim();
           const hasSegmentResolution = !!(src || segId || grpId);
           if (hasSegmentResolution && !ctx?.overrideUserTs) return 'system';
         }
@@ -776,7 +799,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         return 'system';
       };
 
-      const digitsOnly = (v: unknown): string => String(v ?? '').replace(/\D/g, '');
+      const digitsOnly = (v: JsonValue): string => String(v ?? '').replace(/\D/g, '');
 
       const normalizeForMatch = (s: string): string => s
         .toLowerCase()
@@ -786,7 +809,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         .trim();
 
       const findUserMessageTsForValue = (
-        value: unknown,
+        value: JsonValue,
         mode: 'exact' | 'digits',
         opts?: { wholeWord?: boolean },
       ): string | null => {
@@ -818,16 +841,32 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         return null;
       };
 
-      const findUserMessageTsForKeyValue = (key: string, value: unknown): string | null => {
+      const findUserMessageTsForKeyValue = (key: string, value: JsonValue | undefined): string | null => {
         const k = String(key || '').trim().toLowerCase();
         if (!k) return null;
         if (value === null || value === undefined) return null;
+
+        // Registration / company identifiers: the user often provides these as digits.
+        // Match by digits so the identifier's timestamp reflects when it was supplied.
+        if ([
+          'business_registration_id',
+          'il_company_number',
+          'entity_tax_id',
+          'legal_id',
+        ].includes(k)) {
+          const d = digitsOnly(value);
+          if (d && d.length >= 7) {
+            return findUserMessageTsForValue(d, 'digits');
+          }
+        }
 
         const findReplyAfterAsk = (
           askRe: RegExp,
           replyPred: (replyText: string) => boolean,
         ): string | null => {
-          for (let i = 0; i < msgsChrono.length; i += 1) {
+          // Use the most recent relevant ask→reply pair, so later confirmations/updates
+          // (e.g. "אין כתובות נוספות") get a later timestamp and appear at the end.
+          for (let i = msgsChrono.length - 1; i >= 0; i -= 1) {
             const msg = msgsChrono[i];
             if (msg.role !== 'assistant') continue;
             if (!askRe.test(String(msg.text || ''))) continue;
@@ -837,7 +876,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
               const reply = String(next.text || '').trim();
               if (!reply) continue;
               if (replyPred(reply)) return new Date(next.createdAt).toISOString();
-              // Stop at first user reply after ask (avoid matching later unrelated answers)
+              // Stop at first user reply after this ask.
               break;
             }
           }
@@ -929,6 +968,21 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           return null;
         }
 
+        // Policy start date: stored as ISO (YYYY-MM-DD) after parsing, so the exact value often
+        // doesn't appear in the user's message. Use the ask→reply timestamp instead.
+        if (k === 'policy_start_date') {
+          const askRe = /(תאריך\s*(?:תחילת|התחלה).*ביטוח|מאיזה\s*תאריך.*ביטוח|הביטוח\s*יתחיל|effective\s*date|start\s*date)/i;
+          return findReplyAfterAsk(askRe, (reply) => {
+            const r = String(reply || '').trim();
+            if (!r) return false;
+            // Basic signal that the reply contains a date-like token.
+            if (/\d/.test(r)) return true;
+            if (/(ינואר|פברואר|מרץ|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)/.test(r)) return true;
+            if (/(january|february|march|april|may|june|july|august|september|october|november|december)/i.test(r)) return true;
+            return false;
+          });
+        }
+
         // Name keys: if the extracted name appears in a user message, treat as user input.
         if (/(^|_)(first_name|last_name)($|_)/.test(k)) {
           const s = String(value ?? '').trim();
@@ -988,7 +1042,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           if (!k) continue;
           if (out[k]) continue;
           const overrideUserTs = !isSystemDefaultKey(k)
-            ? findUserMessageTsForKeyValue(k, (userData as any)?.[k])
+            ? findUserMessageTsForKeyValue(k, userData[k])
             : null;
           const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
           if (contributor === 'user') userCollectedKeys.add(k);
@@ -1006,8 +1060,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       }
 
       for (const trace of traceRows) {
-        const snap = trace.userDataSnapshot as any;
-        if (!snap || typeof snap !== 'object') continue;
+        const snapVal = trace.userDataSnapshot as JsonValue;
+        const snap = (snapVal && typeof snapVal === 'object' && !Array.isArray(snapVal))
+          ? (snapVal as JsonObject)
+          : null;
+        if (!snap) continue;
         const inferredContributor = contributorFromStageSlug(trace.stageSlug);
         const startMs = new Date(trace.enteredAt).getTime();
         const endMs = new Date(trace.completedAt || trace.enteredAt).getTime();
@@ -1019,10 +1076,10 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
           const k = String(kRaw || '').trim();
           if (!k) continue;
           if (out[k]) continue;
-          const v = (snap as any)[kRaw];
+          const v = snap[kRaw];
           if (!isPresentValue(v)) continue;
           const overrideUserTs = !isSystemDefaultKey(k)
-            ? (findUserMessageTsForKeyValue(k, (userData as any)?.[k]) || findUserMessageTsForKeyValue(k, v))
+            ? (findUserMessageTsForKeyValue(k, userData[k]) || findUserMessageTsForKeyValue(k, v))
             : null;
           const contributor = classifyContributor(k, inferredContributor, { userAnswerTs, overrideUserTs });
           if (contributor === 'user') userCollectedKeys.add(k);
@@ -1040,7 +1097,10 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       }
 
       // Ensure we always have a provenance record for any key currently present in userData.
-      const fallbackSystemTs = conversation.updatedAt?.toISOString?.() || new Date().toISOString();
+      // Stable system fallback: do NOT use updatedAt (it changes every message and causes UI reordering).
+      const fallbackSystemTs = conversation.createdAt?.toISOString?.()
+        || conversation.updatedAt?.toISOString?.()
+        || new Date().toISOString();
       // Stable fallback for user-provided fields when we cannot match the value:
       // prefer first user message (conversation start), else conversation createdAt, else updatedAt.
       const fallbackUserTs = firstUserMessageAtIso
@@ -1052,7 +1112,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         if (out[k]) return;
         const inferred = userFieldKeys.has(k) ? 'user' : 'system';
         const overrideUserTs = !isSystemDefaultKey(k)
-          ? findUserMessageTsForKeyValue(k, (userData as any)?.[k])
+          ? findUserMessageTsForKeyValue(k, userData[k])
           : null;
         const contributor = classifyContributor(k, inferred, { userAnswerTs: inferred === 'user' ? fallbackUserTs : null, overrideUserTs });
         const overrideSystemTs = (contributor === 'system') ? systemOverrideTsForKey(k) : null;
@@ -1070,7 +1130,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       // This ensures "Collected Data" is ordered by when values were first observed,
       // rather than alphabetical fallbacks, and prevents system enrichment keys from drifting to the end.
       try {
-        const parseTs = (ts: unknown): number => {
+        const parseTs = (ts: JsonValue): number => {
           const t = String(ts || '').trim();
           if (!t) return Number.POSITIVE_INFINITY;
           const ms = Date.parse(t);
@@ -1093,9 +1153,15 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         // best-effort
       }
 
+      lastCollectedKeys = lastUserMessageAtIso
+        ? Object.entries(out)
+          .filter(([_, prov]) => prov?.contributor === 'user' && prov?.ts === lastUserMessageAtIso)
+          .map(([k]) => k)
+        : [];
       fieldProvenance = out;
     } catch {
       fieldProvenance = {};
+      lastCollectedKeys = [];
     }
 
     // Hide internal enrichment/meta keys from "Collected Data" UI, while keeping them in API Log.
@@ -1110,15 +1176,18 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
         'il_companies_registry_name_match_should_verify',
         // Potentially present if we ever persist registrar code fields (should stay API-log-only)
         'il_companies_registry_city_code',
+        'il_companies_registry_company_type_code',
         'il_companies_registry_classification_code',
         'il_companies_registry_country_code',
         'il_companies_registry_limitation_code',
         'il_companies_registry_purpose_code',
         'il_companies_registry_status_code',
+        'il_companies_registry_street_code',
         'il_companies_registry_violator_code',
+        'il_companies_registry_red_flag_reasons',
       ]);
       for (const k of hideFromCollectedData) {
-        if (k in (userData as any)) delete (userData as any)[k];
+        if (k in userData) delete userData[k];
       }
     } catch {
       // best-effort
@@ -1137,6 +1206,7 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       activeFlow,
       completedFlows,
       fieldProvenance,
+      lastCollectedKeys,
       log: logRows.map((row) => ({
         id: row.id,
         provider: row.provider,
@@ -1147,11 +1217,11 @@ registerRoute('get', '/api/v1/conversations/:id', async (req: Request, res: Resp
       })),
       organisations,
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       ok: false,
       error: 'Failed to fetch conversation',
-      message: error?.message,
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 }, { protected: true });

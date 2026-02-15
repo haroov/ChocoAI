@@ -1,3 +1,5 @@
+import type { JsonValue } from '../../../utils/json';
+
 /**
  * Execution context provided to tool executors
  */
@@ -28,11 +30,11 @@ export type ToolExecutionContext = {
  * }
  * ```
  */
-export type ToolResult<T = any> = {
+export type ToolResult<TData = unknown> = {
   /** Whether the tool execution was successful */
   success: boolean;
   /** Data returned on successful execution */
-  data?: T;
+  data?: TData;
   /** Error message if execution failed */
   error?: string;
   /** Optional error code for structured error handling (e.g., 'ALREADY_REGISTERED', 'WRONG_CODE', 'ENTITY_PUSH_FAILED') */
@@ -40,7 +42,7 @@ export type ToolResult<T = any> = {
   /** Optional HTTP status code if error came from HTTP request */
   status?: number;
   /** Optional fields to automatically save to userData (keyed by field slug) */
-  saveResults?: Record<string, any>;
+  saveResults?: Record<string, JsonValue | undefined>;
 };
 
 /**
@@ -77,7 +79,7 @@ export type ToolResult<T = any> = {
  * };
  * ```
  */
-export type ToolExecutor<TInput = any, TResult = any> = (
+export type ToolExecutor<TInput = Record<string, unknown>, TResult = unknown> = (
   input: TInput,
   context: ToolExecutionContext
 ) => Promise<ToolResult<TResult>>;

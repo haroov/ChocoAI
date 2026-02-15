@@ -101,6 +101,25 @@ describe('nameInference', () => {
     expect('proposer_last_name' in repaired).toBe(false);
   });
 
+  test('repairNameFieldsFromInference never infers alias groups when canonical first+last are already good', () => {
+    const inferred = inferFirstLastFromText('גפן שפר');
+    const current = {
+      first_name: 'ליאב חיים',
+      last_name: 'גפן שפר',
+    };
+    const augmented = {
+      // Only updating last_name in this turn, but canonical pair is still good.
+      last_name: 'גפן שפר',
+    };
+    const repaired = repairNameFieldsFromInference({ current, augmented, inferred });
+    expect(repaired.first_name).toBeUndefined();
+    expect(repaired.last_name).toBe('גפן שפר');
+    expect('user_first_name' in repaired).toBe(false);
+    expect('user_last_name' in repaired).toBe(false);
+    expect('proposer_first_name' in repaired).toBe(false);
+    expect('proposer_last_name' in repaired).toBe(false);
+  });
+
   test('repairNameFieldsFromInference does not split multi-word explicit last name into first name', () => {
     const inferred = inferFirstLastFromText('שפרלינג גפן');
     const current = {};

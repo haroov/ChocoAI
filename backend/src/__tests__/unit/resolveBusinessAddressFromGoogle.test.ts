@@ -1,10 +1,12 @@
 import { resolveBusinessAddressFromGoogle } from '../../lib/services/googleMaps/resolveBusinessAddress';
+import type { JsonValue } from '../../utils/json';
 
-function mockJsonResponse(obj: unknown) {
-  return {
+function mockJsonResponse(obj: JsonValue) {
+  const res: Pick<Response, 'ok' | 'json'> = {
     ok: true,
     json: async () => obj,
-  } as any;
+  };
+  return res as Response;
 }
 
 describe('resolveBusinessAddressFromGoogle', () => {
@@ -17,12 +19,12 @@ describe('resolveBusinessAddressFromGoogle', () => {
 
   afterEach(() => {
     process.env.GOOGLE_MAPS_API_KEY = prevKey;
-    global.fetch = prevFetch as any;
+    global.fetch = prevFetch;
     jest.restoreAllMocks();
   });
 
   test('falls back to Places when Geocoding has no ZIP', async () => {
-    const fetchMock = jest.fn(async (url: any) => {
+    const fetchMock = jest.fn(async (url: Parameters<typeof fetch>[0]) => {
       const u = String(url || '');
       if (u.includes('maps.googleapis.com/maps/api/geocode/json')) {
         return mockJsonResponse({
@@ -63,7 +65,7 @@ describe('resolveBusinessAddressFromGoogle', () => {
       throw new Error(`Unexpected URL in fetch mock: ${u}`);
     });
 
-    global.fetch = fetchMock as any;
+    global.fetch = fetchMock as typeof fetch;
 
     const res = await resolveBusinessAddressFromGoogle({ query: 'קניון עזריאלי, עכו', fallbackToPlacesWhenZipMissing: true });
     expect(res).not.toBeNull();

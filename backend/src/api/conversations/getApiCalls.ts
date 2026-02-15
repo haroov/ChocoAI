@@ -4,8 +4,7 @@ import { prisma } from '../../core';
 
 registerRoute('get', '/api/v1/conversations/:id/api-calls', async (req: Request, res: Response) => {
   try {
-    const idRaw = (req.params as any).id as unknown;
-    const id = Array.isArray(idRaw) ? String(idRaw[0] || '').trim() : String(idRaw || '').trim();
+    const id = String(req.params.id || '').trim();
 
     if (!id) {
       res.status(400).json({
@@ -24,11 +23,11 @@ registerRoute('get', '/api/v1/conversations/:id/api-calls', async (req: Request,
       ok: true,
       apiCalls,
     });
-  } catch (error: any) {
+  } catch (error) {
     res.status(500).json({
       ok: false,
       error: 'Failed to get API calls',
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
     });
   }
 }, { protected: true });

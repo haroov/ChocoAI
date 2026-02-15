@@ -1,14 +1,15 @@
 import { resolveSegmentFromText } from '../../lib/insurance/segments/resolveSegmentFromText';
 import { setSegmentsCatalogProdOverride } from '../../lib/insurance/segments/loadSegmentsCatalog';
+import type { SegmentsCatalogProd } from '../../lib/insurance/segments/types';
 
 beforeAll(() => {
   // Minimal fixture so unit tests don't depend on DB seeding.
-  setSegmentsCatalogProdOverride({
+  const catalog = {
     catalog_id: 'test',
     catalog_version: '0',
     environment: 'test',
     segment_groups: [
-      { group_id: 'professional_offices', group_name_he: 'משרדים ושירותים מקצועיים', default_package_key: 'pkg_prof' } as any,
+      { group_id: 'professional_offices', group_name_he: 'משרדים ושירותים מקצועיים', default_package_key: 'pkg_prof' },
     ],
     segments: [
       {
@@ -18,7 +19,7 @@ beforeAll(() => {
         keywords: ['עו"ד', 'עו״ד', 'עורך דין', 'משרד עורכי דין'],
         business_profile_defaults: { primary_activity_he: 'שירותים משפטיים', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
-      } as any,
+      },
       {
         segment_id: 'insurance_agent',
         segment_group_id: 'professional_offices',
@@ -26,7 +27,7 @@ beforeAll(() => {
         keywords: ['סוכן ביטוח', 'סוכנות ביטוח', 'משרד ביטוח'],
         business_profile_defaults: { primary_activity_he: 'לתווך בעסקאות ביטוח', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
-      } as any,
+      },
       {
         segment_id: 'architecture_engineering_office',
         segment_group_id: 'professional_offices',
@@ -34,7 +35,7 @@ beforeAll(() => {
         keywords: ['משרד אדריכלים', 'אדריכל', 'אדריכלים', 'אדריכלות', 'הנדסאי', 'הנדסאים'],
         business_profile_defaults: { primary_activity_he: 'שירותי אדריכלות והנדסה', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
-      } as any,
+      },
       {
         segment_id: 'accounting_firm',
         segment_group_id: 'professional_offices',
@@ -42,9 +43,11 @@ beforeAll(() => {
         // Intentionally no keywords: we still expect to match via abbreviation aliases (רו״ח -> רואי חשבון)
         business_profile_defaults: { primary_activity_he: 'שירותי הנהלת חשבונות, ביקורת וייעוץ פיננסי', site_type_he: 'משרד', has_physical_location: true },
         default_package_key: 'pkg_prof',
-      } as any,
+      },
     ],
-  } as any);
+  } satisfies SegmentsCatalogProd;
+
+  setSegmentsCatalogProdOverride(catalog);
 });
 
 describe('resolveSegmentFromText (deterministic catalog)', () => {

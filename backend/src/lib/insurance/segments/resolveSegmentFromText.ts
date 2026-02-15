@@ -279,15 +279,14 @@ function buildResolvedFromCatalog(params: {
 }): ResolvedSegment {
   const catalog = getSegmentsCatalogProd();
   const found = params.segment_id ? catalog.segments.find((s) => s.segment_id === params.segment_id) : undefined;
-  const seg: any = found;
-  const groupId = params.segment_group_id || seg?.segment_group_id || found?.segment_group_id;
+  const groupId = params.segment_group_id || found?.segment_group_id;
   const group = groupId ? catalog.segment_groups.find((g) => g.group_id === groupId) : undefined;
   return {
-    segment_id: seg?.segment_id || found?.segment_id || params.segment_id,
+    segment_id: found?.segment_id || params.segment_id,
     segment_group_id: groupId || undefined,
-    segment_name_he: seg?.segment_name_he,
+    segment_name_he: found?.segment_name_he,
     group_name_he: group?.group_name_he,
-    default_package_key: seg?.default_package_key || group?.default_package_key,
+    default_package_key: found?.default_package_key || group?.default_package_key,
     source: params.source,
     match_confidence: clamp01(params.match_confidence),
   };
@@ -326,9 +325,7 @@ export async function resolveSegmentFromText(
     // which would otherwise dilute Jaccard similarity.
     const nameTokens = new Set(tokenize(name));
     const nameOverlap = overlapRatio(inputTokens, nameTokens);
-    const kwArr = Array.isArray((s as any).keywords)
-      ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
-      : [];
+    const kwArr = Array.isArray(s.keywords) ? s.keywords : [];
     const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
     const kwOverlapRaw = overlapRatio(inputTokens, kwTokens);
     const kwOverlapMeaningful = overlapRatio(meaningfulTokenSet(inputTokens), meaningfulTokenSet(kwTokens));
@@ -346,8 +343,8 @@ export async function resolveSegmentFromText(
 
   if (segMatch.item && segMatch.score >= 0.55) {
     return buildResolvedFromCatalog({
-      segment_id: (segMatch.item as any).segment_id,
-      segment_group_id: (segMatch.item as any).segment_group_id,
+      segment_id: segMatch.item.segment_id,
+      segment_group_id: segMatch.item.segment_group_id,
       source: 'catalog',
       match_confidence: segMatch.score,
     });
@@ -364,7 +361,7 @@ export async function resolveSegmentFromText(
   });
 
   if (grpMatch.item && grpMatch.score >= 0.45) {
-    const groupId = (grpMatch.item as any).group_id as string;
+    const groupId = grpMatch.item.group_id;
 
     // Refine to a specific segment within the matched group (deterministic).
     // This is important for richer enrichment (segment_name_he/default_package_key).
@@ -377,9 +374,7 @@ export async function resolveSegmentFromText(
       const jac = jaccard(inputTokens, tokens);
       const nameTokens = new Set(tokenize(name));
       const nameOverlap = overlapRatio(inputTokens, nameTokens);
-      const kwArr = Array.isArray((s as any).keywords)
-        ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
-        : [];
+      const kwArr = Array.isArray(s.keywords) ? s.keywords : [];
       const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
       const kwOverlapRaw = overlapRatio(inputTokens, kwTokens);
       const kwOverlapMeaningful = overlapRatio(meaningfulTokenSet(inputTokens), meaningfulTokenSet(kwTokens));
@@ -391,7 +386,7 @@ export async function resolveSegmentFromText(
       return clamp01(Math.max(jac, nameOverlap * 0.95, kwOverlap * 0.97) + bonus + tieBreakBonus + kwPhrase);
     });
 
-    const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.28 ? (segInGroup.item as any).segment_id : undefined;
+    const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.28 ? segInGroup.item.segment_id : undefined;
     const confidence = Math.max(grpMatch.score, segInGroup.score * 0.9);
 
     return buildResolvedFromCatalog({
@@ -408,15 +403,15 @@ export async function resolveSegmentFromText(
     // No LLM context allowed here; return best deterministic guess if any.
     if (segMatch.item && segMatch.score > 0) {
       return buildResolvedFromCatalog({
-        segment_id: (segMatch.item as any).segment_id,
-        segment_group_id: (segMatch.item as any).segment_group_id,
+        segment_id: segMatch.item.segment_id,
+        segment_group_id: segMatch.item.segment_group_id,
         source: 'catalog',
         match_confidence: segMatch.score,
       });
     }
     if (grpMatch.item && grpMatch.score > 0) {
       return buildResolvedFromCatalog({
-        segment_group_id: (grpMatch.item as any).group_id,
+        segment_group_id: grpMatch.item.group_id,
         source: 'catalog',
         match_confidence: grpMatch.score,
       });
@@ -452,26 +447,27 @@ export async function resolveSegmentFromText(
         '- segment_group_id MUST be a group_id from the list, or null if unsure.',
         '- Prefer returning null rather than guessing wildly.',
       ].join('\n'),
-    } as any,
+    },
   });
 
-  const llmGroupId = String((extracted as any).segment_group_id || '').trim();
-  const llmConf = clamp01(Number((extracted as any).match_confidence ?? 0));
+  const extractedParsed = zodSchema.safeParse(extracted);
+  const llmGroupId = String((extractedParsed.success ? extractedParsed.data.segment_group_id : null) || '').trim();
+  const llmConf = clamp01(Number(extractedParsed.success ? extractedParsed.data.match_confidence : 0));
   const group = llmGroupId ? catalog.segment_groups.find((g) => g.group_id === llmGroupId) : undefined;
 
   if (!group) {
     // Fall back to best deterministic segment/group guess
     if (segMatch.item && segMatch.score > 0) {
       return buildResolvedFromCatalog({
-        segment_id: (segMatch.item as any).segment_id,
-        segment_group_id: (segMatch.item as any).segment_group_id,
+        segment_id: segMatch.item.segment_id,
+        segment_group_id: segMatch.item.segment_group_id,
         source: 'catalog',
         match_confidence: segMatch.score,
       });
     }
     if (grpMatch.item && grpMatch.score > 0) {
       return buildResolvedFromCatalog({
-        segment_group_id: (grpMatch.item as any).group_id,
+        segment_group_id: grpMatch.item.group_id,
         source: 'catalog',
         match_confidence: grpMatch.score,
       });
@@ -487,9 +483,7 @@ export async function resolveSegmentFromText(
     const hay = [name, primary].filter(Boolean).join(' | ');
     const tokens = new Set(tokenize(hay));
     const jac = jaccard(inputTokens, tokens);
-    const kwArr = Array.isArray((s as any).keywords)
-      ? ((s as any).keywords as unknown[]).map((x) => String(x ?? '').trim()).filter(Boolean)
-      : [];
+    const kwArr = Array.isArray(s.keywords) ? s.keywords : [];
     const kwTokens = new Set(tokenize(kwArr.slice(0, 80).join(' ')));
     const kwOverlap = overlapRatio(inputTokens, kwTokens);
     const nameNorm = normalizeText(name);
@@ -497,7 +491,7 @@ export async function resolveSegmentFromText(
     return clamp01(Math.max(jac, kwOverlap * 0.9) + bonus);
   });
 
-  const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.3 ? (segInGroup.item as any).segment_id : undefined;
+  const chosenSegmentId = segInGroup.item && segInGroup.score >= 0.3 ? segInGroup.item.segment_id : undefined;
   const confidence = Math.max(llmConf, segInGroup.score * 0.85);
 
   return buildResolvedFromCatalog({

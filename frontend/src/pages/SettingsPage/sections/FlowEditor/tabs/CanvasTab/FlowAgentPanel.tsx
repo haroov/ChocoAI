@@ -148,8 +148,7 @@ const SuggestionCard: React.FC<{
       {suggestion.diff && suggestion.diff.changes && (
         <div className="mt-2 p-2 bg-default-100 rounded text-xs">
           <div className="font-semibold mb-1">Changes:</div>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {suggestion.diff.changes.slice(0, 3).map((change: any, idx: number) => (
+          {suggestion.diff.changes.slice(0, 3).map((change, idx: number) => (
             <div key={idx} className="text-default-600">
               {change.type}
               :

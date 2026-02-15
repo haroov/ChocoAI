@@ -4,6 +4,8 @@ import { ToolExecutor, ToolResult } from '../types';
 import { resolveSegmentFromText } from '../../../insurance/segments/resolveSegmentFromText';
 import { buildQuestionnaireDefaultsFromResolution } from '../../../insurance/segments/buildQuestionnaireDefaults';
 import { formatBusinessSegmentLabelHe, shouldOverrideBusinessSegmentHe } from '../../../insurance/segments/formatBusinessSegmentLabelHe';
+import { pickUserSegmentLabelHeFromText } from '../../../insurance/segments/pickUserSegmentLabelHe';
+import type { JsonValue } from '../../../../utils/json';
 
 function isEmpty(v: unknown): boolean {
   if (v === undefined || v === null) return true;
@@ -63,7 +65,7 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
     const defaults = buildQuestionnaireDefaultsFromResolution(resolution);
 
     // Apply non-destructively (fill only if missing)
-    const saveResults: Record<string, unknown> = {};
+    const saveResults: Record<string, JsonValue | undefined> = {};
 
     const existingSegmentId = String(payload.segment_id || '').trim();
     const existingConf = Number(payload.segment_resolution_confidence);
@@ -78,6 +80,48 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
       group_name_he: resolution.group_name_he,
       segment_group_id: resolution.segment_group_id,
     });
+
+    // Capture user's own segment phrasing (when present) for UI + terminology consistency.
+    // Prefer recent user messages for capturing exact phrasing ("משרד מהנדסים" etc.),
+    // because payload/business_segment may have been normalized already.
+    const recentUserText = await (async (): Promise<string> => {
+      try {
+        const msgs = await prisma.message.findMany({
+          where: { conversationId, role: 'user' },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          select: { content: true },
+        });
+        return msgs
+          .map((m) => String(m.content || '').trim())
+          .filter(Boolean)
+          .reverse()
+          .join(' | ')
+          .slice(0, 900);
+      } catch {
+        return '';
+      }
+    })();
+
+    const userLabel = pickUserSegmentLabelHeFromText({
+      rawText: recentUserText || combined,
+      resolvedSegmentId: resolution.segment_id,
+    });
+    if (userLabel) {
+      // Persist separately; the UI will prefer this for display of `segment_name_he`.
+      if (shouldOverrideBusinessSegmentHe(String(payload.segment_name_he_user || '').trim(), userLabel)) {
+        saveResults.segment_name_he_user = userLabel;
+      }
+      const existingBs = String(payload.business_segment || '').trim();
+      // If existing label contradicts a professional office segment (e.g., says "חנות ..."), fix it.
+      const existingLooksLikeShop = /(חנות|מזון|בעלי\s*חיים|מחסן|מפעל)/.test(existingBs);
+      const resolvedIsOffice = String(resolution.segment_group_id || '').trim() === 'professional_offices'
+        || String(resolution.segment_name_he || '').includes('משרד');
+      // If business_segment is currently the catalog-derived default (or empty/noise), prefer user's phrase.
+      if (!existingBs || existingBs === desiredBusinessSegment || (resolvedIsOffice && existingLooksLikeShop)) {
+        saveResults.business_segment = userLabel;
+      }
+    }
     if (desiredBusinessSegment) {
       const existing = String(payload.business_segment || '').trim();
       if (shouldOverrideBusinessSegmentHe(existing, desiredBusinessSegment)) {
@@ -118,6 +162,17 @@ export const insuranceResolveSegmentTool: ToolExecutor = async (
     }
 
     for (const [k, v] of Object.entries(defaults.prefill)) {
+      // Prefer correcting obvious site-type contradictions (e.g., segment is office but site_type=shop).
+      if (k === 'business_site_type') {
+        const desired = Array.isArray(v) ? String(v[0] || '').trim() : String(v || '').trim();
+        const existing = String(payload.business_site_type || '').trim();
+        const resolvedIsOffice = String(resolution.segment_group_id || '').trim() === 'professional_offices'
+          || String(resolution.segment_name_he || '').includes('משרד');
+        if (desired && resolvedIsOffice && existing === 'חנות') {
+          saveResults.business_site_type = desired;
+          continue;
+        }
+      }
       if (isEmpty(payload[k])) saveResults[k] = v;
     }
 

@@ -9,9 +9,24 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "types": ["node", "jest"],
-    "typeRoots": ["node_modules/@types", "types"]
+    "types": [
+      "node",
+      "jest"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "types"
+    ]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/__tests__/**"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/__tests__/**"
+  ]
 }

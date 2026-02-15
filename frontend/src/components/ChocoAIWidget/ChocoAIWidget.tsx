@@ -323,7 +323,7 @@ export const ChocoAIWidget: React.FC<ChocoAIWidgetProps> = ({ config, previewMod
 
         <div className="flex-1 overflow-hidden">
           <ChatContainer
-            messages={messages as any}
+            messages={messages}
             onSend={sendMessage}
             isTyping={isConnecting}
             isSendingDisabled={isConnecting}

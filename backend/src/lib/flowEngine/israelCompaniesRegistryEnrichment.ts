@@ -256,22 +256,24 @@ export async function enrichIsraelCompaniesRegistryInPlace(params: {
 
   // Name match vs. user-provided business_name
   const userBusinessName = String(validatedCollectedData.business_name ?? existingUserData.business_name ?? '').trim();
+  let nameMatchConfidence: number | null = null;
   if (userBusinessName && nameHe) {
     const confidence = computeNameMatchConfidence(userBusinessName, nameHe);
+    nameMatchConfidence = confidence;
     validatedCollectedData.il_companies_registry_name_match_confidence = confidence;
     validatedCollectedData.il_companies_registry_name_match_ok = confidence >= 0.7;
     validatedCollectedData.il_companies_registry_name_match_should_verify = confidence < 0.7;
   }
 
-  // Red flags
-  const redFlags: string[] = [];
-  const active = isActiveStatusHe(statusHe);
-  validatedCollectedData.il_companies_registry_is_active = active;
-  if (!active) redFlags.push('company_not_active');
+  // Red flags (reasons) + overall boolean flag (requested)
+  const redFlagReasons: string[] = [];
+  const isActive = isActiveStatusHe(statusHe);
+  validatedCollectedData.il_companies_registry_is_active = isActive;
+  if (!isActive) redFlagReasons.push('company_not_active');
 
   const isViolator = parseIsViolatorHe(c.violatorHe, c.violatorCode);
   if (isViolator !== null) validatedCollectedData.il_companies_registry_is_violator = isViolator;
-  if (isViolator) redFlags.push('company_is_violator');
+  if (isViolator) redFlagReasons.push('company_is_violator');
 
   const isPublicCompany = entityTypeRaw === 'חברה ציבורית' || regIdDigits.startsWith('52');
 
@@ -289,10 +291,26 @@ export async function enrichIsraelCompaniesRegistryInPlace(params: {
   } else if (typeof lastAnnualReportYear === 'number') {
     const reportsRecentOk = lastAnnualReportYear >= (currentYear - 2);
     validatedCollectedData.il_companies_registry_reports_recent_ok = reportsRecentOk;
-    if (!reportsRecentOk) redFlags.push('annual_report_not_recent');
+    if (!reportsRecentOk) redFlagReasons.push('annual_report_not_recent');
   } else {
     validatedCollectedData.il_companies_registry_reports_recent_ok = false;
-    redFlags.push('annual_report_year_missing');
+    redFlagReasons.push('annual_report_year_missing');
   }
-  validatedCollectedData.il_companies_registry_red_flags = redFlags;
+
+  // Requested rules for Israeli LTD company numbers (5X...):
+  // - If name match confidence < 0.7 => red flag
+  // - If status is not exactly "פעילה" => red flag
+  const isLtdCompanyNumber = /^5\d{7,8}$/.test(regIdDigits);
+  if (isLtdCompanyNumber) {
+    if (typeof nameMatchConfidence === 'number' && nameMatchConfidence < 0.7) {
+      redFlagReasons.push('name_mismatch');
+    }
+    const statusExact = String(statusHe || '').trim();
+    if (statusExact && statusExact !== 'פעילה') {
+      redFlagReasons.push('company_status_not_active');
+    }
+  }
+
+  validatedCollectedData.il_companies_registry_red_flags = redFlagReasons.length > 0;
+  validatedCollectedData.il_companies_registry_red_flag_reasons = redFlagReasons;
 }

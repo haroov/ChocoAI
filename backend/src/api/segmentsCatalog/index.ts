@@ -9,8 +9,38 @@ import {
 } from '../../lib/insurance/segments/loadSegmentsCatalog';
 import { getLatestChocoProductsSegmentListFromDb, importChocoProductsSegmentListCsvToDb } from '../../lib/chocoProducts/importChocoProductsSegmentListCsv';
 import { enrichSegmentsCatalog } from '../../lib/insurance/segments/enrichSegmentsCatalog';
+import type { JsonObject } from '../../utils/json';
+import { asJsonObject } from '../../utils/json';
+import { JsonValueSchema } from '../../utils/zodJson';
+import type { SegmentsCatalogInsuranceProduct, SegmentsCatalogProd } from '../../lib/insurance/segments/types';
 
-const SegmentsCatalogProdSchema = z.object({
+const SegmentsCatalogInsuranceProductSchema: z.ZodType<SegmentsCatalogInsuranceProduct> = z.object({
+  product_key: z.string().min(1),
+  product_name_he: z.string().optional(),
+  insurer_code: z.string().optional(),
+  channel: z.string().optional(),
+  notes_he: z.string().optional(),
+}).passthrough();
+
+const SegmentsCatalogSegmentGroupSchema = z.object({
+  group_id: z.string().min(1),
+  group_name_he: z.string().optional(),
+  default_package_key: z.string().optional(),
+  default_site_type_he: z.string().optional(),
+}).passthrough();
+
+const SegmentsCatalogSegmentSchema = z.object({
+  segment_id: z.string().min(1),
+  segment_group_id: z.string().min(1),
+  segment_name_he: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  choco_product_slugs: z.array(z.string()).optional(),
+  coverages: z.record(z.boolean()).optional(),
+  default_package_key: z.string().optional(),
+  business_profile_defaults: z.record(JsonValueSchema).optional(),
+}).passthrough();
+
+const SegmentsCatalogProdSchema: z.ZodType<SegmentsCatalogProd> = z.object({
   catalog_id: z.string().min(1),
   catalog_version: z.string().min(1),
   environment: z.string().min(1),
@@ -21,9 +51,9 @@ const SegmentsCatalogProdSchema = z.object({
     insurer_code: z.string().optional(),
     insurer_name_he: z.string().optional(),
   }).optional(),
-  insurance_products: z.array(z.any()).optional(),
-  segment_groups: z.array(z.any()),
-  segments: z.array(z.any()),
+  insurance_products: z.array(SegmentsCatalogInsuranceProductSchema).optional(),
+  segment_groups: z.array(SegmentsCatalogSegmentGroupSchema),
+  segments: z.array(SegmentsCatalogSegmentSchema),
 }).passthrough();
 
 registerRoute('get', '/api/v1/segments-catalog/prod', async (_req, res) => {
@@ -36,8 +66,8 @@ registerRoute('get', '/api/v1/segments-catalog/prod', async (_req, res) => {
       catalog,
       ...sourceInfo,
     });
-  } catch (error: any) {
-    const msg = String(error?.message || '');
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
     const isMissing = /not initialized in db/i.test(msg) || /not found in db/i.test(msg);
     res.status(isMissing ? 404 : 500).json({ ok: false, error: 'Failed to get segments catalog', message: msg });
   }
@@ -63,14 +93,19 @@ registerRoute('put', '/api/v1/segments-catalog/prod', async (req, res) => {
       }
     }
 
-    const body = { ...(req.body || {}) } as any;
+    const body = { ...(req.body || {}) } as JsonObject;
     delete body.__meta;
     delete body.packages; // packages are deprecated/removed
     // Sanitize removed coverages keys (if older overrides still include them)
-    if (Array.isArray(body.segments)) {
-      for (const s of body.segments) {
-        if (s?.coverages && typeof s.coverages === 'object') {
-          delete s.coverages.legal_expenses;
+    {
+      const segmentsVal = (body as Record<string, unknown>).segments;
+      if (Array.isArray(segmentsVal)) {
+        for (const seg of segmentsVal) {
+          const s = asJsonObject(seg);
+          if (!s) continue;
+          const cov = asJsonObject((s as Record<string, unknown>).coverages);
+          if (!cov) continue;
+          delete (cov as Record<string, unknown>)['legal_expenses'];
         }
       }
     }
@@ -86,31 +121,31 @@ registerRoute('put', '/api/v1/segments-catalog/prod', async (req, res) => {
 
     const meta = (() => {
       const notes = typeof req.body?.__meta?.notes === 'string' ? req.body.__meta.notes.trim() : undefined;
-      const updatedBy = typeof (req as any)?.admin?.username === 'string' ? (req as any).admin.username : undefined;
+      const updatedBy = req.admin?.username;
       return { ...(notes ? { notes } : {}), ...(updatedBy ? { updatedBy } : {}) };
     })();
 
     const { createdAt } = await persistSegmentsCatalogProdOverride({
-      catalog: parsed.data as any,
+      catalog: parsed.data,
       meta,
     });
 
     res.json({ ok: true, overrideUpdatedAt: createdAt.toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ ok: false, error: 'Failed to save segments catalog', message: error?.message });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Failed to save segments catalog', message: error instanceof Error ? error.message : String(error) });
   }
 }, { protected: true });
 
 registerRoute('delete', '/api/v1/segments-catalog/prod', async (req, res) => {
   try {
-    const updatedBy = typeof (req as any)?.admin?.username === 'string' ? (req as any).admin.username : undefined;
+    const updatedBy = req.admin?.username;
     // DB-only mode: clearing means tombstoning the DB record.
     const { createdAt } = await persistSegmentsCatalogProdOverrideTombstone({
       meta: updatedBy ? { updatedBy, notes: 'Cleared segments catalog (tombstone)' } : { notes: 'Cleared segments catalog (tombstone)' },
     });
     res.json({ ok: true, overrideUpdatedAt: createdAt.toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ ok: false, error: 'Failed to clear segments catalog override', message: error?.message });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Failed to clear segments catalog override', message: error instanceof Error ? error.message : String(error) });
   }
 }, { protected: true });
 
@@ -123,7 +158,7 @@ registerRoute('delete', '/api/v1/segments-catalog/prod', async (req, res) => {
  */
 registerRoute('post', '/api/v1/segments-catalog/prod/enrich', async (req, res) => {
   try {
-    const updatedBy = typeof (req as any)?.admin?.username === 'string' ? (req as any).admin.username : undefined;
+    const updatedBy = req.admin?.username;
 
     await importChocoProductsSegmentListCsvToDb();
     const latest = await getLatestChocoProductsSegmentListFromDb();
@@ -135,7 +170,7 @@ registerRoute('post', '/api/v1/segments-catalog/prod/enrich', async (req, res) =
     });
 
     const { createdAt } = await persistSegmentsCatalogProdOverride({
-      catalog: enriched.catalog as any,
+      catalog: enriched.catalog,
       meta: updatedBy ? { updatedBy, notes: 'Enriched from choco products CSV' } : { notes: 'Enriched from choco products CSV' },
     });
 
@@ -144,8 +179,8 @@ registerRoute('post', '/api/v1/segments-catalog/prod/enrich', async (req, res) =
       overrideUpdatedAt: createdAt.toISOString(),
       stats: enriched.stats,
     });
-  } catch (error: any) {
-    res.status(500).json({ ok: false, error: 'Failed to enrich segments catalog', message: error?.message });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Failed to enrich segments catalog', message: error instanceof Error ? error.message : String(error) });
   }
 }, { protected: true });
 
@@ -154,7 +189,7 @@ registerRoute('post', '/api/v1/segments-catalog/prod/reload', async (_req, res) 
   try {
     await initSegmentsCatalogProdOverrideCache();
     res.json({ ok: true, ...getSegmentsCatalogProdEffectiveSource() });
-  } catch (error: any) {
-    res.status(500).json({ ok: false, error: 'Failed to reload segments catalog override', message: error?.message });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: 'Failed to reload segments catalog override', message: error instanceof Error ? error.message : String(error) });
   }
 }, { protected: true });

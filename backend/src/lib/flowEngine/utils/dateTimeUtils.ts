@@ -410,6 +410,57 @@ function toIsoYmd(y: number, m: number, d: number): string | null {
   return `${y}-${mm}-${dd}`;
 }
 
+function daysInMonthUtc(y: number, m: number): number | null {
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
+  if (y < 1900 || y > 2100) return null;
+  if (m < 1 || m > 12) return null;
+  // Day 0 of next month = last day of current month.
+  const dt = new Date(Date.UTC(y, m, 0));
+  const d = dt.getUTCDate();
+  return Number.isFinite(d) ? d : null;
+}
+
+function endOfMonthYmd(ymd: string): string | null {
+  if (!isValidIsoYmd(ymd)) return null;
+  const y = Number(ymd.slice(0, 4));
+  const m = Number(ymd.slice(5, 7));
+  const dim = daysInMonthUtc(y, m);
+  return dim ? toIsoYmd(y, m, dim) : null;
+}
+
+function addMonthsToYmd(ymd: string, months: number): string | null {
+  if (!isValidIsoYmd(ymd)) return null;
+  if (!Number.isFinite(months)) return null;
+  const y = Number(ymd.slice(0, 4));
+  const m = Number(ymd.slice(5, 7));
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
+  const base = (y * 12) + (m - 1);
+  const target = base + Math.trunc(months);
+  const ty = Math.floor(target / 12);
+  const tm0 = target % 12;
+  const tm = tm0 + 1;
+  return toIsoYmd(ty, tm, 1);
+}
+
+/**
+ * Derive policy end date from a policy start date (YYYY-MM-DD).
+ *
+ * Business rule:
+ * - The market convention is an annual policy that ends on the end-of-month closest to (start + 12 months).
+ * - Operationalized as:
+ *   - If start day is 1..15: end-of-month of (start + 11 months)  (month *before* the anniversary month)
+ *   - If start day is 16..31: end-of-month of (start + 12 months) (anniversary month)
+ */
+export function derivePolicyEndDateFromStartYmd(startYmd: string): string | null {
+  if (!isValidIsoYmd(startYmd)) return null;
+  const day = Number(startYmd.slice(8, 10));
+  if (!Number.isFinite(day) || day < 1 || day > 31) return null;
+  const monthsToAdd = day >= 16 ? 12 : 11;
+  const firstOfTargetMonth = addMonthsToYmd(startYmd, monthsToAdd);
+  if (!firstOfTargetMonth) return null;
+  return endOfMonthYmd(firstOfTargetMonth);
+}
+
 /**
  * Parse user-provided policy start date text and normalize it to YYYY-MM-DD.
  *

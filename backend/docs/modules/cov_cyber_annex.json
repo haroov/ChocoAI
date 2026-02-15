@@ -9,7 +9,7 @@
       "stage_title_he": "נספח א — כיסוי סייבר",
       "chapter": "A",
       "question_he": "כיסוי סייבר",
-      "prompt_he": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)",
+      "prompt_he": "האם תרצה גם כיסוי סייבר? (לא/כן)",
       "field_key_en": "cyber_selected",
       "data_type": "boolean",
       "input_type": "yes_no",
@@ -23,8 +23,8 @@
       "stage_key": "02_needs_discovery",
       "required_if": null,
       "prompt_variants": {
-        "web_chat": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)",
-        "whatsapp": "האם תרצה גם כיסוי סייבר? (מותנה בעמידה בתנאים) (לא/כן)"
+        "web_chat": "האם תרצה גם כיסוי סייבר? (לא/כן)",
+        "whatsapp": "האם תרצה גם כיסוי סייבר? (לא/כן)"
       },
       "priority": 1,
       "whatsapp_rendering": {

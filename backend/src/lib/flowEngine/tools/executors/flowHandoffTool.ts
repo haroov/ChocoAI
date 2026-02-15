@@ -3,6 +3,7 @@ import { logger } from '../../../../utils/logger';
 import { flowHelpers } from '../../flowHelpers';
 import { FlowDefinition } from '../../types';
 import { ToolExecutor, ToolResult } from '../types';
+import type { JsonObject, JsonValue } from '../../../../utils/json';
 
 /**
  * Flow handoff tool executor
@@ -16,10 +17,21 @@ import { ToolExecutor, ToolResult } from '../types';
  * @param context - Tool execution context with conversationId
  * @returns ToolResult indicating success or failure
  */
-export const flowHandoffTool: ToolExecutor = async (
+type FlowHandoffInput = {
+  targetFlowSlug: string;
+  preserveFields?: string[];
+};
+
+type FlowHandoffOutput = {
+  targetFlowSlug: string;
+  targetStage: string;
+  preservedFields: string[];
+};
+
+export const flowHandoffTool: ToolExecutor<FlowHandoffInput, FlowHandoffOutput> = async (
   payload: { targetFlowSlug: string; preserveFields?: string[] },
   { conversationId },
-): Promise<ToolResult> => {
+): Promise<ToolResult<FlowHandoffOutput>> => {
   try {
     const { targetFlowSlug, preserveFields } = payload;
 
@@ -73,12 +85,12 @@ export const flowHandoffTool: ToolExecutor = async (
     const currentUserData = await flowHelpers.getUserData(userId, currentUserFlow.flowId);
 
     // Preserve specified fields (or all fields if preserveFields is not specified)
-    const fieldsToPreserve: Record<string, unknown> = {};
+    const fieldsToPreserve: JsonObject = {};
     if (preserveFields && preserveFields.length > 0) {
       // Preserve only specified fields
       for (const fieldKey of preserveFields) {
         if (fieldKey in currentUserData && currentUserData[fieldKey] !== undefined && currentUserData[fieldKey] !== null && currentUserData[fieldKey] !== '') {
-          fieldsToPreserve[fieldKey] = currentUserData[fieldKey];
+          fieldsToPreserve[fieldKey] = currentUserData[fieldKey] as JsonValue;
         }
       }
     } else {

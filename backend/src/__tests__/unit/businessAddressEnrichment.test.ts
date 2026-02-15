@@ -97,5 +97,33 @@ describe('enrichBusinessAddressInPlace', () => {
     expect(validated.business_geo_lat).toBeUndefined();
     expect(validated.business_google_formatted_address).toBeUndefined();
   });
+
+  test('when Google cannot validate street+house, it asks for confirmation', async () => {
+    const validated: Record<string, unknown> = {
+      business_city: 'בארותיים',
+      business_street: 'קניון עזריאלי',
+      business_house_number: '52',
+    };
+    const existing: Record<string, unknown> = {};
+    const resolveAddress = jest.fn(async () => ({
+      city: 'בארותיים',
+      // No street/house resolved => treated as no-match for street+house verification
+      street: '',
+      houseNumber: '',
+      zip: '',
+      geoLat: 32.3,
+      geoLng: 35.0,
+      googleFormattedAddress: 'בארותיים, ישראל',
+      googleSource: 'geocoding' as const,
+    }));
+
+    await enrichBusinessAddressInPlace({ validatedCollectedData: validated, existingUserData: existing, resolveAddress });
+
+    expect(resolveAddress).toHaveBeenCalledTimes(1);
+    expect(validated.business_address_needs_confirmation).toBe(true);
+    expect(validated.business_address_needs_correction).toBe('N');
+    expect(validated.business_google_match_found).toBe(false);
+    expect(validated.business_google_match_status).toBe('no_match_needs_confirmation');
+  });
 });
 

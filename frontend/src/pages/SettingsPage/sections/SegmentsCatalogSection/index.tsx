@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, max-len, react/jsx-one-expression-per-line, consistent-return, no-multiple-empty-lines */
+/* eslint-disable max-len, react/jsx-one-expression-per-line, consistent-return, no-multiple-empty-lines */
 import React from 'react';
 import { useTranslations } from 'use-intl';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,14 +23,41 @@ import { app } from '../../../../helpers/app';
 import { SectionHeader } from '../../components/SectionHeader';
 import { SectionContent } from '../../components/SectionContent';
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+// We treat this as "JSON-ish" because the catalog editor creates/edits objects
+// and optional fields may be absent (or temporarily `undefined`) in memory.
+type JsonObject = { [k: string]: JsonValue | undefined };
+type JsonArray = JsonValue[];
+
+type SegmentsCatalogSegmentGroup = {
+  group_id: string;
+  group_name_he?: string;
+  default_package_key?: string;
+  default_site_type_he?: string;
+  [k: string]: JsonValue | undefined;
+};
+
+type SegmentsCatalogSegment = {
+  segment_id: string;
+  segment_group_id: string;
+  segment_name_he?: string;
+  keywords?: string[];
+  choco_product_slugs?: string[];
+  coverages?: Record<string, boolean>;
+  default_package_key?: string;
+  business_profile_defaults?: JsonObject;
+  [k: string]: JsonValue | undefined;
+};
+
 type SegmentsCatalogProd = {
   catalog_id: string;
   catalog_version: string;
   environment: string;
-  insurance_products?: any[];
-  segment_groups: any[];
-  segments: any[];
-  [k: string]: any;
+  insurance_products?: JsonValue[];
+  segment_groups: SegmentsCatalogSegmentGroup[];
+  segments: SegmentsCatalogSegment[];
+  [k: string]: JsonValue | undefined;
 };
 
 type CatalogApiResponse = {
@@ -45,15 +72,15 @@ function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
-function safeJsonStringify(v: unknown): string {
+function safeJsonStringify(v: JsonValue): string {
   try { return JSON.stringify(v, null, 2); } catch { return ''; }
 }
 
-function normalize(s: unknown): string {
+function normalize(s: JsonValue | undefined): string {
   return String(s ?? '').toLowerCase().trim();
 }
 
-function pickLabel(v: any, fallbackKey: string): string {
+function pickLabel(v: JsonObject | null | undefined, fallbackKey: string): string {
   return String(v?.segment_name_he || v?.group_name_he || v?.package_name_he || v?.product_name_he || v?.name || v?.[fallbackKey] || '').trim();
 }
 
@@ -94,7 +121,7 @@ function makeNewId(prefix: string): string {
   return `${prefix}${Date.now()}`;
 }
 
-function parseKeywordsTextToList(text: unknown): string[] {
+function parseKeywordsTextToList(text: JsonValue): string[] {
   return String(text || '')
     .split(/\r?\n|,|!/g)
     .map((x) => x.trim())
@@ -169,7 +196,7 @@ export const SegmentsCatalogSection: React.FC = () => {
     const id = String(segmentIdFromUrl || '').trim();
     if (!id) return;
     const seg = Array.isArray(draft.segments)
-      ? draft.segments.find((s: any) => String(s?.segment_id || '').trim() === id)
+      ? draft.segments.find((s) => String(s?.segment_id || '').trim() === id)
       : undefined;
     if (!seg) {
       if (missingSegmentNotifiedRef.current !== id) {
@@ -201,7 +228,7 @@ export const SegmentsCatalogSection: React.FC = () => {
         const segId = String(selectedSegmentId || '').trim();
         if (!segId) return draft;
         const next = deepClone(draft);
-        const idx = next.segments.findIndex((s: any) => String(s?.segment_id) === segId);
+        const idx = next.segments.findIndex((s) => String(s?.segment_id) === segId);
         if (idx >= 0) next.segments[idx].keywords = parseKeywordsTextToList(keywordsText);
         return next;
       })();
@@ -218,7 +245,7 @@ export const SegmentsCatalogSection: React.FC = () => {
       });
       const res = await resp.json();
       if (!resp.ok || !res.ok) throw res;
-      return res as any;
+      return res;
     },
     onSuccess: async () => {
       // Verify DB is the source-of-truth by reloading after save.
@@ -235,7 +262,7 @@ export const SegmentsCatalogSection: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ['segmentsCatalog', 'prod'] });
       app.notification.success(tCommon('save'));
     },
-    onError: (err: any) => {
+    onError: (err: Error & { error?: string }) => {
       // Concurrency conflict: another admin/tab saved a newer version.
       if (err?.error === 'Conflict') {
         app.notification.error('הקטלוג עודכן בינתיים (טאב/משתמש אחר). רענן ונסה שוב.');
@@ -260,11 +287,11 @@ export const SegmentsCatalogSection: React.FC = () => {
     : { label: 'File', color: 'default' as const };
 
   const selectedGroup = React.useMemo(() => (
-    draft?.segment_groups?.find((g: any) => String(g?.group_id) === String(selectedGroupId))
+    draft?.segment_groups?.find((g) => String(g?.group_id) === String(selectedGroupId))
   ), [draft, selectedGroupId]);
 
   const selectedSegment = React.useMemo(() => (
-    draft?.segments?.find((s: any) => String(s?.segment_id) === String(selectedSegmentId))
+    draft?.segments?.find((s) => String(s?.segment_id) === String(selectedSegmentId))
   ), [draft, selectedSegmentId]);
 
   React.useEffect(() => {
@@ -290,7 +317,7 @@ export const SegmentsCatalogSection: React.FC = () => {
     const q = normalize(searchGroups);
     const items = Array.isArray(draft?.segment_groups) ? draft!.segment_groups : [];
     if (!q) return items;
-    return items.filter((g: any) => {
+    return items.filter((g) => {
       const hay = [g.group_id, g.group_name_he, g.default_site_type_he, g.default_package_key].map(normalize).join(' | ');
       return hay.includes(q);
     });
@@ -301,7 +328,7 @@ export const SegmentsCatalogSection: React.FC = () => {
     const itemsRaw = Array.isArray(draft?.segments) ? draft!.segments : [];
     const items = itemsRaw;
     if (!q) return items;
-    return items.filter((s: any) => {
+    return items.filter((s) => {
       const hay = [
         s.segment_id,
         s.segment_name_he,
@@ -316,14 +343,14 @@ export const SegmentsCatalogSection: React.FC = () => {
 
   const updateSelectedJson = (kind: 'group' | 'segment', jsonText: string) => {
     if (!draft) return;
-    let parsed: any;
+    let parsed: JsonValue;
     try {
-      parsed = JSON.parse(jsonText);
-    } catch (e: any) {
-      app.notification.error(`Invalid JSON: ${e?.message || 'parse error'}`);
+      parsed = JSON.parse(jsonText) as JsonValue;
+    } catch (e) {
+      app.notification.error(`Invalid JSON: ${e instanceof Error ? e.message : 'parse error'}`);
       return;
     }
-    if (!parsed || typeof parsed !== 'object') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       app.notification.error('JSON must be an object');
       return;
     }
@@ -331,11 +358,11 @@ export const SegmentsCatalogSection: React.FC = () => {
     setDraftPatched((cur) => {
       const next = deepClone(cur);
       if (kind === 'group') {
-        const idx = next.segment_groups.findIndex((g: any) => String(g?.group_id) === String(selectedGroupId));
-        if (idx >= 0) next.segment_groups[idx] = parsed;
+        const idx = next.segment_groups.findIndex((g) => String(g?.group_id) === String(selectedGroupId));
+        if (idx >= 0) next.segment_groups[idx] = parsed as SegmentsCatalogSegmentGroup;
       } else if (kind === 'segment') {
-        const idx = next.segments.findIndex((s: any) => String(s?.segment_id) === String(selectedSegmentId));
-        if (idx >= 0) next.segments[idx] = parsed;
+        const idx = next.segments.findIndex((s) => String(s?.segment_id) === String(selectedSegmentId));
+        if (idx >= 0) next.segments[idx] = parsed as SegmentsCatalogSegment;
       }
       return next;
     });
@@ -343,12 +370,12 @@ export const SegmentsCatalogSection: React.FC = () => {
 
   const applyRawJson = () => {
     if (!rawJson) return;
-    let parsed: any;
-    try { parsed = JSON.parse(rawJson); } catch (e: any) {
-      app.notification.error(`Invalid JSON: ${e?.message || 'parse error'}`);
+    let parsed: JsonValue;
+    try { parsed = JSON.parse(rawJson) as JsonValue; } catch (e) {
+      app.notification.error(`Invalid JSON: ${e instanceof Error ? e.message : 'parse error'}`);
       return;
     }
-    if (!parsed || typeof parsed !== 'object') {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       app.notification.error('JSON must be an object');
       return;
     }
@@ -386,7 +413,8 @@ export const SegmentsCatalogSection: React.FC = () => {
                 next.segments.unshift({
                   segment_id: segId,
                   segment_name_he: '',
-                  segment_group_id: groupId || undefined,
+                  // Keep it a string (empty is allowed during draft editing).
+                  segment_group_id: groupId,
                   keywords: [],
                   coverages: {},
                 });
@@ -467,7 +495,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                             setDraftPatched((cur) => {
                               const next = deepClone(cur);
                               next.segment_groups = Array.isArray(next.segment_groups) ? next.segment_groups : [];
-                              const exists = next.segment_groups.some((g: any) => String(g?.group_id) === id);
+                              const exists = next.segment_groups.some((g) => String(g?.group_id) === id);
                               if (exists) {
                                 app.notification.error('group_id already exists');
                                 return next;
@@ -494,7 +522,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                   <Divider />
                   <CardBody className="p-2 max-h-[70vh] overflow-auto">
                     <div className="flex flex-col gap-1">
-                      {filteredGroups.map((g: any) => {
+                      {filteredGroups.map((g) => {
                         const id = String(g?.group_id || '');
                         const active = id && id === selectedGroupId;
                         return (
@@ -536,11 +564,11 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedGroup.group_id || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segment_groups.findIndex((x: any) => String(x?.group_id) === String(selectedGroup.group_id));
+                            const idx = next.segment_groups.findIndex((x) => String(x?.group_id) === String(selectedGroup.group_id));
                             if (idx < 0) return next;
                             const newId = String(v || '').trim();
                             if (!newId) return next;
-                            const exists = next.segment_groups.some((x: any, i: number) => i !== idx && String(x?.group_id) === newId);
+                            const exists = next.segment_groups.some((x, i: number) => i !== idx && String(x?.group_id) === newId);
                             if (exists) {
                               app.notification.error('group_id already exists');
                               return next;
@@ -562,7 +590,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedGroup.group_name_he || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segment_groups.findIndex((x: any) => String(x?.group_id) === String(selectedGroup.group_id));
+                            const idx = next.segment_groups.findIndex((x) => String(x?.group_id) === String(selectedGroup.group_id));
                             if (idx >= 0) next.segment_groups[idx].group_name_he = v;
                             return next;
                           })}
@@ -572,7 +600,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedGroup.default_site_type_he || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segment_groups.findIndex((x: any) => String(x?.group_id) === String(selectedGroup.group_id));
+                            const idx = next.segment_groups.findIndex((x) => String(x?.group_id) === String(selectedGroup.group_id));
                             if (idx >= 0) next.segment_groups[idx].default_site_type_he = v;
                             return next;
                           })}
@@ -617,7 +645,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                   <Divider />
                   <CardBody className="p-2 max-h-[70vh] overflow-auto">
                     <div className="flex flex-col gap-1">
-                      {filteredSegments.map((s: any) => {
+                      {filteredSegments.map((s) => {
                         const id = String(s?.segment_id || '');
                         const active = id && id === selectedSegmentId;
                         return (
@@ -668,11 +696,11 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedSegment.segment_id || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx < 0) return next;
                             const newId = String(v || '').trim();
                             if (!newId) return next;
-                            const exists = next.segments.some((x: any, i: number) => i !== idx && String(x?.segment_id) === newId);
+                            const exists = next.segments.some((x, i: number) => i !== idx && String(x?.segment_id) === newId);
                             if (exists) {
                               app.notification.error('segment_id already exists');
                               return next;
@@ -691,7 +719,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedSegment.segment_name_he || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx >= 0) next.segments[idx].segment_name_he = v;
                             return next;
                           })}
@@ -701,7 +729,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedSegment.segment_group_id || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx >= 0) next.segments[idx].segment_group_id = String(v || '').trim();
                             return next;
                           })}
@@ -712,7 +740,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedSegment.business_profile_defaults?.site_type_he || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx >= 0) {
                               next.segments[idx].business_profile_defaults = next.segments[idx].business_profile_defaults || {};
                               next.segments[idx].business_profile_defaults.site_type_he = v;
@@ -728,7 +756,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                               variant="flat"
                               onPress={() => setDraftPatched((cur) => {
                                 const next = deepClone(cur);
-                                const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                                const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                                 if (idx >= 0) {
                                   next.segments[idx].business_profile_defaults = next.segments[idx].business_profile_defaults || {};
                                   next.segments[idx].business_profile_defaults.site_type_he = opt;
@@ -745,7 +773,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String((selectedSegment.choco_product_slugs || []).join(', '))}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx >= 0) {
                               const slugs = String(v || '')
                                 .split(',')
@@ -761,7 +789,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                           value={String(selectedSegment.business_profile_defaults?.primary_activity_he || '')}
                           onValueChange={(v) => setDraftPatched((cur) => {
                             const next = deepClone(cur);
-                            const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                            const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                             if (idx >= 0) {
                               next.segments[idx].business_profile_defaults = next.segments[idx].business_profile_defaults || {};
                               next.segments[idx].business_profile_defaults.primary_activity_he = v;
@@ -783,7 +811,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                             setIsEditingKeywordsText(false);
                             setDraftPatched((cur) => {
                               const next = deepClone(cur);
-                              const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                              const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                               if (idx >= 0) next.segments[idx].keywords = parseKeywordsTextToList(keywordsText);
                               return next;
                             });
@@ -799,7 +827,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                                 isSelected={Boolean(selectedSegment.coverages?.[opt.key])}
                                 onValueChange={(checked) => setDraftPatched((cur) => {
                                   const next = deepClone(cur);
-                                  const idx = next.segments.findIndex((x: any) => String(x?.segment_id) === String(selectedSegment.segment_id));
+                                  const idx = next.segments.findIndex((x) => String(x?.segment_id) === String(selectedSegment.segment_id));
                                   if (idx >= 0) {
                                     next.segments[idx].coverages = next.segments[idx].coverages || {};
                                     next.segments[idx].coverages[opt.key] = Boolean(checked);
@@ -824,7 +852,7 @@ export const SegmentsCatalogSection: React.FC = () => {
                               const id = String(selectedSegment.segment_id || '').trim();
                               if (!id) return next;
                               next.segments = Array.isArray(next.segments) ? next.segments : [];
-                              next.segments = next.segments.filter((s: any) => (
+                              next.segments = next.segments.filter((s) => (
                                 String(s?.segment_id || '').trim() !== id
                               ));
                               const nextSelected = next.segments[0];

@@ -104,6 +104,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   const [expandedApiCalls, setExpandedApiCalls] = useState<Set<string>>(new Set());
   const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
   const [expandedEntityInstances, setExpandedEntityInstances] = useState<Set<string>>(new Set());
+  const ORDER_STORAGE_PREFIX = 'choco.collectedData.order';
   const [fieldOrderByContainer, setFieldOrderByContainer] = useState<Record<string, string[]>>({});
   const [scrollToStageId, setScrollToStageId] = useState<string | null>(null);
   const [maskedFields, setMaskedFields] = useState<Set<string>>(new Set([
@@ -142,6 +143,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     completedFlows,
     log = [],
     fieldProvenance,
+    lastCollectedKeys,
   } = conversationDetails;
 
   // Canonicalize legacy keys for display.
@@ -180,6 +182,11 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     delete out.last_name;
     delete out.phone;
     delete out.email;
+
+    // Display preference: if we captured the user's own segment phrasing, show it as segment_name_he in the UI.
+    // We still keep the catalog-backed name under segment_name_he_user for debugging (hidden by default).
+    const userSegName = String((ud as Record<string, unknown>)?.['segment_name_he_user'] ?? '').trim();
+    if (userSegName) out.segment_name_he = userSegName;
 
     return out;
   };
@@ -597,18 +604,26 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
 
   // Internal enrichment/meta keys that should not show under "Collected Data" (they remain in API Log).
   const hiddenCollectedDataKeys = new Set<string>([
+    // Segment catalog/system internals (not useful to show in Collected Data)
+    'default_package_key',
+    'segment_resolution_source',
+    'segment_coverages_prefilled_v1',
+
     'business_legal_entity_type_source',
     'business_registry_source',
     'business_legal_name',
     'il_company_number',
     'il_companies_registry_name_match_should_verify',
     'il_companies_registry_city_code',
+    'il_companies_registry_company_type_code',
     'il_companies_registry_classification_code',
     'il_companies_registry_country_code',
     'il_companies_registry_limitation_code',
     'il_companies_registry_purpose_code',
     'il_companies_registry_status_code',
+    'il_companies_registry_street_code',
     'il_companies_registry_violator_code',
+    'il_companies_registry_red_flag_reasons',
 
     // Google diagnostics / internal glue (keep in API Log only)
     'business_google_api_key_present',
@@ -640,6 +655,8 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
   const stripHiddenCollectedKeys = (data: Record<string, unknown>): Record<string, unknown> => Object.fromEntries(
     Object.entries(data).filter(([k]) => !hiddenCollectedDataKeys.has(String(k))),
   );
+
+  const isHiddenCollectedKey = (key: string): boolean => hiddenCollectedDataKeys.has(String(key));
 
   // Split collected data into: User (contact/device) vs Insured (business + insurance payload).
   // This replaces the old "Organizations" bucket which was mainly for nonprofit/KYC.
@@ -673,12 +690,10 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     // Segment resolution (system-derived, but part of insured payload)
     'segment_id',
     'segment_name_he',
+    'segment_name_he_user',
     'segment_group_id',
     'segment_group_name_he',
-    'default_package_key',
     'segment_resolution_confidence',
-    'segment_resolution_source',
-    'segment_coverages_prefilled_v1',
     // Profile / needs
     'segment_description',
     'product_line',
@@ -1358,38 +1373,40 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                                       Fields Collected
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-xs">
-                                      {trace.fieldsCollected.map((field) => {
-                                        const value = trace.userDataSnapshot?.[field] ?? userData[field];
-                                        const isMasked = maskedFields.has(field.toLowerCase());
-                                        const displayValue = value !== undefined && value !== null && value !== ''
-                                          ? (typeof value === 'string' || typeof value === 'number'
-                                            ? String(value)
-                                            : JSON.stringify(value))
-                                          : '–';
-                                        return (
-                                          <div key={field} className="space-y-1">
-                                            <div className="flex items-center gap-1">
-                                              <span className="text-gray-500 font-mono text-xs">
-                                                {field}
-                                                :
-                                              </span>
-                                              <button
-                                                onClick={() => toggleMaskField(field)}
-                                                className="text-gray-400 hover:text-gray-600"
-                                              >
-                                                {isMasked ? (
-                                                  <EyeSlashIcon className="w-3 h-3" />
-                                                ) : (
-                                                  <EyeIcon className="w-3 h-3" />
-                                                )}
-                                              </button>
+                                      {trace.fieldsCollected
+                                        .filter((field) => !isHiddenCollectedKey(field))
+                                        .map((field) => {
+                                          const value = trace.userDataSnapshot?.[field] ?? userData[field];
+                                          const isMasked = maskedFields.has(field.toLowerCase());
+                                          const displayValue = value !== undefined && value !== null && value !== ''
+                                            ? (typeof value === 'string' || typeof value === 'number'
+                                              ? String(value)
+                                              : JSON.stringify(value))
+                                            : '–';
+                                          return (
+                                            <div key={field} className="space-y-1">
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-gray-500 font-mono text-xs">
+                                                  {field}
+                                                  :
+                                                </span>
+                                                <button
+                                                  onClick={() => toggleMaskField(field)}
+                                                  className="text-gray-400 hover:text-gray-600"
+                                                >
+                                                  {isMasked ? (
+                                                    <EyeSlashIcon className="w-3 h-3" />
+                                                  ) : (
+                                                    <EyeIcon className="w-3 h-3" />
+                                                  )}
+                                                </button>
+                                              </div>
+                                              <div className="text-gray-800 break-words text-xs">
+                                                {isMasked ? maskValue(field, displayValue) : displayValue}
+                                              </div>
                                             </div>
-                                            <div className="text-gray-800 break-words text-xs">
-                                              {isMasked ? maskValue(field, displayValue) : displayValue}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
+                                          );
+                                        })}
                                     </div>
                                   </div>
                                 )}
@@ -1547,6 +1564,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
     setFieldOrderByContainer((prev) => {
       let changed = false;
       const next: Record<string, string[]> = { ...prev };
+      const bumpSet = new Set((lastCollectedKeys || []).map((k) => String(k || '').trim()).filter(Boolean));
 
       const arraysEqual = (a: string[], b: string[]) => (
         a.length === b.length && a.every((v, i) => v === b[i])
@@ -1571,25 +1589,32 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
           if (!prevSig) return false;
           const nextSig = sigFor(key);
           if (!nextSig.contributor && nextSig.tsMs == null) return false;
-          // Promote when a field transitions system->user, or when its timestamp advances.
-          if (prevSig.contributor === 'system' && nextSig.contributor === 'user') return true;
-          const prevTs = prevSig.tsMs ?? -1;
-          const nextTs = nextSig.tsMs ?? -1;
-          if (nextTs > prevTs) return true;
-          return false;
+          // Promote only when a field transitions system -> user (i.e., user answered it now).
+          return prevSig.contributor === 'system' && nextSig.contributor === 'user';
         };
 
         if (!hadPrev) {
-          // First time we see this container: initialize deterministically from backend seq if available,
-          // otherwise by key name. This makes ordering stable across refresh.
-          order = [...keys].sort((a, b) => {
-            const pa = provenanceForField(a);
-            const pb = provenanceForField(b);
-            const sa = typeof pa?.seq === 'number' ? pa.seq : Number.POSITIVE_INFINITY;
-            const sb = typeof pb?.seq === 'number' ? pb.seq : Number.POSITIVE_INFINITY;
-            if (sa !== sb) return sa - sb;
-            return String(a).localeCompare(String(b));
-          });
+          // First time we see this container: load persisted order (per conversation+container) if exists,
+          // else initialize by current key order.
+          const storageKey = `${ORDER_STORAGE_PREFIX}.${conversationId}.${id}`;
+          let persisted: string[] | null = null;
+          try {
+            const raw = window.localStorage.getItem(storageKey);
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
+              persisted = parsed as string[];
+            }
+          } catch {
+            persisted = null;
+          }
+          if (persisted) {
+            const kept = persisted.filter((k) => keySet.has(k));
+            const keptSet = new Set(kept);
+            const appended = keys.filter((k) => !keptSet.has(k));
+            order = [...kept, ...appended];
+          } else {
+            order = [...keys].sort((a, b) => String(a).localeCompare(String(b)));
+          }
         } else {
           // Keep existing order; append any newly seen keys to the end.
           const keptAll = prevOrder.filter((k) => keySet.has(k));
@@ -1610,9 +1635,25 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
           order = [...kept, ...appended, ...promoted];
         }
 
+        // Always move fields collected from the *last user message* to the end.
+        if (bumpSet.size > 0) {
+          const bumped = order.filter((k) => bumpSet.has(k));
+          if (bumped.length > 0) {
+            order = [...order.filter((k) => !bumpSet.has(k)), ...bumped];
+          }
+        }
+
         if (!arraysEqual(prevOrder, order)) {
           next[id] = order;
           changed = true;
+        }
+
+        // Persist order for this container (per conversation) to prevent reorder/jump on refresh/poll.
+        try {
+          const storageKey = `${ORDER_STORAGE_PREFIX}.${conversationId}.${id}`;
+          window.localStorage.setItem(storageKey, JSON.stringify(order));
+        } catch {
+          // ignore
         }
 
         // Update signatures for stability across polls.
@@ -1681,7 +1722,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                   const containerId = `${entityKey}::${instance.id}`;
                   const order = fieldOrderByContainer[containerId] || [];
                   const orderedKeys = (order.length > 0 ? order : Object.keys(instance.data || {}))
-                    .filter((k) => k in (instance.data || {}));
+                    .filter((k) => k in (instance.data || {}) && !isHiddenCollectedKey(k));
 
                   return (
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -1813,7 +1854,7 @@ export const ConversationDetailsPane: React.FC<ConversationDetailsPaneProps> = (
                             const containerId = `${entityKey}::${instance.id}`;
                             const order = fieldOrderByContainer[containerId] || [];
                             const orderedKeys = (order.length > 0 ? order : Object.keys(instance.data || {}))
-                              .filter((k) => k in (instance.data || {}));
+                              .filter((k) => k in (instance.data || {}) && !isHiddenCollectedKey(k));
                             return orderedKeys.map((key) => {
                               const value = (instance.data || {})[key];
                               const prov = provenanceForField(key);
