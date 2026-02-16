@@ -1,6 +1,7 @@
 name: Azure - Deploy
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths:
@@ -62,12 +63,27 @@ jobs:
             set -euo pipefail
 
             RG="${AZURE_RESOURCE_GROUP}"
-            ACR_NAME="${AZURE_ACR_NAME}"
+            ACR_NAME="${AZURE_ACR_NAME:-}"
 
-            if [ -z "$RG" ] || [ -z "$ACR_NAME" ]; then
-              echo "Missing GitHub variables: AZURE_RESOURCE_GROUP / AZURE_ACR_NAME"
+            if [ -z "$RG" ]; then
+              echo "Missing GitHub variable: AZURE_RESOURCE_GROUP"
               exit 1
             fi
+
+            if [ -z "$ACR_NAME" ]; then
+              # Auto-discover ACR name in the resource group (prefer one containing "chocoai")
+              ACR_NAME="$(az acr list -g "$RG" --query \"[?contains(name, 'chocoai')]|[0].name\" -o tsv)"
+              if [ -z "$ACR_NAME" ]; then
+                ACR_NAME="$(az acr list -g "$RG" --query \"[0].name\" -o tsv)"
+              fi
+            fi
+
+            if [ -z "$ACR_NAME" ]; then
+              echo "Could not resolve ACR name in resource group '$RG'. Set AZURE_ACR_NAME variable or run Provision."
+              exit 1
+            fi
+
+            echo "Using ACR_NAME=$ACR_NAME"
 
             ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR_NAME" --query loginServer -o tsv)"
             az acr login -n "$ACR_NAME"
@@ -91,14 +107,29 @@ jobs:
             set -euo pipefail
 
             RG="${AZURE_RESOURCE_GROUP}"
-            WEBAPP="${AZURE_WEBAPP_NAME}"
+            WEBAPP="${AZURE_WEBAPP_NAME:-}"
             ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
             TAG="${IMAGE_TAG}"
 
-            if [ -z "$RG" ] || [ -z "$WEBAPP" ]; then
-              echo "Missing GitHub variables: AZURE_RESOURCE_GROUP / AZURE_WEBAPP_NAME"
+            if [ -z "$RG" ]; then
+              echo "Missing GitHub variable: AZURE_RESOURCE_GROUP"
               exit 1
             fi
+
+            if [ -z "$WEBAPP" ]; then
+              # Auto-discover Web App in the resource group (prefer one containing "chocoai")
+              WEBAPP="$(az webapp list -g "$RG" --query \"[?contains(name, 'chocoai')]|[0].name\" -o tsv)"
+              if [ -z "$WEBAPP" ]; then
+                WEBAPP="$(az webapp list -g "$RG" --query \"[0].name\" -o tsv)"
+              fi
+            fi
+
+            if [ -z "$WEBAPP" ]; then
+              echo "Could not resolve Web App name in resource group '$RG'. Set AZURE_WEBAPP_NAME variable or run Provision."
+              exit 1
+            fi
+
+            echo "Using WEBAPP=$WEBAPP"
 
             IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
             echo "Deploying image: $IMAGE"
