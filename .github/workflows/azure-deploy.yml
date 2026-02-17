@@ -31,28 +31,68 @@ jobs:
       IMAGE_REPO: chocoai
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            package-lock.json
+
+      - name: Build backend (dist)
+        run: |
+          set -euo pipefail
+          npm ci --prefix backend
+          # Prisma generate in CI (no real DB needed for generate)
+          DATABASE_URL="postgresql://user:pass@localhost:5432/chocoai?schema=public" \
+            npm run db:generate --prefix backend
+          npm run build --prefix backend
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Validate required vars
+      - name: Validate required repo variables
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-            for v in AZURE_RESOURCE_GROUP AZURE_WEBAPP_NAME AZURE_ACR_NAME AZURE_KEYVAULT_NAME; do
+            for v in AZURE_RESOURCE_GROUP AZURE_WEBAPP_NAME AZURE_ACR_NAME AZURE_KEYVAULT_NAME AZURE_LOCATION; do
               if [ -z "${!v:-}" ]; then
-                echo "Missing GitHub variable: $v"
+                echo "Missing GitHub Repository Variable: $v"
                 exit 1
               fi
             done
+            echo "All required variables are present."
 
-      # Build inside ACR (no docker on runner)
+      - name: Resolve ACR + WebApp + KV resource IDs
+        id: ids
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            RG="$AZURE_RESOURCE_GROUP"
+            ACR="$AZURE_ACR_NAME"
+            WEBAPP="$AZURE_WEBAPP_NAME"
+            KV="$AZURE_KEYVAULT_NAME"
+
+            ACR_ID="$(az acr show -g "$RG" -n "$ACR" --query id -o tsv)"
+            ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR" --query loginServer -o tsv)"
+            WEBAPP_ID="$(az webapp show -g "$RG" -n "$WEBAPP" --query id -o tsv)"
+            KV_ID="$(az keyvault show -g "$RG" -n "$KV" --query id -o tsv)"
+
+            echo "ACR_ID=$ACR_ID" >> "$GITHUB_ENV"
+            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> "$GITHUB_ENV"
+            echo "WEBAPP_ID=$WEBAPP_ID" >> "$GITHUB_ENV"
+            echo "KV_ID=$KV_ID" >> "$GITHUB_ENV"
+
       - name: Build image in ACR (az acr build)
         uses: azure/cli@v2
         with:
@@ -60,105 +100,130 @@ jobs:
             set -euo pipefail
             RG="$AZURE_RESOURCE_GROUP"
             ACR="$AZURE_ACR_NAME"
+
             TAG="${GITHUB_SHA::7}"
-            IMAGE="$IMAGE_REPO:$TAG"
+            echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
 
-            echo "Building in ACR: $ACR -> $IMAGE"
-            az acr build -r "$ACR" -g "$RG" -t "$IMAGE" -t "$IMAGE_REPO:latest" .
+            echo "Building in ACR: $ACR (tag: $TAG)"
+            az acr build -g "$RG" -r "$ACR" \
+              -t "${IMAGE_REPO}:${TAG}" \
+              -t "${IMAGE_REPO}:latest" \
+              .
 
-            LOGIN_SERVER="$(az acr show -n "$ACR" -g "$RG" --query loginServer -o tsv)"
-            echo "ACR_LOGIN_SERVER=$LOGIN_SERVER" >> $GITHUB_ENV
-            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
-
-      - name: Ensure WebApp identity + AcrPull (idempotent)
+      - name: Ensure WebApp has System-Assigned Managed Identity
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             RG="$AZURE_RESOURCE_GROUP"
-            WEB="$AZURE_WEBAPP_NAME"
-            ACR="$AZURE_ACR_NAME"
+            WEBAPP="$AZURE_WEBAPP_NAME"
 
-            # Ensure system identity exists
-            az webapp identity assign -g "$RG" -n "$WEB" 1>/dev/null
+            az webapp identity assign -g "$RG" -n "$WEBAPP" >/dev/null
 
-            PRINCIPAL_ID="$(az webapp identity show -g "$RG" -n "$WEB" --query principalId -o tsv)"
-            ACR_ID="$(az acr show -g "$RG" -n "$ACR" --query id -o tsv)"
+            PRINCIPAL_ID="$(az webapp identity show -g "$RG" -n "$WEBAPP" --query principalId -o tsv)"
+            if [ -z "$PRINCIPAL_ID" ]; then
+              echo "Could not read WebApp principalId after identity assign."
+              exit 1
+            fi
+            echo "WEBAPP_PRINCIPAL_ID=$PRINCIPAL_ID" >> "$GITHUB_ENV"
+            echo "WebApp principalId: $PRINCIPAL_ID"
 
-            # Assign AcrPull (safe if already exists)
-            az role assignment create \
-              --assignee-object-id "$PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role AcrPull \
-              --scope "$ACR_ID" \
-              1>/dev/null || true
+      - name: Grant WebApp identity pull from ACR (AcrPull)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            PID="$WEBAPP_PRINCIPAL_ID"
+            SCOPE="$ACR_ID"
 
-      - name: Deploy WebApp to new image (Managed Identity pull)
+            # Create role assignment if missing (idempotent-ish)
+            if az role assignment list --assignee-object-id "$PID" --scope "$SCOPE" --query "[?roleDefinitionName=='AcrPull']|length(@)" -o tsv | grep -q '^1$'; then
+              echo "AcrPull already assigned."
+            else
+              az role assignment create \
+                --assignee-object-id "$PID" \
+                --assignee-principal-type ServicePrincipal \
+                --role AcrPull \
+                --scope "$SCOPE" >/dev/null
+              echo "AcrPull assigned."
+            fi
+
+      - name: Grant WebApp identity read secrets from Key Vault
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
             RG="$AZURE_RESOURCE_GROUP"
-            WEB="$AZURE_WEBAPP_NAME"
-            ACR_SERVER="$ACR_LOGIN_SERVER"
+            KV="$AZURE_KEYVAULT_NAME"
+            PID="$WEBAPP_PRINCIPAL_ID"
+            KV_SCOPE="$KV_ID"
+
+            RBAC_ENABLED="$(az keyvault show -g "$RG" -n "$KV" --query properties.enableRbacAuthorization -o tsv)"
+            echo "KeyVault RBAC enabled: $RBAC_ENABLED"
+
+            if [ "$RBAC_ENABLED" = "true" ]; then
+              # RBAC model
+              if az role assignment list --assignee-object-id "$PID" --scope "$KV_SCOPE" --query "[?roleDefinitionName=='Key Vault Secrets User']|length(@)" -o tsv | grep -q '^1$'; then
+                echo "Key Vault Secrets User already assigned."
+              else
+                az role assignment create \
+                  --assignee-object-id "$PID" \
+                  --assignee-principal-type ServicePrincipal \
+                  --role "Key Vault Secrets User" \
+                  --scope "$KV_SCOPE" >/dev/null
+                echo "Key Vault Secrets User assigned."
+              fi
+            else
+              # Access Policy model
+              az keyvault set-policy -g "$RG" -n "$KV" --object-id "$PID" \
+                --secret-permissions get list >/dev/null
+              echo "KeyVault access policy set (get/list secrets)."
+            fi
+
+      - name: Point WebApp to new image + set app settings (KeyVault references)
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            set -euo pipefail
+            RG="$AZURE_RESOURCE_GROUP"
+            WEBAPP="$AZURE_WEBAPP_NAME"
+            KV="$AZURE_KEYVAULT_NAME"
+
             TAG="$IMAGE_TAG"
-            IMAGE="$ACR_SERVER/$IMAGE_REPO:$TAG"
-
+            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:${TAG}"
             echo "Deploying image: $IMAGE"
 
             az webapp config container set \
-              -g "$RG" \
-              -n "$WEB" \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
               --docker-custom-image-name "$IMAGE" \
-              --docker-registry-server-url "https://$ACR_SERVER"
+              --docker-registry-server-url "https://$ACR_LOGIN_SERVER" >/dev/null
 
-            # Try to explicitly enable managed identity for ACR pull (not available in all CLI versions)
-            az webapp config set -g "$RG" -n "$WEB" --generic-configurations '{"acrUseManagedIdentityCreds": true}' 1>/dev/null || true
-
+            # Non-secret settings
             az webapp config appsettings set \
-              -g "$RG" \
-              -n "$WEB" \
-              --settings NODE_ENV=production PORT=8080 WEBSITES_PORT=8080
-
-      # Secrets to KeyVault (one-time or every deploy). This still needs GitHub secrets ONCE,
-      # but after first run you can remove them from GitHub and manage secrets only in KeyVault.
-      - name: Sync secrets into KeyVault (optional but recommended)
-        if: ${{ secrets.OPENAI_API_KEY != '' }}
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            KV="$AZURE_KEYVAULT_NAME"
-
-            # These write values into KeyVault
-            az keyvault secret set --vault-name "$KV" --name "DATABASE-URL" --value "${{ secrets.DATABASE_URL }}"
-            az keyvault secret set --vault-name "$KV" --name "OPENAI-API-KEY" --value "${{ secrets.OPENAI_API_KEY }}"
-            az keyvault secret set --vault-name "$KV" --name "JWT-SECRET" --value "${{ secrets.JWT_SECRET }}"
-            az keyvault secret set --vault-name "$KV" --name "ROOT-URL" --value "${{ secrets.ROOT_URL }}"
-            az keyvault secret set --vault-name "$KV" --name "GOOGLE-MAPS-API-KEY" --value "${{ secrets.GOOGLE_MAPS_API_KEY }}"
-
-      - name: Configure WebApp settings via KeyVault references
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-            RG="$AZURE_RESOURCE_GROUP"
-            WEB="$AZURE_WEBAPP_NAME"
-            KV="$AZURE_KEYVAULT_NAME"
-
-            # KeyVault reference syntax
-            kvref () {
-              echo "@Microsoft.KeyVault(VaultName=$KV;SecretName=$1)"
-            }
-
-            az webapp config appsettings set \
-              -g "$RG" \
-              -n "$WEB" \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
               --settings \
-                DATABASE_URL="$(kvref DATABASE-URL)" \
-                OPENAI_API_KEY="$(kvref OPENAI-API-KEY)" \
-                JWT_SECRET="$(kvref JWT-SECRET)" \
-                ROOT_URL="$(kvref ROOT-URL)" \
-                GOOGLE_MAPS_API_KEY="$(kvref GOOGLE-MAPS-API-KEY)"
+                NODE_ENV=production \
+                PORT=8080 \
+                WEBSITES_PORT=8080 >/dev/null
 
-            az webapp restart -g "$RG" -n "$WEB"
+            # Secrets via Key Vault references (NO secrets in GitHub)
+            # You must create these secrets in Key Vault:
+            # - DATABASE_URL
+            # - OPENAI_API_KEY
+            # - JWT_SECRET
+            # - ROOT_URL
+            # - GOOGLE_MAPS_API_KEY
+            az webapp config appsettings set \
+              --resource-group "$RG" \
+              --name "$WEBAPP" \
+              --settings \
+                DATABASE_URL="@Microsoft.KeyVault(SecretUri=https://${KV}.vault.azure.net/secrets/DATABASE_URL/)" \
+                OPENAI_API_KEY="@Microsoft.KeyVault(SecretUri=https://${KV}.vault.azure.net/secrets/OPENAI_API_KEY/)" \
+                JWT_SECRET="@Microsoft.KeyVault(SecretUri=https://${KV}.vault.azure.net/secrets/JWT_SECRET/)" \
+                ROOT_URL="@Microsoft.KeyVault(SecretUri=https://${KV}.vault.azure.net/secrets/ROOT_URL/)" \
+                GOOGLE_MAPS_API_KEY="@Microsoft.KeyVault(SecretUri=https://${KV}.vault.azure.net/secrets/GOOGLE_MAPS_API_KEY/)" >/dev/null
+
+            az webapp restart --resource-group "$RG" --name "$WEBAPP" >/dev/null
+            echo "Done."
