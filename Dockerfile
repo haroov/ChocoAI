@@ -7,7 +7,7 @@ COPY backend/dist ./dist
 COPY backend/prisma ./prisma
 COPY backend/package*.json ./
 
-RUN npm install
+RUN npm ci --omit=dev
 RUN npx prisma generate
 
 # Install wget for health checks
