@@ -28,6 +28,7 @@ jobs:
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
       AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
       IMAGE_REPO: chocoai
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --prefix backend
-          # Ensure Prisma Client types are generated in CI (repo does not ship node_modules/.prisma).
+          # Generate Prisma Client in CI (repo does not ship node_modules/.prisma)
           DATABASE_URL="postgresql://user:pass@localhost:5432/chocoai?schema=public" npm run db:generate --prefix backend
           npm run build --prefix backend
 
@@ -71,10 +72,10 @@ jobs:
             fi
 
             if [ -z "$ACR_NAME" ]; then
-              # Auto-discover ACR name in the resource group (prefer one containing "chocoai")
-              ACR_NAME="$(az acr list -g "$RG" --query \"[?contains(name, 'chocoai')]|[0].name\" -o tsv)"
+              # Auto-discover ACR name in the resource group (prefer one containing 'chocoai')
+              ACR_NAME="$(az acr list -g "$RG" --query "[?contains(name, 'chocoai')]|[0].name" -o tsv)"
               if [ -z "$ACR_NAME" ]; then
-                ACR_NAME="$(az acr list -g "$RG" --query \"[0].name\" -o tsv)"
+                ACR_NAME="$(az acr list -g "$RG" --query "[0].name" -o tsv)"
               fi
             fi
 
@@ -88,7 +89,7 @@ jobs:
             ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR_NAME" --query loginServer -o tsv)"
             az acr login -n "$ACR_NAME"
 
-            TAG="${GITHUB_SHA::7}"
+            TAG="$(echo "$GITHUB_SHA" | cut -c1-7)"
             IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
             IMAGE_LATEST="$ACR_LOGIN_SERVER/${IMAGE_REPO}:latest"
 
@@ -97,8 +98,8 @@ jobs:
             docker push "$IMAGE"
             docker push "$IMAGE_LATEST"
 
-            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> $GITHUB_ENV
-            echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> "$GITHUB_ENV"
+            echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
 
       - name: Update Web App to new image
         uses: azure/cli@v2
@@ -117,10 +118,10 @@ jobs:
             fi
 
             if [ -z "$WEBAPP" ]; then
-              # Auto-discover Web App in the resource group (prefer one containing "chocoai")
-              WEBAPP="$(az webapp list -g "$RG" --query \"[?contains(name, 'chocoai')]|[0].name\" -o tsv)"
+              # Auto-discover Web App in the resource group (prefer one containing 'chocoai')
+              WEBAPP="$(az webapp list -g "$RG" --query "[?contains(name, 'chocoai')]|[0].name" -o tsv)"
               if [ -z "$WEBAPP" ]; then
-                WEBAPP="$(az webapp list -g "$RG" --query \"[0].name\" -o tsv)"
+                WEBAPP="$(az webapp list -g "$RG" --query "[0].name" -o tsv)"
               fi
             fi
 
@@ -158,4 +159,3 @@ jobs:
                 GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}"
 
             az webapp restart --resource-group "$RG" --name "$WEBAPP"
-
