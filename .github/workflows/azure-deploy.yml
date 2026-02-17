@@ -22,8 +22,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     env:
-      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
       AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
@@ -38,124 +38,87 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json
-            package-lock.json
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Build backend (dist)
+      - name: Build backend
         run: |
-          set -euo pipefail
+          set -e
           npm ci --prefix backend
-          # Generate Prisma Client in CI (repo does not ship node_modules/.prisma)
-          DATABASE_URL="postgresql://user:pass@localhost:5432/chocoai?schema=public" npm run db:generate --prefix backend
+          DATABASE_URL="postgresql://user:pass@localhost:5432/db" npm run db:generate --prefix backend
           npm run build --prefix backend
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push Docker image to ACR
+      - name: Build and push Docker image
         uses: azure/cli@v2
         with:
           inlineScript: |
-            set -euo pipefail
+            set -e
 
-            RG="${AZURE_RESOURCE_GROUP}"
-            ACR_NAME="${AZURE_ACR_NAME:-}"
+            RG="$AZURE_RESOURCE_GROUP"
+            ACR="$AZURE_ACR_NAME"
 
             if [ -z "$RG" ]; then
-              echo "Missing GitHub variable: AZURE_RESOURCE_GROUP"
+              echo "Missing AZURE_RESOURCE_GROUP"
               exit 1
             fi
 
-            if [ -z "$ACR_NAME" ]; then
-              # Auto-discover ACR name in the resource group (prefer one containing 'chocoai')
-              ACR_NAME="$(az acr list -g "$RG" --query "[?contains(name, 'chocoai')]|[0].name" -o tsv)"
-              if [ -z "$ACR_NAME" ]; then
-                ACR_NAME="$(az acr list -g "$RG" --query "[0].name" -o tsv)"
-              fi
-            fi
-
-            if [ -z "$ACR_NAME" ]; then
-              echo "Could not resolve ACR name in resource group '$RG'. Set AZURE_ACR_NAME variable or run Provision."
+            if [ -z "$ACR" ]; then
+              echo "Missing AZURE_ACR_NAME"
               exit 1
             fi
 
-            echo "Using ACR_NAME=$ACR_NAME"
+            LOGIN_SERVER=$(az acr show -g "$RG" -n "$ACR" --query loginServer -o tsv)
+            az acr login -n "$ACR"
 
-            ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR_NAME" --query loginServer -o tsv)"
-            az acr login -n "$ACR_NAME"
+            TAG=$(echo $GITHUB_SHA | cut -c1-7)
 
-            TAG="$(echo "$GITHUB_SHA" | cut -c1-7)"
-            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
-            IMAGE_LATEST="$ACR_LOGIN_SERVER/${IMAGE_REPO}:latest"
+            IMAGE="$LOGIN_SERVER/${IMAGE_REPO}:$TAG"
+            IMAGE_LATEST="$LOGIN_SERVER/${IMAGE_REPO}:latest"
 
-            echo "Building image: $IMAGE"
             docker build -t "$IMAGE" -t "$IMAGE_LATEST" .
             docker push "$IMAGE"
             docker push "$IMAGE_LATEST"
 
-            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> "$GITHUB_ENV"
-            echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
+            echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
-      - name: Update Web App to new image
+      - name: Deploy to Web App
         uses: azure/cli@v2
         with:
           inlineScript: |
-            set -euo pipefail
+            set -e
 
-            RG="${AZURE_RESOURCE_GROUP}"
-            WEBAPP="${AZURE_WEBAPP_NAME:-}"
-            ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
-            TAG="${IMAGE_TAG}"
-
-            if [ -z "$RG" ]; then
-              echo "Missing GitHub variable: AZURE_RESOURCE_GROUP"
-              exit 1
-            fi
+            RG="$AZURE_RESOURCE_GROUP"
+            WEBAPP="$AZURE_WEBAPP_NAME"
 
             if [ -z "$WEBAPP" ]; then
-              # Auto-discover Web App in the resource group (prefer one containing 'chocoai')
-              WEBAPP="$(az webapp list -g "$RG" --query "[?contains(name, 'chocoai')]|[0].name" -o tsv)"
-              if [ -z "$WEBAPP" ]; then
-                WEBAPP="$(az webapp list -g "$RG" --query "[0].name" -o tsv)"
-              fi
-            fi
-
-            if [ -z "$WEBAPP" ]; then
-              echo "Could not resolve Web App name in resource group '$RG'. Set AZURE_WEBAPP_NAME variable or run Provision."
+              echo "Missing AZURE_WEBAPP_NAME"
               exit 1
             fi
-
-            echo "Using WEBAPP=$WEBAPP"
-
-            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
-            echo "Deploying image: $IMAGE"
 
             az webapp config container set \
               --resource-group "$RG" \
               --name "$WEBAPP" \
-              --docker-custom-image-name "$IMAGE" \
-              --docker-registry-server-url "https://$ACR_LOGIN_SERVER"
+              --docker-custom-image-name "$IMAGE"
 
-            # App settings (non-secret defaults)
-            az webapp config appsettings set \
-              --resource-group "$RG" \
-              --name "$WEBAPP" \
-              --settings NODE_ENV=production PORT=8080 WEBSITES_PORT=8080
-
-            # App settings (secrets) - define these in GitHub Secrets
             az webapp config appsettings set \
               --resource-group "$RG" \
               --name "$WEBAPP" \
               --settings \
+                NODE_ENV=production \
+                PORT=8080 \
+                WEBSITES_PORT=8080 \
                 DATABASE_URL="${{ secrets.DATABASE_URL }}" \
                 OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
                 JWT_SECRET="${{ secrets.JWT_SECRET }}" \
                 ROOT_URL="${{ secrets.ROOT_URL }}" \
                 GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}"
 
-            az webapp restart --resource-group "$RG" --name "$WEBAPP"
+            az webapp restart \
+              --resource-group "$RG" \
+              --name "$WEBAPP"
