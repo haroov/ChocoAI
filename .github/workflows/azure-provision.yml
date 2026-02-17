@@ -1,4 +1,4 @@
-name: Azure - Provision
+name: Azure - Provision (enterprise)
 
 on:
   workflow_dispatch:
@@ -12,13 +12,17 @@ on:
         required: false
         default: rg-chocoai-prod
       webAppName:
-        description: Web App name (must be globally unique). Leave empty to auto-generate.
-        required: false
-        default: ""
+        description: Web App name (globally unique)
+        required: true
+        default: chocoai-prod-web
       acrName:
-        description: ACR name (optional; leave empty to auto-generate)
-        required: false
-        default: ""
+        description: ACR name (globally unique, lowercase)
+        required: true
+        default: chocoaiprodacr
+      keyVaultName:
+        description: KeyVault name (globally unique)
+        required: true
+        default: chocoai-prod-kv
 
 permissions:
   id-token: write
@@ -28,8 +32,7 @@ jobs:
   provision:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -38,26 +41,23 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Provision infra (Bicep)
+      - name: Create RG + Deploy Bicep
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
-
             LOCATION="${{ inputs.location }}"
             RG="${{ inputs.resourceGroupName }}"
             WEBAPP="${{ inputs.webAppName }}"
             ACR="${{ inputs.acrName }}"
+            KV="${{ inputs.keyVaultName }}"
 
-            echo "Provisioning ChocoAI resources..."
-            echo "location=$LOCATION rg=$RG webApp=$WEBAPP acrName=$ACR"
+            az group create -n "$RG" -l "$LOCATION" 1>/dev/null
 
-            az deployment sub create \
-              --name "chocoai-provision-${GITHUB_RUN_ID}" \
-              --location "$LOCATION" \
-              --template-file "infra/azure/main.bicep" \
-              --parameters location="$LOCATION" resourceGroupName="$RG" webAppName="$WEBAPP" acrName="$ACR"
+            az deployment group create \
+              -g "$RG" \
+              -n "chocoai-provision-${GITHUB_RUN_ID}" \
+              -f "infra/azure/main.bicep" \
+              -p location="$LOCATION" webAppName="$WEBAPP" acrName="$ACR" keyVaultName="$KV"
 
-            echo "Done. Get outputs via:"
-            echo "az deployment sub show --name chocoai-provision-${GITHUB_RUN_ID} --query properties.outputs"
-
+            echo "Provision done."
