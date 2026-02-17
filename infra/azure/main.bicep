@@ -1,61 +1,112 @@
-targetScope = 'subscription'
+@description('Azure region, e.g. israelcentral')
+param location string = resourceGroup().location
 
-@description('Azure region for all resources.')
-param location string = 'israelcentral'
+@description('Web App name (must be globally unique)')
+param webAppName string
 
-@description('Resource group name to create/use for ChocoAI.')
-param resourceGroupName string = 'rg-chocoai-prod'
+@description('ACR name (must be globally unique, lowercase, 5-50 chars)')
+param acrName string
 
-@description('Azure App Service Web App name (must be globally unique). If empty, will be generated.')
-param webAppName string = ''
+@description('Key Vault name (globally unique, 3-24 chars)')
+param keyVaultName string
 
-@description('App Service plan name.')
-param appServicePlanName string = 'asp-chocoai-prod'
+@description('App Service Plan name')
+param planName string = 'asp-${webAppName}'
 
-@description('User-assigned managed identity name used for pulling images from ACR.')
-param userAssignedIdentityName string = 'uami-chocoai-prod'
-
-@description('Azure Container Registry name (lowercase, 5-50 chars). If empty, will be generated.')
-param acrName string = ''
-
-@description('Docker image repository name in ACR.')
+@description('Image repo name in ACR')
 param imageRepo string = 'chocoai'
 
-@description('Docker image tag to deploy initially (pipeline will update later).')
-param imageTag string = 'latest'
+var linuxFxVersion = 'DOCKER|${acrName}.azurecr.io/${imageRepo}:latest'
 
-@description('App Service pricing tier (e.g. B1, P0v3).')
-param appServiceSkuName string = 'B1'
-
-var generatedAcrName = toLower('chocoai${uniqueString(subscription().id, resourceGroupName)}')
-var acrFinalName = empty(acrName) ? generatedAcrName : toLower(acrName)
-var webAppFinalName = empty(webAppName)
-  ? toLower('chocoai-${uniqueString(subscription().id, resourceGroupName)}')
-  : toLower(webAppName)
-
-resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
-  name: resourceGroupName
+// App Service Plan (Linux)
+resource plan 'Microsoft.Web/serverfarms@2022-09-01' = {
+  name: planName
   location: location
-}
-
-module rgResources './rg.bicep' = {
-  name: 'chocoai-rg-resources'
-  scope: rg
-  params: {
-    location: location
-    webAppName: webAppFinalName
-    appServicePlanName: appServicePlanName
-    userAssignedIdentityName: userAssignedIdentityName
-    acrName: acrFinalName
-    imageRepo: imageRepo
-    imageTag: imageTag
-    appServiceSkuName: appServiceSkuName
+  sku: {
+    name: 'B1'
+    tier: 'Basic'
+    size: 'B1'
+    capacity: 1
+  }
+  kind: 'linux'
+  properties: {
+    reserved: true
   }
 }
 
-output resourceGroup string = rg.name
-output acrName string = rgResources.outputs.acrName
-output acrLoginServer string = rgResources.outputs.acrLoginServer
-output webApp string = rgResources.outputs.webApp
-output managedIdentityClientId string = rgResources.outputs.managedIdentityClientId
+// ACR
+resource acr 'Microsoft.ContainerRegistry/registries@2023-01-01-preview' = {
+  name: acrName
+  location: location
+  sku: { name: 'Basic' }
+  properties: {
+    adminUserEnabled: false
+  }
+}
 
+// Web App (Linux container) + System-assigned identity
+resource web 'Microsoft.Web/sites@2022-09-01' = {
+  name: webAppName
+  location: location
+  kind: 'app,linux,container'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: plan.id
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: linuxFxVersion
+      alwaysOn: true
+      ftpsState: 'Disabled'
+      appSettings: [
+        { name: 'NODE_ENV', value: 'production' }
+        { name: 'PORT', value: '8080' }
+        { name: 'WEBSITES_PORT', value: '8080' }
+        // Secrets will be set later as KeyVault references from workflow
+      ]
+    }
+  }
+}
+
+// Key Vault (RBAC mode)
+resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    tenantId: subscription().tenantId
+    enableRbacAuthorization: true
+    sku: {
+      name: 'standard'
+      family: 'A'
+    }
+    enabledForTemplateDeployment: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+// AcrPull to WebApp MI
+resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, web.id, 'AcrPull')
+  scope: acr
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalId: web.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// (optional) Allow WebApp MI to read KeyVault secrets via RBAC role "Key Vault Secrets User"
+resource kvSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(kv.id, web.id, 'KVSecretsUser')
+  scope: kv
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalId: web.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+output acrLoginServer string = acr.properties.loginServer
+output webAppNameOut string = web.name
+output keyVaultNameOut string = kv.name
