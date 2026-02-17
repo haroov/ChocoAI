@@ -46,7 +46,6 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --prefix backend
-          # Prisma Client generation needs a DATABASE_URL, but we don't need a real DB here.
           DATABASE_URL="postgresql://user:pass@localhost:5432/chocoai?schema=public" npm run db:generate --prefix backend
           npm run build --prefix backend
 
@@ -57,130 +56,139 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Resolve ACR + WebApp names (auto-discover if missing)
+      - name: Resolve (or create) ACR + resolve WebApp
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
 
             RG="${AZURE_RESOURCE_GROUP:-}"
+            LOC="${AZURE_LOCATION:-israelcentral}"
+            ACR_NAME="${AZURE_ACR_NAME:-}"
+            WEBAPP="${AZURE_WEBAPP_NAME:-}"
+
             if [ -z "$RG" ]; then
               echo "Missing GitHub variable: AZURE_RESOURCE_GROUP"
               exit 1
             fi
 
-            ACR_NAME="${AZURE_ACR_NAME:-}"
-            if [ -z "$ACR_NAME" ]; then
-              ACR_NAME="$(az acr list -g "$RG" --query "[?contains(name,'chocoai')]|[0].name" -o tsv)"
-              if [ -z "$ACR_NAME" ]; then
-                ACR_NAME="$(az acr list -g "$RG" --query "[0].name" -o tsv)"
+            echo "Using RG=$RG LOC=$LOC"
+
+            # ---- Resolve WebApp (must exist) ----
+            if [ -z "$WEBAPP" ]; then
+              WEBAPP="$(az webapp list -g "$RG" --query '[?contains(name, `chocoai`)].name | [0]' -o tsv || true)"
+              if [ -z "$WEBAPP" ]; then
+                WEBAPP="$(az webapp list -g "$RG" --query '[0].name' -o tsv || true)"
               fi
             fi
-            if [ -z "$ACR_NAME" ]; then
-              echo "Could not find any ACR in resource group '$RG'."
-              echo "Create ACR or set repo variable AZURE_ACR_NAME."
+
+            if [ -z "$WEBAPP" ]; then
+              echo "Could not find any Web App in resource group '$RG'."
+              echo "Run the Provision workflow first (Azure - Provision) or set AZURE_WEBAPP_NAME."
               exit 1
             fi
 
-            WEBAPP="${AZURE_WEBAPP_NAME:-}"
-            if [ -z "$WEBAPP" ]; then
-              WEBAPP="$(az webapp list -g "$RG" --query "[?contains(name,'chocoai')]|[0].name" -o tsv)"
-              if [ -z "$WEBAPP" ]; then
-                WEBAPP="$(az webapp list -g "$RG" --query "[0].name" -o tsv)"
+            echo "Resolved WEBAPP=$WEBAPP"
+
+            # ---- Resolve or Create ACR ----
+            if [ -z "$ACR_NAME" ]; then
+              ACR_NAME="$(az acr list -g "$RG" --query '[?contains(name, `chocoai`)].name | [0]' -o tsv || true)"
+              if [ -z "$ACR_NAME" ]; then
+                ACR_NAME="$(az acr list -g "$RG" --query '[0].name' -o tsv || true)"
               fi
             fi
-            if [ -z "$WEBAPP" ]; then
-              echo "Could not find any Web App in resource group '$RG'."
-              echo "Create Web App or set repo variable AZURE_WEBAPP_NAME."
-              exit 1
+
+            if [ -z "$ACR_NAME" ]; then
+              # Create a new ACR if none exists
+              RAW="chocoai${GITHUB_RUN_ID}"
+              ACR_NAME="$(echo "$RAW" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9' | cut -c1-32)"
+              echo "No ACR found in RG. Creating ACR: $ACR_NAME"
+              az acr create \
+                --resource-group "$RG" \
+                --name "$ACR_NAME" \
+                --sku Basic \
+                --location "$LOC" \
+                --admin-enabled false 1>/dev/null
+            else
+              echo "Resolved ACR_NAME=$ACR_NAME"
             fi
 
             ACR_LOGIN_SERVER="$(az acr show -g "$RG" -n "$ACR_NAME" --query loginServer -o tsv)"
+            echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
 
-            echo "Using RG=$RG"
-            echo "Using ACR_NAME=$ACR_NAME"
-            echo "Using WEBAPP=$WEBAPP"
-            echo "Using ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER"
-
-            echo "ACR_NAME=$ACR_NAME" >> "$GITHUB_ENV"
-            echo "WEBAPP=$WEBAPP" >> "$GITHUB_ENV"
+            echo "AZURE_WEBAPP_NAME_RESOLVED=$WEBAPP" >> "$GITHUB_ENV"
+            echo "AZURE_ACR_NAME_RESOLVED=$ACR_NAME" >> "$GITHUB_ENV"
             echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> "$GITHUB_ENV"
 
-      - name: Build image in ACR (az acr build)
+            echo ""
+            echo "TIP: אם תרצה לקבע משתנים בריפו:"
+            echo "  AZURE_WEBAPP_NAME=$WEBAPP"
+            echo "  AZURE_ACR_NAME=$ACR_NAME"
+
+      - name: Build and push Docker image (runner -> ACR)
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
 
             RG="${AZURE_RESOURCE_GROUP}"
-            ACR_NAME="${ACR_NAME}"
-            TAG="${GITHUB_SHA::7}"
+            ACR_NAME="${AZURE_ACR_NAME_RESOLVED}"
+            ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
 
-            echo "Building in ACR: ${ACR_NAME}/${IMAGE_REPO}:${TAG}"
-            # Builds remotely inside ACR (no docker needed on runner)
-            az acr build \
-              -g "$RG" \
-              -r "$ACR_NAME" \
-              -t "${IMAGE_REPO}:${TAG}" \
-              -t "${IMAGE_REPO}:latest" \
-              .
+            az acr login -n "$ACR_NAME"
+
+            TAG="${GITHUB_SHA::7}"
+            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
+            IMAGE_LATEST="$ACR_LOGIN_SERVER/${IMAGE_REPO}:latest"
+
+            echo "Building: $IMAGE"
+            docker build -t "$IMAGE" -t "$IMAGE_LATEST" .
+            docker push "$IMAGE"
+            docker push "$IMAGE_LATEST"
 
             echo "IMAGE_TAG=$TAG" >> "$GITHUB_ENV"
 
-      - name: Ensure WebApp can pull from ACR (Managed Identity + AcrPull)
+      - name: Configure WebApp to use image + set settings + grant AcrPull
         uses: azure/cli@v2
         with:
           inlineScript: |
             set -euo pipefail
 
             RG="${AZURE_RESOURCE_GROUP}"
-            WEBAPP="${WEBAPP}"
-            ACR_NAME="${ACR_NAME}"
-
-            # Turn on system-assigned identity (safe if already enabled)
-            PRINCIPAL_ID="$(az webapp identity assign -g "$RG" -n "$WEBAPP" --query principalId -o tsv)"
-            ACR_ID="$(az acr show -g "$RG" -n "$ACR_NAME" --query id -o tsv)"
-
-            # Assign AcrPull role (idempotent-ish; if it already exists, Azure may error -> ignore)
-            az role assignment create \
-              --assignee-object-id "$PRINCIPAL_ID" \
-              --assignee-principal-type ServicePrincipal \
-              --role "AcrPull" \
-              --scope "$ACR_ID" || true
-
-            echo "WebApp identity principalId=$PRINCIPAL_ID"
-
-      - name: Deploy Web App to new image
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            set -euo pipefail
-
-            RG="${AZURE_RESOURCE_GROUP}"
-            WEBAPP="${WEBAPP}"
+            WEBAPP="${AZURE_WEBAPP_NAME_RESOLVED}"
+            ACR_NAME="${AZURE_ACR_NAME_RESOLVED}"
             ACR_LOGIN_SERVER="${ACR_LOGIN_SERVER}"
             TAG="${IMAGE_TAG}"
 
-            IMAGE="${ACR_LOGIN_SERVER}/${IMAGE_REPO}:${TAG}"
+            IMAGE="$ACR_LOGIN_SERVER/${IMAGE_REPO}:$TAG"
             echo "Deploying image: $IMAGE"
+            echo "WEBAPP=$WEBAPP ACR=$ACR_NAME"
 
-            # Configure container image
+            # Enable managed identity for webapp (if not already)
+            PRINCIPAL_ID="$(az webapp identity assign -g "$RG" -n "$WEBAPP" --query principalId -o tsv)"
+            ACR_ID="$(az acr show -g "$RG" -n "$ACR_NAME" --query id -o tsv)"
+
+            # Grant AcrPull to the webapp identity
+            az role assignment create \
+              --assignee-object-id "$PRINCIPAL_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --role AcrPull \
+              --scope "$ACR_ID" 1>/dev/null || true
+
+            # Tell WebApp which image to run
             az webapp config container set \
               --resource-group "$RG" \
               --name "$WEBAPP" \
               --docker-custom-image-name "$IMAGE" \
-              --docker-registry-server-url "https://${ACR_LOGIN_SERVER}"
+              --docker-registry-server-url "https://$ACR_LOGIN_SERVER"
 
-            # Required for Linux container on App Service
+            # Non-secret settings
             az webapp config appsettings set \
               --resource-group "$RG" \
               --name "$WEBAPP" \
-              --settings \
-                WEBSITES_PORT=8080 \
-                PORT=8080 \
-                NODE_ENV=production
+              --settings NODE_ENV=production PORT=8080 WEBSITES_PORT=8080 1>/dev/null
 
-            # Secrets from GitHub Secrets
+            # Secret settings (from GitHub Secrets)
             az webapp config appsettings set \
               --resource-group "$RG" \
               --name "$WEBAPP" \
@@ -189,6 +197,7 @@ jobs:
                 OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
                 JWT_SECRET="${{ secrets.JWT_SECRET }}" \
                 ROOT_URL="${{ secrets.ROOT_URL }}" \
-                GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}"
+                GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}" 1>/dev/null
+            az webapp restart -g "$RG" -n "$WEBAPP"
+            echo "Done."
 
-            az webapp restart --resource-group "$RG" --name "$WEBAPP"
