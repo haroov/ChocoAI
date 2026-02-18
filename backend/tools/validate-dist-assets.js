@@ -19,6 +19,7 @@ function main() {
   const backendRoot = path.resolve(__dirname, '..');
   const srcRoot = path.resolve(backendRoot, 'src', 'lib', 'flowEngine', 'builtInFlows');
   const distRoot = path.resolve(backendRoot, 'dist', 'lib', 'flowEngine', 'builtInFlows');
+  const distIndexHtml = path.resolve(backendRoot, 'dist', 'static', 'index.html');
 
   if (!fs.existsSync(srcRoot)) {
     console.error(`[validate:dist-assets] Missing source directory: ${srcRoot}`);
@@ -51,6 +52,12 @@ function main() {
     for (const rel of missing) console.error(`- ${path.posix.join('dist/lib/flowEngine/builtInFlows', rel.split(path.sep).join('/'))}`);
     console.error('');
     console.error('[validate:dist-assets] Failing build to prevent broken production images.');
+    process.exit(1);
+  }
+
+  if (!fs.existsSync(distIndexHtml)) {
+    console.error(`[validate:dist-assets] Missing static index.html in dist: ${distIndexHtml}`);
+    console.error('[validate:dist-assets] Ensure build copies backend/src/static into backend/dist/static.');
     process.exit(1);
   }
 

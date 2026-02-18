@@ -6,7 +6,7 @@
     "scripts": {
         "build": "tsc",
         "postbuild": "npm run copy-static && npm run copy-built-in-flows && npm run validate:dist-assets",
-        "copy-static": "mkdir -p dist/static/web-widget && cp -r src/static/web-widget/* dist/static/web-widget/",
+        "copy-static": "mkdir -p dist/static && cp -r src/static/* dist/static/",
         "copy-built-in-flows": "node tools/copy-built-in-flows.js",
         "validate:dist-assets": "node tools/validate-dist-assets.js",
         "dev": "NODE_ENV=development tsx src/app.ts",
